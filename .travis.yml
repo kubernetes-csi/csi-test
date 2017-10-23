@@ -1,6 +1,4 @@
 language: go
-before_install:
-  - mkdir $GOPATH/bin
 install:
   - curl https://glide.sh/get | sh
   - glide install -v
