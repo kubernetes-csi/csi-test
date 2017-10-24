@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	mock_driver "github.com/csi-volumes/csi-test/driver"
-	mock_utils "github.com/csi-volumes/csi-test/utils"
 	gomock "github.com/golang/mock/gomock"
+	mock_driver "github.com/kubernetes-csi/csi-test/driver"
+	mock_utils "github.com/kubernetes-csi/csi-test/utils"
 	"golang.org/x/net/context"
 )
 

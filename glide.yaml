@@ -1,4 +1,4 @@
-package: github.com/csi-volumes/csi-test
+package: github.com/kubernetes-csi/csi-test
 import:
 - package: github.com/container-storage-interface/spec
   subpackages:
