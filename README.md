@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/csi-volumes/csi-test.svg?branch=master)](https://travis-ci.org/csi-volumes/csi-test)
 
 # csi-test
 csi-test is a golang unit testing framework for container orchestration (CO)
