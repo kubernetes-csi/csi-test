@@ -1,4 +1,4 @@
-
+[![Build Status](https://travis-ci.org/kubernetes-csi/csi-test.svg?branch=master)](https://travis-ci.org/kubernetes-csi/csi-test)
 # csi-test
 csi-test is a golang unit testing framework for container orchestration (CO)
 system and CSI driver developers.
