@@ -16,12 +16,12 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"net"
 	"sync"
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
