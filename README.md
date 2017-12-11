@@ -18,4 +18,4 @@ for more information.
 
 ### Note
 
-* Only Golang 1.9+ supported. See (gRPC issue)[https://github.com/grpc/grpc-go/issues/711#issuecomment-326626790]
+* Only Golang 1.9+ supported. See [gRPC issue](https://github.com/grpc/grpc-go/issues/711#issuecomment-326626790)
