@@ -15,3 +15,7 @@ framework may provide little value currently, but if the need arises,
 it may provide future libraries to make developement and testing of
 drivers easier. Please see the example [driver_test.go](test/driver_test.go)
 for more information. 
+
+### Note
+
+* Only Golang 1.9+ supported. See (gRPC issue)[https://github.com/grpc/grpc-go/issues/711#issuecomment-326626790]
