@@ -1,0 +1,27 @@
+# Sanity Test Command Line Program
+
+Once built using `make`, type:
+
+```
+$ csi-sanity --csi.endpoint=<your csi driver endpoint>
+```
+
+For verbose type:
+
+```
+$ csi-sanity --ginkgo.v --csi.endpoint=<your csi driver endpoint>
+```
+
+### Help
+The full Ginkgo and golang unit test parameters are available. Type
+
+```
+$ csi-sanity -h
+```
+
+to get more information
+
+### Download
+
+Please see the [Releases](https://github.com/kubernetes-csi/csi-test/releases) page
+to download the latest version of `csi-sanity`
