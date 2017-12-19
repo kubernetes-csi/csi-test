@@ -17,6 +17,7 @@ package sanity
 
 import (
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
@@ -27,15 +28,22 @@ const (
 )
 
 var (
+	VERSION  = "(dev)"
 	endpoint string
+	version  bool
 )
 
 func init() {
 	flag.StringVar(&endpoint, prefix+"endpoint", "", "CSI endpoint")
+	flag.BoolVar(&version, prefix+"version", false, "Version of this program")
 	flag.Parse()
 }
 
 func TestSanity(t *testing.T) {
+	if version {
+		fmt.Printf("Version = %s\n", VERSION)
+		return
+	}
 	if len(endpoint) == 0 {
 		t.Fatalf("--%s.endpoint must be provided with an CSI endpoint", prefix)
 	}
