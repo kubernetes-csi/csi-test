@@ -1,6 +1,5 @@
 APP_NAME := csi-sanity
-#VER :=$(shell git describe).$(shell git log --oneline -1 --pretty=format:"%h")
-VER :=$(shell git log --oneline -1 --pretty=format:"%h")
+VER :=$(shell git describe).$(shell git log --oneline -1 --pretty=format:"%h")
 BRANCH := $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 SHA := $(shell git rev-parse --short HEAD)
 ARCH := $(shell go env GOARCH)
