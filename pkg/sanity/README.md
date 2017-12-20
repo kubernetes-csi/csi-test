@@ -4,7 +4,7 @@ This library provides a simple way to ensure that a CSI driver conforms to
 the CSI specification. There are two ways to leverage this testing framework.
 For CSI drivers written in Golang, the framework provides a simple API function
 to call to test the driver. Another way to run the test suite is to use the
-command line program [csi-sanity](../../cmd/sanity).
+command line program [csi-sanity](https://github.com/kubernetes-csi/csi-test/tree/master/cmd/csi-sanity).
 
 ## For Golang CSI Drivers
 This framework leverages the Ginkgo BDD testing framework to deliver a descriptive
@@ -22,4 +22,4 @@ func TestMyDriver(t *testing.T) {
 ```
 
 ## Command line program
-Please see [csi-sanity](../../cmd/sanity)
+Please see [csi-sanity](https://github.com/kubernetes-csi/csi-test/tree/master/cmd/csi-sanity)
