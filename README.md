@@ -1,20 +1,14 @@
 [![Build Status](https://travis-ci.org/kubernetes-csi/csi-test.svg?branch=master)](https://travis-ci.org/kubernetes-csi/csi-test)
 # csi-test
-csi-test is a golang unit testing framework for container orchestration (CO)
-system and CSI driver developers.
+csi-test houses packages and libraries to help test CSI client and plugins.
 
-### For Container Orchestration Unit Tests
+## For Container Orchestration Unit Tests
 CO developers can use this framework to create drivers based on the
 [Golang mock](https://github.com/golang/mock) framework. Please see
 [co_test.go](test/co_test.go) for an example.
 
-### For CSI Driver Unit Tests
-Driver developers do not need to leverage the mocking framework, and
-instead just use the CSI protocol buffers golang output library. This
-framework may provide little value currently, but if the need arises,
-it may provide future libraries to make developement and testing of
-drivers easier. Please see the example [driver_test.go](test/driver_test.go)
-for more information. 
+## For CSI Driver Unit Tests
+To test drivers please take a look at [pkg/sanity](https://github.com/kubernetes-csi/csi-test/tree/master/pkg/sanity)
 
 ### Note
 
