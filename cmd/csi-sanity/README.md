@@ -1,6 +1,7 @@
 # Sanity Test Command Line Program
+This is the command line program that tests a CSI driver using the [`sanity`](https://github.com/kubernetes-csi/csi-test/tree/master/pkg/sanity) package test suite.
 
-Once built using `make`, type:
+Example:
 
 ```
 $ csi-sanity --csi.endpoint=<your csi driver endpoint>
