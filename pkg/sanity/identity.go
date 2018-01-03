@@ -17,6 +17,8 @@ limitations under the License.
 package sanity
 
 import (
+	"regexp"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -107,8 +109,11 @@ var _ = Describe("GetPluginInfo [Identity Server]", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
 
-		By("Verifying name size and characters")
+		By("verifying name size and characters")
 		Expect(res.GetName()).ToNot(HaveLen(0))
 		Expect(len(res.GetName())).To(BeNumerically("<=", 63))
+		Expect(regexp.
+			MustCompile("^[a-zA-Z][A-Za-z0-9-\\.\\_]{0,61}[a-zA-Z]$").
+			MatchString(res.GetName())).To(BeTrue())
 	})
 })
