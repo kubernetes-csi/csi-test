@@ -63,7 +63,7 @@ func TestSanity(t *testing.T) {
 	d.EXPECT().
 		GetPluginInfo(gomock.Any(), pluginInforeq).
 		Return(&csi.GetPluginInfoResponse{
-			Name: "mock",
+			Name: "org._csi-test_.mock",
 		}, nil).
 		AnyTimes()
 
