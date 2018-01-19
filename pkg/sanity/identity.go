@@ -23,9 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-csi/csi-test/utils"
 	context "golang.org/x/net/context"
-	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -41,19 +39,11 @@ var (
 
 var _ = Describe("GetSupportedVersions [Identity Server]", func() {
 	var (
-		c    csi.IdentityClient
-		conn *grpc.ClientConn
+		c csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		var err error
-		conn, err = utils.Connect(driverAddress)
-		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewIdentityClient(conn)
-	})
-
-	AfterEach(func() {
-		conn.Close()
 	})
 
 	It("should return an array of supported versions", func() {
@@ -78,19 +68,11 @@ var _ = Describe("GetSupportedVersions [Identity Server]", func() {
 
 var _ = Describe("GetPluginInfo [Identity Server]", func() {
 	var (
-		c    csi.IdentityClient
-		conn *grpc.ClientConn
+		c csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		var err error
-		conn, err = utils.Connect(driverAddress)
-		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewIdentityClient(conn)
-	})
-
-	AfterEach(func() {
-		conn.Close()
 	})
 
 	It("should fail when no version is provided", func() {
