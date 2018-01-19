@@ -24,6 +24,9 @@ all: $(APP_NAME)
 $(APP_NAME): Makefile sanity_test.go
 	go test $(LDFLAGS) -c -o $(APP_NAME)
 
+install: $(APP_NAME)
+	cp $(APP_NAME) $(GOPATH)/bin
+
 clean:
 	rm -f csi-sanity
 	rm -rf $(DIR)/dist
