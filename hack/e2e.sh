@@ -1,9 +1,9 @@
 #!/bin/bash
 
 CSI_ENDPOINTS="tcp://127.0.0.1:9998"
-CSI_ENDPOINTS="$CSI_ENDPOINTS /tmp/csi.sock.$$"
-CSI_ENDPOINTS="$CSI_ENDPOINTS unix:///tmp/csi.sock.$$"
-CSI_ENDPOINTS="$CSI_ENDPOINTS csi.sock.$$"
+CSI_ENDPOINTS="$CSI_ENDPOINTS /tmp/e2e-csi-sanity.sock"
+CSI_ENDPOINTS="$CSI_ENDPOINTS unix:///tmp/e2e-csi-sanity.sock"
+CSI_ENDPOINTS="$CSI_ENDPOINTS e2e-csi-sanity.sock"
 
 go get -u github.com/thecodeteam/gocsi/mock
 cd cmd/csi-sanity
@@ -21,12 +21,12 @@ for endpoint in $CSI_ENDPOINTS ; do
 	csi-sanity $@ --csi.endpoint=$endpoint ; ret=$?
 	kill -9 $pid
 
-	if [ $ret -ne 0 ] ; then
-		exit $ret
-	fi
-
 	if ! echo $endpoint | grep tcp > /dev/null 2>&1 ; then
 		rm -f $endpoint
+	fi
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
 	fi
 done
 
