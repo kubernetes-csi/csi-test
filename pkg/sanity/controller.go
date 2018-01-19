@@ -30,6 +30,29 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func isCapabilitySupported(
+	c csi.ControllerClient,
+	capType csi.ControllerServiceCapability_RPC_Type,
+) bool {
+
+	caps, err := c.ControllerGetCapabilities(
+		context.Background(),
+		&csi.ControllerGetCapabilitiesRequest{
+			Version: csiClientVersion,
+		})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(caps).NotTo(BeNil())
+	Expect(caps.GetCapabilities()).NotTo(BeNil())
+
+	for _, cap := range caps.GetCapabilities() {
+		Expect(cap.GetRpc()).NotTo(BeNil())
+		if cap.GetRpc().GetType() == capType {
+			return true
+		}
+	}
+	return false
+}
+
 var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 	var (
 		c    csi.ControllerClient
@@ -82,5 +105,52 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 			}
 		}
+	})
+})
+
+var _ = Describe("GetCapacity [Controller Server]", func() {
+	var (
+		c    csi.ControllerClient
+		conn *grpc.ClientConn
+	)
+
+	BeforeEach(func() {
+		var err error
+		conn, err = grpc.Dial(driverAddress, grpc.WithInsecure())
+		Expect(err).ToNot(HaveOccurred())
+		c = csi.NewControllerClient(conn)
+
+		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_GET_CAPACITY) {
+			Skip("GetCapacity not supported")
+		}
+	})
+
+	AfterEach(func() {
+		conn.Close()
+	})
+
+	It("should fail when no version is provided", func() {
+
+		By("failing when there is no version")
+		_, err := c.GetCapacity(
+			context.Background(),
+			&csi.GetCapacityRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return capacity (no optional values added)", func() {
+		_, err := c.GetCapacity(
+			context.Background(),
+			&csi.GetCapacityRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Since capacity is uint64 we will not be checking it
+		// The value of zero is a possible value.
 	})
 })
