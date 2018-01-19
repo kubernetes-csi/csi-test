@@ -23,9 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-csi/csi-test/utils"
 	context "golang.org/x/net/context"
-	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,19 +59,11 @@ func isCapabilitySupported(
 
 var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 	var (
-		c    csi.ControllerClient
-		conn *grpc.ClientConn
+		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		var err error
-		conn, err = utils.Connect(driverAddress)
-		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
-	})
-
-	AfterEach(func() {
-		conn.Close()
 	})
 
 	It("should fail when no version is provided", func() {
@@ -116,23 +106,15 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 
 var _ = Describe("GetCapacity [Controller Server]", func() {
 	var (
-		c    csi.ControllerClient
-		conn *grpc.ClientConn
+		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		var err error
-		conn, err = utils.Connect(driverAddress)
-		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
 
 		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_GET_CAPACITY) {
 			Skip("GetCapacity not supported")
 		}
-	})
-
-	AfterEach(func() {
-		conn.Close()
 	})
 
 	It("should fail when no version is provided", func() {
@@ -163,23 +145,15 @@ var _ = Describe("GetCapacity [Controller Server]", func() {
 
 var _ = Describe("ListVolumes [Controller Server]", func() {
 	var (
-		c    csi.ControllerClient
-		conn *grpc.ClientConn
+		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		var err error
-		conn, err = utils.Connect(driverAddress)
-		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
 
 		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_LIST_VOLUMES) {
-			Skip("GetCapacity not supported")
+			Skip("ListVolumes not supported")
 		}
-	})
-
-	AfterEach(func() {
-		conn.Close()
 	})
 
 	It("should fail when no version is provided", func() {
@@ -214,4 +188,113 @@ var _ = Describe("ListVolumes [Controller Server]", func() {
 
 	// TODO: Add test which checks list of volume is there when created,
 	//       and not there when deleted.
+})
+
+var _ = Describe("CreateVolume [Controller Server]", func() {
+	var (
+		c csi.ControllerClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewControllerClient(conn)
+
+		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME) {
+			Skip("CreateVolume not supported")
+		}
+	})
+
+	It("should fail when no version is provided", func() {
+
+		_, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no name is provided", func() {
+
+		_, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume capabilities are provided", func() {
+
+		_, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    "name",
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values SingleNodeWriter NoCapacity Type:Mount", func() {
+		name := "sanity"
+		vol, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+	})
+
+	// Pending fix in mock file
+	It("[MOCKERRORS] should return appropriate values SingleNodeWriter WithCapacity 1Gi Type:Mount", func() {
+		name := "sanity"
+		size := uint64(1 * 1024 * 1024 * 1024)
+		vol, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: size,
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+		Expect(vol.GetVolumeInfo().GetCapacityBytes()).To(Equal(size))
+	})
 })

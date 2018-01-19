@@ -20,12 +20,17 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/kubernetes-csi/csi-test/utils"
+
+	"google.golang.org/grpc"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var (
 	driverAddress string
+	conn          *grpc.ClientConn
 	lock          sync.Mutex
 )
 
@@ -38,3 +43,13 @@ func Test(t *testing.T, address string) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Driver Test Suite")
 }
+
+var _ = BeforeSuite(func() {
+	var err error
+	conn, err = utils.Connect(driverAddress)
+	Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = AfterSuite(func() {
+	conn.Close()
+})
