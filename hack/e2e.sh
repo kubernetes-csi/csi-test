@@ -16,7 +16,7 @@ for endpoint in $CSI_ENDPOINTS ; do
 	CSI_ENDPOINT=$endpoint mock &
 	pid=$!
 
-	csi-sanity --csi.endpoint=$endpoint ; ret=$?
+	csi-sanity $@ --csi.endpoint=$endpoint ; ret=$?
 	kill -9 $pid
 
 	if [ $ret -ne 0 ] ; then
