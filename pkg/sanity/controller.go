@@ -30,6 +30,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func verifyVolumeInfo(v *csi.VolumeInfo) {
+	Expect(v).NotTo(BeNil())
+	Expect(v.GetId()).NotTo(BeEmpty())
+}
+
 func isCapabilitySupported(
 	c csi.ControllerClient,
 	capType csi.ControllerServiceCapability_RPC_Type,
@@ -153,4 +158,59 @@ var _ = Describe("GetCapacity [Controller Server]", func() {
 		// Since capacity is uint64 we will not be checking it
 		// The value of zero is a possible value.
 	})
+})
+
+var _ = Describe("ListVolumes [Controller Server]", func() {
+	var (
+		c    csi.ControllerClient
+		conn *grpc.ClientConn
+	)
+
+	BeforeEach(func() {
+		var err error
+		conn, err = grpc.Dial(driverAddress, grpc.WithInsecure())
+		Expect(err).ToNot(HaveOccurred())
+		c = csi.NewControllerClient(conn)
+
+		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_LIST_VOLUMES) {
+			Skip("GetCapacity not supported")
+		}
+	})
+
+	AfterEach(func() {
+		conn.Close()
+	})
+
+	It("should fail when no version is provided", func() {
+
+		By("failing when there is no version")
+		_, err := c.ListVolumes(
+			context.Background(),
+			&csi.ListVolumesRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+		vols, err := c.ListVolumes(
+			context.Background(),
+			&csi.ListVolumesRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vols).NotTo(BeNil())
+		Expect(vols.GetEntries()).NotTo(BeNil())
+
+		for _, vol := range vols.GetEntries() {
+			verifyVolumeInfo(vol.GetVolumeInfo())
+		}
+	})
+
+	// TODO: Add test to test for tokens
+
+	// TODO: Add test which checks list of volume is there when created,
+	//       and not there when deleted.
 })
