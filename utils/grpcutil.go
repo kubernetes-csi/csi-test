@@ -17,11 +17,14 @@ limitations under the License.
 package utils
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 // Connect address by grpc
@@ -38,5 +41,19 @@ func Connect(address string) (*grpc.ClientConn, error) {
 				}))
 	}
 
-	return grpc.Dial(address, dialOptions...)
+	conn, err := grpc.Dial(address, dialOptions...)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	for {
+		if !conn.WaitForStateChange(ctx, conn.GetState()) {
+			return conn, fmt.Errorf("Connection timed out")
+		}
+		if conn.GetState() == connectivity.Ready {
+			return conn, nil
+		}
+	}
 }
