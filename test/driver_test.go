@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-test/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -109,7 +110,7 @@ func TestSimpleDriver(t *testing.T) {
 	defer s.Stop()
 
 	// Setup a connection to the driver
-	conn, err := grpc.Dial(s.Address(), grpc.WithInsecure())
+	conn, err := utils.Connect(s.Address())
 	if err != nil {
 		t.Errorf("Error: %s", err.Error())
 	}
