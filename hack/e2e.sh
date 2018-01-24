@@ -16,7 +16,7 @@ for endpoint in $CSI_ENDPOINTS ; do
 	CSI_ENDPOINT=$endpoint mock &
 	pid=$!
 
-	csi-sanity $@ --ginkgo.skip=MOCKERRORS --csi.endpoint=$endpoint ; ret=$?
+	csi-sanity $@ --csi.endpoint=$endpoint ; ret=$?
 	kill -9 $pid
     rm -f $UDS
 
