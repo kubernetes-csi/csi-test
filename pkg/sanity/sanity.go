@@ -17,6 +17,8 @@ limitations under the License.
 package sanity
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -30,26 +32,49 @@ import (
 
 var (
 	driverAddress string
+	csiTargetPath string
 	conn          *grpc.ClientConn
 	lock          sync.Mutex
 )
 
 // Test will test the CSI driver at the specified address
-func Test(t *testing.T, address string) {
+func Test(t *testing.T, address, mountPoint string) {
 	lock.Lock()
 	defer lock.Unlock()
 
 	driverAddress = address
+	csiTargetPath = mountPoint
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Driver Test Suite")
 }
 
 var _ = BeforeSuite(func() {
 	var err error
+
+	By("connecting to CSI driver")
 	conn, err = utils.Connect(driverAddress)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("creating mount directory")
+	err = createMountTargetLocation(csiTargetPath)
 	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	conn.Close()
+	os.Remove(csiTargetPath)
 })
+
+func createMountTargetLocation(targetPath string) error {
+	fileInfo, err := os.Stat(targetPath)
+	if err != nil && os.IsNotExist(err) {
+		return os.Mkdir(targetPath, 0755)
+	} else if err != nil {
+		return err
+	}
+	if !fileInfo.IsDir() {
+		return fmt.Errorf("Target location %s is not a directory", targetPath)
+	}
+
+	return nil
+}
