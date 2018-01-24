@@ -7,6 +7,12 @@ Example:
 $ csi-sanity --csi.endpoint=<your csi driver endpoint>
 ```
 
+If you want to specify a mount point:
+
+```
+$ csi-sanity --csi.endpoint=<your csi driver endpoint> --csi.mountpoint=/mnt
+```
+
 For verbose type:
 
 ```
