@@ -324,7 +324,7 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 	})
 
-	It("should fail when no volumeid is provided", func() {
+	It("should fail when no volume id is provided", func() {
 
 		_, err := c.DeleteVolume(
 			context.Background(),
@@ -372,5 +372,104 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 				VolumeId: vol.GetVolumeInfo().GetId(),
 			})
 		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
+	var (
+		c csi.ControllerClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewControllerClient(conn)
+	})
+
+	It("should fail when no version is provided", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume id is provided", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume capabilities are provided", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				Version:  csiClientVersion,
+				VolumeId: "id",
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+
+		// Create Volume First
+		name := "sanity"
+		vol, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+
+		// ValidateVolumeCapabilities
+		valivolcap, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				Version:  csiClientVersion,
+				VolumeId: vol.GetVolumeInfo().GetId(),
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(valivolcap).NotTo(BeNil())
+		Expect(valivolcap.GetSupported()).To(BeTrue())
 	})
 })
