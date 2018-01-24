@@ -29,6 +29,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	csiTargetPath = "/mnt/csi"
+)
+
 var _ = Describe("NodeGetCapabilities [Node Server]", func() {
 	var (
 		c csi.NodeClient
@@ -135,5 +139,141 @@ var _ = Describe("GetNodeID [Node Server]", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nid).NotTo(BeNil())
 		Expect(nid.GetNodeId()).NotTo(BeEmpty())
+	})
+})
+
+var _ = Describe("NodePublishVolume [Node Server]", func() {
+	var (
+		s csi.ControllerClient
+		c csi.NodeClient
+	)
+
+	BeforeEach(func() {
+		s = csi.NewControllerClient(conn)
+		c = csi.NewNodeClient(conn)
+	})
+
+	It("should fail when no version is provided", func() {
+
+		_, err := c.NodePublishVolume(
+			context.Background(),
+			&csi.NodePublishVolumeRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume id is provided", func() {
+
+		_, err := c.NodePublishVolume(
+			context.Background(),
+			&csi.NodePublishVolumeRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no target path is provided", func() {
+
+		_, err := c.NodePublishVolume(
+			context.Background(),
+			&csi.NodePublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: "id",
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume capability is provided", func() {
+
+		_, err := c.NodePublishVolume(
+			context.Background(),
+			&csi.NodePublishVolumeRequest{
+				Version:    csiClientVersion,
+				VolumeId:   "id",
+				TargetPath: csiTargetPath,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+
+		// Create Volume First
+		name := "sanity"
+		vol, err := s.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+
+		// ControllerPublishVolume
+		conpubvol, err := s.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: vol.GetVolumeInfo().GetId(),
+				NodeId:   "foobar",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				Readonly: false,
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conpubvol).NotTo(BeNil())
+
+		// NodePublishVolume
+		nodepubvol, err := c.NodePublishVolume(
+			context.Background(),
+			&csi.NodePublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: vol.GetVolumeInfo().GetId(),
+				// PublishVolumeInfo is optional in NodePublishVolume
+				PublishVolumeInfo: conpubvol.GetPublishVolumeInfo(),
+				TargetPath:        csiTargetPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(nodepubvol).NotTo(BeNil())
 	})
 })
