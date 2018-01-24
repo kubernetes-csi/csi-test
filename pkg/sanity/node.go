@@ -72,3 +72,35 @@ var _ = Describe("NodeGetCapabilities [Node Server]", func() {
 		}
 	})
 })
+
+var _ = Describe("NodeProbe [Node Server]", func() {
+	var (
+		c csi.NodeClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewNodeClient(conn)
+	})
+
+	It("should fail when no version is provided", func() {
+		_, err := c.NodeProbe(
+			context.Background(),
+			&csi.NodeProbeRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values", func() {
+		pro, err := c.NodeProbe(
+			context.Background(),
+			&csi.NodeProbeRequest{
+				Version: csiClientVersion,
+			})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pro).NotTo(BeNil())
+	})
+})
