@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-test/utils"
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -66,7 +67,7 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 
 	BeforeEach(func() {
 		var err error
-		conn, err = grpc.Dial(driverAddress, grpc.WithInsecure())
+		conn, err = utils.Connect(driverAddress)
 		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
 	})
@@ -121,7 +122,7 @@ var _ = Describe("GetCapacity [Controller Server]", func() {
 
 	BeforeEach(func() {
 		var err error
-		conn, err = grpc.Dial(driverAddress, grpc.WithInsecure())
+		conn, err = utils.Connect(driverAddress)
 		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
 
@@ -168,7 +169,7 @@ var _ = Describe("ListVolumes [Controller Server]", func() {
 
 	BeforeEach(func() {
 		var err error
-		conn, err = grpc.Dial(driverAddress, grpc.WithInsecure())
+		conn, err = utils.Connect(driverAddress)
 		Expect(err).ToNot(HaveOccurred())
 		c = csi.NewControllerClient(conn)
 
