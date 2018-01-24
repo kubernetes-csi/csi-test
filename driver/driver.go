@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-test/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -106,7 +107,7 @@ func (m *MockCSIDriver) Nexus() (*grpc.ClientConn, error) {
 	}
 
 	// Create a client connection
-	m.conn, err = grpc.Dial(m.Address(), grpc.WithInsecure())
+	m.conn, err = utils.Connect(m.Address())
 	if err != nil {
 		return nil, err
 	}

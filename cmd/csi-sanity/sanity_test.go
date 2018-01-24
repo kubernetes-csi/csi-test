@@ -45,7 +45,7 @@ func TestSanity(t *testing.T) {
 		return
 	}
 	if len(endpoint) == 0 {
-		t.Fatalf("--%s.endpoint must be provided with an CSI endpoint", prefix)
+		t.Fatalf("--%sendpoint must be provided with an CSI endpoint", prefix)
 	}
 	sanity.Test(t, endpoint)
 }
