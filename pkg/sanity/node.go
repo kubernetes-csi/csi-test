@@ -104,3 +104,36 @@ var _ = Describe("NodeProbe [Node Server]", func() {
 		Expect(pro).NotTo(BeNil())
 	})
 })
+
+var _ = Describe("GetNodeID [Node Server]", func() {
+	var (
+		c csi.NodeClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewNodeClient(conn)
+	})
+
+	It("should fail when no version is provided", func() {
+		_, err := c.GetNodeID(
+			context.Background(),
+			&csi.GetNodeIDRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values", func() {
+		nid, err := c.GetNodeID(
+			context.Background(),
+			&csi.GetNodeIDRequest{
+				Version: csiClientVersion,
+			})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(nid).NotTo(BeNil())
+		Expect(nid.GetNodeId()).NotTo(BeEmpty())
+	})
+})
