@@ -29,6 +29,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	csiNodeID = "foobar"
+)
+
 func verifyVolumeInfo(v *csi.VolumeInfo) {
 	Expect(v).NotTo(BeNil())
 	Expect(v.GetId()).NotTo(BeEmpty())
@@ -471,5 +475,122 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(valivolcap).NotTo(BeNil())
 		Expect(valivolcap.GetSupported()).To(BeTrue())
+	})
+})
+
+var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
+	var (
+		c csi.ControllerClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewControllerClient(conn)
+
+		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME) {
+			Skip("ControllerPublishVolume not supported")
+		}
+	})
+
+	It("should fail when no version is provided", func() {
+
+		_, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume id is provided", func() {
+
+		_, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no node id is provided", func() {
+
+		_, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: "id",
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume capability is provided", func() {
+
+		_, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: "id",
+				NodeId:   csiNodeID,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+
+		// Create Volume First
+		name := "sanity"
+		vol, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+
+		// ControllerPublishVolume
+		conpubvol, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: vol.GetVolumeInfo().GetId(),
+				NodeId:   csiNodeID,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				Readonly: false,
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conpubvol).NotTo(BeNil())
 	})
 })
