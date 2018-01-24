@@ -298,3 +298,79 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 		Expect(vol.GetVolumeInfo().GetCapacityBytes()).To(Equal(size))
 	})
 })
+
+var _ = Describe("DeleteVolume [Controller Server]", func() {
+	var (
+		c csi.ControllerClient
+	)
+
+	BeforeEach(func() {
+		c = csi.NewControllerClient(conn)
+
+		if !isCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME) {
+			Skip("DeleteVolume not supported")
+		}
+	})
+
+	It("should fail when no version is provided", func() {
+
+		_, err := c.DeleteVolume(
+			context.Background(),
+			&csi.DeleteVolumeRequest{})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volumeid is provided", func() {
+
+		_, err := c.DeleteVolume(
+			context.Background(),
+			&csi.DeleteVolumeRequest{
+				Version: csiClientVersion,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+
+		// Create Volume First
+		name := "sanity"
+		vol, err := c.CreateVolume(
+			context.Background(),
+			&csi.CreateVolumeRequest{
+				Version: csiClientVersion,
+				Name:    name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					&csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
+		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+
+		// Delete Volume
+		_, err = c.DeleteVolume(
+			context.Background(),
+			&csi.DeleteVolumeRequest{
+				Version:  csiClientVersion,
+				VolumeId: vol.GetVolumeInfo().GetId(),
+			})
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
