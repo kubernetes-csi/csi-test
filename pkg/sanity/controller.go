@@ -280,7 +280,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 	})
 
 	// Pending fix in mock file
-	It("[MOCKERRORS] should return appropriate values SingleNodeWriter WithCapacity 1Gi Type:Mount", func() {
+	It("should return appropriate values SingleNodeWriter WithCapacity 1Gi Type:Mount", func() {
 
 		By("creating a volume")
 		name := "sanity"
