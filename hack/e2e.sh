@@ -13,7 +13,7 @@ cd ../..
 for endpoint in $CSI_ENDPOINTS ; do
     rm -f $UDS
 
-	CSI_ENDPOINT=$endpoint mock &
+	CSI_ENDPOINT=$endpoint mock > /dev/null 2>&1 &
 	pid=$!
 
 	csi-sanity $@ --csi.endpoint=$endpoint ; ret=$?

@@ -177,7 +177,6 @@ var _ = Describe("ListVolumes [Controller Server]", func() {
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vols).NotTo(BeNil())
-		Expect(vols.GetEntries()).NotTo(BeNil())
 
 		for _, vol := range vols.GetEntries() {
 			verifyVolumeInfo(vol.GetVolumeInfo())
