@@ -2,12 +2,12 @@
 # csi-test
 csi-test houses packages and libraries to help test CSI client and plugins.
 
-## For Container Orchestration Unit Tests
+## For Container Orchestration Tests
 CO developers can use this framework to create drivers based on the
 [Golang mock](https://github.com/golang/mock) framework. Please see
 [co_test.go](test/co_test.go) for an example.
 
-## For CSI Driver Unit Tests
+## For CSI Driver Tests
 To test drivers please take a look at [pkg/sanity](https://github.com/kubernetes-csi/csi-test/tree/master/pkg/sanity)
 
 ### Note
