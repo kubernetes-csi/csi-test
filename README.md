@@ -12,4 +12,5 @@ To test drivers please take a look at [pkg/sanity](https://github.com/kubernetes
 
 ### Note
 
+* Master is for CSI v0.2.0. Please use the branch v0.1.0 for CSI v0.1.0
 * Only Golang 1.9+ supported. See [gRPC issue](https://github.com/grpc/grpc-go/issues/711#issuecomment-326626790)
