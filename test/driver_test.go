@@ -40,9 +40,9 @@ func (s *simpleDriver) GetSupportedVersions(
 	context.Context, *csi.GetSupportedVersionsRequest) (*csi.GetSupportedVersionsResponse, error) {
 	return &csi.GetSupportedVersionsResponse{
 		SupportedVersions: []*csi.Version{
-			&csi.Version{
+			{
 				Major: 0,
-				Minor: 1,
+				Minor: 2,
 				Patch: 0,
 			},
 		},

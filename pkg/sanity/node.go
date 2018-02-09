@@ -105,7 +105,7 @@ var _ = Describe("NodeProbe [Node Server]", func() {
 	})
 })
 
-var _ = Describe("GetNodeID [Node Server]", func() {
+var _ = Describe("NodeGetId [Node Server]", func() {
 	var (
 		c csi.NodeClient
 	)
@@ -115,9 +115,10 @@ var _ = Describe("GetNodeID [Node Server]", func() {
 	})
 
 	It("should fail when no version is provided", func() {
-		_, err := c.GetNodeID(
+		// _, err := c.NodeGetId(
+		_, err := c.NodeGetId(
 			context.Background(),
-			&csi.GetNodeIDRequest{})
+			&csi.NodeGetIdRequest{})
 		Expect(err).To(HaveOccurred())
 
 		serverError, ok := status.FromError(err)
@@ -126,9 +127,9 @@ var _ = Describe("GetNodeID [Node Server]", func() {
 	})
 
 	It("should return appropriate values", func() {
-		nid, err := c.GetNodeID(
+		nid, err := c.NodeGetId(
 			context.Background(),
-			&csi.GetNodeIDRequest{
+			&csi.NodeGetIdRequest{
 				Version: csiClientVersion,
 			})
 
@@ -221,7 +222,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 				Version: csiClientVersion,
 				Name:    name,
 				VolumeCapabilities: []*csi.VolumeCapability{
-					&csi.VolumeCapability{
+					{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
 						},
@@ -233,13 +234,13 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vol).NotTo(BeNil())
-		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
-		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+		Expect(vol.GetVolume()).NotTo(BeNil())
+		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
 
 		By("getting a node id")
-		nid, err := c.GetNodeID(
+		nid, err := c.NodeGetId(
 			context.Background(),
-			&csi.GetNodeIDRequest{
+			&csi.NodeGetIdRequest{
 				Version: csiClientVersion,
 			})
 		Expect(err).NotTo(HaveOccurred())
@@ -253,7 +254,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					Version:  csiClientVersion,
-					VolumeId: vol.GetVolumeInfo().GetId(),
+					VolumeId: vol.GetVolume().GetId(),
 					NodeId:   nid.GetNodeId(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
@@ -273,7 +274,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 		By("publishing the volume on a node")
 		nodepubvolRequest := &csi.NodePublishVolumeRequest{
 			Version:    csiClientVersion,
-			VolumeId:   vol.GetVolumeInfo().GetId(),
+			VolumeId:   vol.GetVolume().GetId(),
 			TargetPath: csiTargetPath,
 			VolumeCapability: &csi.VolumeCapability{
 				AccessType: &csi.VolumeCapability_Mount{
@@ -285,7 +286,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 			},
 		}
 		if controllerPublishSupported {
-			nodepubvolRequest.PublishVolumeInfo = conpubvol.GetPublishVolumeInfo()
+			nodepubvolRequest.PublishInfo = conpubvol.GetPublishInfo()
 		}
 		nodepubvol, err := c.NodePublishVolume(context.Background(), nodepubvolRequest)
 		Expect(err).NotTo(HaveOccurred())
@@ -297,7 +298,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 			context.Background(),
 			&csi.NodeUnpublishVolumeRequest{
 				Version:    csiClientVersion,
-				VolumeId:   vol.GetVolumeInfo().GetId(),
+				VolumeId:   vol.GetVolume().GetId(),
 				TargetPath: csiTargetPath,
 			})
 		Expect(err).NotTo(HaveOccurred())
@@ -309,7 +310,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 				context.Background(),
 				&csi.NodeUnpublishVolumeRequest{
 					Version:    csiClientVersion,
-					VolumeId:   vol.GetVolumeInfo().GetId(),
+					VolumeId:   vol.GetVolume().GetId(),
 					TargetPath: csiTargetPath,
 				})
 			Expect(err).NotTo(HaveOccurred())
@@ -321,7 +322,7 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 			context.Background(),
 			&csi.DeleteVolumeRequest{
 				Version:  csiClientVersion,
-				VolumeId: vol.GetVolumeInfo().GetId(),
+				VolumeId: vol.GetVolume().GetId(),
 			})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -394,7 +395,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 				Version: csiClientVersion,
 				Name:    name,
 				VolumeCapabilities: []*csi.VolumeCapability{
-					&csi.VolumeCapability{
+					{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
 						},
@@ -406,8 +407,8 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vol).NotTo(BeNil())
-		Expect(vol.GetVolumeInfo()).NotTo(BeNil())
-		Expect(vol.GetVolumeInfo().GetId()).NotTo(BeEmpty())
+		Expect(vol.GetVolume()).NotTo(BeNil())
+		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
 
 		// ControllerPublishVolume
 		var conpubvol *csi.ControllerPublishVolumeResponse
@@ -417,7 +418,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					Version:  csiClientVersion,
-					VolumeId: vol.GetVolumeInfo().GetId(),
+					VolumeId: vol.GetVolume().GetId(),
 					NodeId:   "foobar",
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
@@ -437,7 +438,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 		By("publishing the volume on a node")
 		nodepubvolRequest := &csi.NodePublishVolumeRequest{
 			Version:    csiClientVersion,
-			VolumeId:   vol.GetVolumeInfo().GetId(),
+			VolumeId:   vol.GetVolume().GetId(),
 			TargetPath: csiTargetPath,
 			VolumeCapability: &csi.VolumeCapability{
 				AccessType: &csi.VolumeCapability_Mount{
@@ -449,7 +450,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 			},
 		}
 		if controllerPublishSupported {
-			nodepubvolRequest.PublishVolumeInfo = conpubvol.GetPublishVolumeInfo()
+			nodepubvolRequest.PublishInfo = conpubvol.GetPublishInfo()
 		}
 		nodepubvol, err := c.NodePublishVolume(context.Background(), nodepubvolRequest)
 		Expect(err).NotTo(HaveOccurred())
@@ -460,7 +461,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 			context.Background(),
 			&csi.NodeUnpublishVolumeRequest{
 				Version:    csiClientVersion,
-				VolumeId:   vol.GetVolumeInfo().GetId(),
+				VolumeId:   vol.GetVolume().GetId(),
 				TargetPath: csiTargetPath,
 			})
 		Expect(err).NotTo(HaveOccurred())
@@ -472,7 +473,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 				context.Background(),
 				&csi.NodeUnpublishVolumeRequest{
 					Version:    csiClientVersion,
-					VolumeId:   vol.GetVolumeInfo().GetId(),
+					VolumeId:   vol.GetVolume().GetId(),
 					TargetPath: csiTargetPath,
 				})
 			Expect(err).NotTo(HaveOccurred())
@@ -484,7 +485,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 			context.Background(),
 			&csi.DeleteVolumeRequest{
 				Version:  csiClientVersion,
-				VolumeId: vol.GetVolumeInfo().GetId(),
+				VolumeId: vol.GetVolume().GetId(),
 			})
 		Expect(err).NotTo(HaveOccurred())
 	})

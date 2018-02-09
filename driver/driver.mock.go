@@ -223,17 +223,17 @@ func (m *MockNodeServer) EXPECT() *MockNodeServerMockRecorder {
 	return m.recorder
 }
 
-// GetNodeID mocks base method
-func (m *MockNodeServer) GetNodeID(arg0 context.Context, arg1 *csi.GetNodeIDRequest) (*csi.GetNodeIDResponse, error) {
-	ret := m.ctrl.Call(m, "GetNodeID", arg0, arg1)
-	ret0, _ := ret[0].(*csi.GetNodeIDResponse)
+// NodeGetId mocks base method
+func (m *MockNodeServer) NodeGetId(arg0 context.Context, arg1 *csi.NodeGetIdRequest) (*csi.NodeGetIdResponse, error) {
+	ret := m.ctrl.Call(m, "NodeGetId", arg0, arg1)
+	ret0, _ := ret[0].(*csi.NodeGetIdResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetNodeID indicates an expected call of GetNodeID
-func (mr *MockNodeServerMockRecorder) GetNodeID(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeID", reflect.TypeOf((*MockNodeServer)(nil).GetNodeID), arg0, arg1)
+// NodeGetId indicates an expected call of NodeGetId
+func (mr *MockNodeServerMockRecorder) NodeGetId(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeGetId", reflect.TypeOf((*MockNodeServer)(nil).NodeGetId), arg0, arg1)
 }
 
 // NodeGetCapabilities mocks base method
