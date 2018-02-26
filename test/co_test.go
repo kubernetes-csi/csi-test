@@ -33,13 +33,7 @@ func TestPluginInfoResponse(t *testing.T) {
 	driver := mock_driver.NewMockIdentityServer(m)
 
 	// Setup input
-	in := &csi.GetPluginInfoRequest{
-		Version: &csi.Version{
-			Major: 0,
-			Minor: 1,
-			Patch: 0,
-		},
-	}
+	in := &csi.GetPluginInfoRequest{}
 
 	// Setup mock outout
 	out := &csi.GetPluginInfoResponse{
@@ -72,13 +66,7 @@ func TestGRPCGetPluginInfoReponse(t *testing.T) {
 	driver := mock_driver.NewMockIdentityServer(m)
 
 	// Setup input
-	in := &csi.GetPluginInfoRequest{
-		Version: &csi.Version{
-			Major: 0,
-			Minor: 1,
-			Patch: 0,
-		},
-	}
+	in := &csi.GetPluginInfoRequest{}
 
 	// Setup mock outout
 	out := &csi.GetPluginInfoResponse{

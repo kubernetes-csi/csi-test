@@ -36,17 +36,13 @@ type simpleDriver struct {
 	wg       sync.WaitGroup
 }
 
-func (s *simpleDriver) GetSupportedVersions(
-	context.Context, *csi.GetSupportedVersionsRequest) (*csi.GetSupportedVersionsResponse, error) {
-	return &csi.GetSupportedVersionsResponse{
-		SupportedVersions: []*csi.Version{
-			{
-				Major: 0,
-				Minor: 2,
-				Patch: 0,
-			},
-		},
-	}, nil
+func (s *simpleDriver) GetPluginCapabilities(context.Context, *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
+	// TODO: Return some simple Plugin Capabilities
+	return &csi.GetPluginCapabilitiesResponse{}, nil
+}
+
+func (s *simpleDriver) Probe(context.Context, *csi.ProbeRequest) (*csi.ProbeResponse, error) {
+	return &csi.ProbeResponse{}, nil
 }
 
 func (s *simpleDriver) GetPluginInfo(
