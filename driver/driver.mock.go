@@ -6,9 +6,10 @@ package driver
 
 import (
 	context "context"
-	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockIdentityServer is a mock of IdentityServer interface

@@ -18,7 +18,7 @@ package test
 import (
 	"testing"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	gomock "github.com/golang/mock/gomock"
 	mock_driver "github.com/kubernetes-csi/csi-test/driver"
 	mock_utils "github.com/kubernetes-csi/csi-test/utils"
