@@ -23,118 +23,95 @@ import (
 	"sync"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"github.com/kubernetes-csi/csi-test/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-type MockCSIDriverServers struct {
-	Controller *MockControllerServer
-	Identity   *MockIdentityServer
-	Node       *MockNodeServer
+type CSIDriverServers struct {
+	Controller csi.ControllerServer
+	Identity   csi.IdentityServer
+	Node       csi.NodeServer
 }
 
-type MockCSIDriver struct {
+type CSIDriver struct {
 	listener net.Listener
 	server   *grpc.Server
-	conn     *grpc.ClientConn
-	servers  *MockCSIDriverServers
+	servers  *CSIDriverServers
 	wg       sync.WaitGroup
 	running  bool
 	lock     sync.Mutex
 }
 
-func NewMockCSIDriver(servers *MockCSIDriverServers) *MockCSIDriver {
-	return &MockCSIDriver{
+func NewCSIDriver(servers *CSIDriverServers) *CSIDriver {
+	return &CSIDriver{
 		servers: servers,
 	}
 }
 
-func (m *MockCSIDriver) goServe(started chan<- bool) {
-	m.wg.Add(1)
+func (c *CSIDriver) goServe(started chan<- bool) {
+	c.wg.Add(1)
 	go func() {
-		defer m.wg.Done()
+		defer c.wg.Done()
 		started <- true
-		err := m.server.Serve(m.listener)
+		err := c.server.Serve(c.listener)
 		if err != nil {
 			panic(err.Error())
 		}
 	}()
 }
 
-func (m *MockCSIDriver) Address() string {
-	return m.listener.Addr().String()
+func (c *CSIDriver) Address() string {
+	return c.listener.Addr().String()
 }
-func (m *MockCSIDriver) Start() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (c *CSIDriver) Start(l net.Listener) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	// Listen on a port assigned by the net package
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return err
-	}
-	m.listener = l
+	// Set listener
+	c.listener = l
 
 	// Create a new grpc server
-	m.server = grpc.NewServer()
+	c.server = grpc.NewServer()
 
 	// Register Mock servers
-	if m.servers.Controller != nil {
-		csi.RegisterControllerServer(m.server, m.servers.Controller)
+	if c.servers.Controller != nil {
+		csi.RegisterControllerServer(c.server, c.servers.Controller)
 	}
-	if m.servers.Identity != nil {
-		csi.RegisterIdentityServer(m.server, m.servers.Identity)
+	if c.servers.Identity != nil {
+		csi.RegisterIdentityServer(c.server, c.servers.Identity)
 	}
-	if m.servers.Node != nil {
-		csi.RegisterNodeServer(m.server, m.servers.Node)
+	if c.servers.Node != nil {
+		csi.RegisterNodeServer(c.server, c.servers.Node)
 	}
-	reflection.Register(m.server)
+	reflection.Register(c.server)
 
 	// Start listening for requests
 	waitForServer := make(chan bool)
-	m.goServe(waitForServer)
+	c.goServe(waitForServer)
 	<-waitForServer
-	m.running = true
+	c.running = true
 	return nil
 }
 
-func (m *MockCSIDriver) Nexus() (*grpc.ClientConn, error) {
-	// Start server
-	err := m.Start()
-	if err != nil {
-		return nil, err
-	}
+func (c *CSIDriver) Stop() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	// Create a client connection
-	m.conn, err = utils.Connect(m.Address())
-	if err != nil {
-		return nil, err
-	}
-
-	return m.conn, nil
-}
-
-func (m *MockCSIDriver) Stop() {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if !m.running {
+	if !c.running {
 		return
 	}
 
-	m.server.Stop()
-	m.wg.Wait()
+	c.server.Stop()
+	c.wg.Wait()
 }
 
-func (m *MockCSIDriver) Close() {
-	m.conn.Close()
-	m.server.Stop()
+func (c *CSIDriver) Close() {
+	c.server.Stop()
 }
 
-func (m *MockCSIDriver) IsRunning() bool {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (c *CSIDriver) IsRunning() bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	return m.running
+	return c.running
 }
