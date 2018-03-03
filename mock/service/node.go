@@ -75,6 +75,13 @@ func (s *service) NodeUnpublishVolume(
 	req *csi.NodeUnpublishVolumeRequest) (
 	*csi.NodeUnpublishVolumeResponse, error) {
 
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target Path cannot be empty")
+	}
+
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 

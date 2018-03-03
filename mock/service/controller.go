@@ -14,13 +14,17 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
+const (
+	MaxStorageCapacity = tib
+)
+
 func (s *service) CreateVolume(
 	ctx context.Context,
 	req *csi.CreateVolumeRequest) (
 	*csi.CreateVolumeResponse, error) {
 
 	if len(req.Name) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume Name canot be empty")
+		return nil, status.Error(codes.InvalidArgument, "Volume Name cannot be empty")
 	}
 	if req.VolumeCapabilities == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities cannot be empty")
@@ -41,12 +45,23 @@ func (s *service) CreateVolume(
 			capacity = lb
 		}
 	}
-
+	// Check for maximum available capacity
+	if capacity >= MaxStorageCapacity {
+		return nil, status.Errorf(codes.OutOfRange, "Requested capacity %d exceeds maximum allowed %d", capacity, MaxStorageCapacity)
+	}
 	// Create the volume and add it to the service's in-mem volume slice.
 	v := s.newVolume(req.Name, capacity)
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 	s.vols = append(s.vols, v)
+	MockVolumes[v.Id] = Volume{
+		VolumeCSI:       v,
+		NodeID:          "",
+		ISStaged:        false,
+		ISPublished:     false,
+		StageTargetPath: "",
+		TargetPath:      "",
+	}
 
 	return &csi.CreateVolumeResponse{Volume: &v}, nil
 }
@@ -58,6 +73,11 @@ func (s *service) DeleteVolume(
 
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
+
+	//  If the volume is not specified, return error
+	if len(req.VolumeId) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
 
 	// If the volume does not exist then return an idempotent response.
 	i, _ := s.findVolNoLock("id", req.VolumeId)
@@ -79,6 +99,20 @@ func (s *service) ControllerPublishVolume(
 	ctx context.Context,
 	req *csi.ControllerPublishVolumeRequest) (
 	*csi.ControllerPublishVolumeResponse, error) {
+
+	if len(req.VolumeId) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+	if len(req.NodeId) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Node ID cannot be empty")
+	}
+	if req.VolumeCapability == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities cannot be empty")
+	}
+
+	if req.NodeId != s.nodeID {
+		return nil, status.Errorf(codes.NotFound, "Not matching Node ID %s to Mock Node ID %s", req.NodeId, s.nodeID)
+	}
 
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
@@ -149,11 +183,14 @@ func (s *service) ValidateVolumeCapabilities(
 	req *csi.ValidateVolumeCapabilitiesRequest) (
 	*csi.ValidateVolumeCapabilitiesResponse, error) {
 
-	i, _ := s.findVolNoLock("id", req.VolumeId)
-	if i < 0 {
-		return nil, status.Error(codes.NotFound, req.VolumeId)
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
 	}
 	if len(req.VolumeCapabilities) == 0 {
+		return nil, status.Error(codes.InvalidArgument, req.VolumeId)
+	}
+	i, _ := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
