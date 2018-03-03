@@ -168,7 +168,6 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nid).NotTo(BeNil())
 		Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
 		var conpubvol *csi.ControllerPublishVolumeResponse
 		if controllerPublishSupported {
 			By("controller publishing volume")
@@ -190,7 +189,6 @@ var _ = Describe("NodePublishVolume [Node Server]", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conpubvol).NotTo(BeNil())
 		}
-
 		// NodePublishVolume
 		By("publishing the volume on a node")
 		nodepubvolRequest := &csi.NodePublishVolumeRequest{
@@ -269,7 +267,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.NotFound))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 	})
 
 	It("should fail when no target path is provided", func() {
@@ -283,7 +281,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.NotFound))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
@@ -319,7 +317,7 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetId(),
-					NodeId:   "foobar",
+					NodeId:   "io.kubernetes.storage.mock",
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
