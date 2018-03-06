@@ -19,6 +19,7 @@ package sanity
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -31,19 +32,23 @@ import (
 )
 
 var (
-	driverAddress string
-	csiTargetPath string
-	conn          *grpc.ClientConn
-	lock          sync.Mutex
+	driverAddress        string
+	csiMountDir          string
+	csiTargetPath        string
+	csiStagingTargetPath string
+	conn                 *grpc.ClientConn
+	lock                 sync.Mutex
 )
 
 // Test will test the CSI driver at the specified address
-func Test(t *testing.T, address, mountPoint string) {
+func Test(t *testing.T, address, mountDir string) {
 	lock.Lock()
 	defer lock.Unlock()
 
 	driverAddress = address
-	csiTargetPath = mountPoint
+	csiMountDir = mountDir
+	csiTargetPath = filepath.Join(mountDir, "mount")
+	csiStagingTargetPath = filepath.Join(mountDir, "stage")
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Driver Test Suite")
 }
@@ -56,13 +61,22 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating mount directory")
+	err = createMountTargetLocation(csiMountDir)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("creating mount and staging directories")
 	err = createMountTargetLocation(csiTargetPath)
 	Expect(err).NotTo(HaveOccurred())
+	err = createMountTargetLocation(csiStagingTargetPath)
+	Expect(err).NotTo(HaveOccurred())
+
 })
 
 var _ = AfterSuite(func() {
 	conn.Close()
 	os.Remove(csiTargetPath)
+	os.Remove(csiStagingTargetPath)
+	os.Remove(csiMountDir)
 })
 
 func createMountTargetLocation(targetPath string) error {
