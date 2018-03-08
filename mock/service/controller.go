@@ -32,6 +32,12 @@ func (s *service) CreateVolume(
 
 	// Check to see if the volume already exists.
 	if i, v := s.findVolByName(ctx, req.Name); i >= 0 {
+		// Requested volume name already exists, need to check if the existing volume's
+		// capacity is more or equal to new request's capacity.
+		if v.GetCapacityBytes() < req.GetCapacityRange().GetRequiredBytes() {
+			return nil, status.Error(codes.AlreadyExists,
+				fmt.Sprintf("Volume with name %s already exists", req.GetName()))
+		}
 		return &csi.CreateVolumeResponse{Volume: &v}, nil
 	}
 
@@ -280,7 +286,7 @@ func (s *service) GetCapacity(
 	*csi.GetCapacityResponse, error) {
 
 	return &csi.GetCapacityResponse{
-		AvailableCapacity: tib100,
+		AvailableCapacity: MaxStorageCapacity,
 	}, nil
 }
 
