@@ -2,8 +2,6 @@
 
 TESTARGS=$@
 UDS="/tmp/e2e-csi-sanity.sock"
-CSI_ENDPOINTS="127.0.0.1:9998"
-CSI_ENDPOINTS="$CSI_ENDPOINTS unix://${UDS}"
 CSI_ENDPOINTS="$CSI_ENDPOINTS ${UDS}"
 CSI_MOCK_VERSION="master"
 
@@ -24,18 +22,12 @@ runTest()
 	fi
 }
 
-cd mock
-  make clean mock || exit 1
-cd ..
+go install ./mock || exit 1
 
 cd cmd/csi-sanity
   make clean install || exit 1
 cd ../..
 
-runTest "tcp://127.0.0.1:9998" "127.0.0.1:9998"
-rm -f $UDS
-runTest "unix://${UDS}" "unix://${UDS}"
-rm -f $UDS
 runTest "${UDS}" "${UDS}"
 rm -f $UDS
 
