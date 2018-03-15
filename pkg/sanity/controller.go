@@ -729,7 +729,7 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.NotFound))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
