@@ -47,7 +47,6 @@ func TestSanity(t *testing.T) {
 		fmt.Printf("Version = %s\n", VERSION)
 		return
 	}
-	fmt.Println(config)
 	if len(config.Address) == 0 {
 		t.Fatalf("--%sendpoint must be provided with an CSI endpoint", prefix)
 	}
