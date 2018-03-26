@@ -63,6 +63,10 @@ var _ = BeforeSuite(func() {
 	By("creating mount and staging directories")
 	err = createMountTargetLocation(config.TargetPath)
 	Expect(err).NotTo(HaveOccurred())
+	if len(config.StagingPath) > 0 {
+		err = createMountTargetLocation(config.StagingPath)
+		Expect(err).NotTo(HaveOccurred())
+	}
 })
 
 var _ = AfterSuite(func() {
@@ -72,7 +76,7 @@ var _ = AfterSuite(func() {
 func createMountTargetLocation(targetPath string) error {
 	fileInfo, err := os.Stat(targetPath)
 	if err != nil && os.IsNotExist(err) {
-		return os.Mkdir(targetPath, 0755)
+		return os.MkdirAll(targetPath, 0755)
 	} else if err != nil {
 		return err
 	}
