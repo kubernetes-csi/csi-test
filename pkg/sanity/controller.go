@@ -251,7 +251,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-			Expect(vol.GetVolume().GetCapacityBytes()).To(Equal(size))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
 		}
 		By("cleaning up deleting the volume")
 		_, err = c.DeleteVolume(
@@ -288,7 +288,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 		Expect(vol1).NotTo(BeNil())
 		Expect(vol1.GetVolume()).NotTo(BeNil())
 		Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
-		Expect(vol1.GetVolume().GetCapacityBytes()).To(Equal(size))
+		Expect(vol1.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
 		vol2, err := c.CreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
@@ -311,7 +311,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 		Expect(vol2).NotTo(BeNil())
 		Expect(vol2.GetVolume()).NotTo(BeNil())
 		Expect(vol2.GetVolume().GetId()).NotTo(BeEmpty())
-		Expect(vol2.GetVolume().GetCapacityBytes()).To(Equal(size))
+		Expect(vol2.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
 		Expect(vol1.GetVolume().GetId()).To(Equal(vol2.GetVolume().GetId()))
 
 		By("cleaning up deleting the volume")
