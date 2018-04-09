@@ -29,6 +29,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	TestVolumeSize = 10 * 1024 * 1024 * 1024
+)
+
 func verifyVolumeInfo(v *csi.Volume) {
 	Expect(v).NotTo(BeNil())
 	Expect(v.GetId()).NotTo(BeEmpty())
@@ -220,7 +224,6 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size := int64(1 * 1024 * 1024 * 1024)
 		vol, err := c.CreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
@@ -236,7 +239,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 					},
 				},
 				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: size,
+					RequiredBytes: TestVolumeSize,
 				},
 			})
 		if serverError, ok := status.FromError(err); ok {
@@ -251,7 +254,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize))
 		}
 		By("cleaning up deleting the volume")
 		_, err = c.DeleteVolume(
@@ -265,7 +268,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size := int64(1 * 1024 * 1024 * 1024)
+		size := int64(TestVolumeSize)
 		vol1, err := c.CreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
@@ -326,7 +329,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size1 := int64(1 * 1024 * 1024 * 1024)
+		size1 := int64(TestVolumeSize)
 		vol1, err := c.CreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
@@ -343,13 +346,14 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 				},
 				CapacityRange: &csi.CapacityRange{
 					RequiredBytes: size1,
+					LimitBytes:    size1,
 				},
 			})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(vol1).NotTo(BeNil())
 		Expect(vol1.GetVolume()).NotTo(BeNil())
 		Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
-		size2 := int64(2 * 1024 * 1024 * 1024)
+		size2 := int64(2 * TestVolumeSize)
 		_, err = c.CreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
@@ -366,6 +370,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 				},
 				CapacityRange: &csi.CapacityRange{
 					RequiredBytes: size2,
+					LimitBytes:    size2,
 				},
 			})
 		Expect(err).To(HaveOccurred())
