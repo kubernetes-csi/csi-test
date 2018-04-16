@@ -16,7 +16,47 @@ func (s *service) NodeStageVolume(
 	req *csi.NodeStageVolumeRequest) (
 	*csi.NodeStageVolumeResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "")
+	device, ok := req.PublishInfo["device"]
+	if !ok {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"stage volume info 'device' key required")
+	}
+
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+
+	if len(req.GetStagingTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging Target Path cannot be empty")
+	}
+
+	if req.GetVolumeCapability() == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
+	}
+
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	// nodeStgPathKey is the key in the volume's attributes that is set to a
+	// mock stage path if the volume has been published by the node
+	nodeStgPathKey := path.Join(s.nodeID, req.StagingTargetPath)
+
+	// Check to see if the volume has already been staged.
+	if v.Attributes[nodeStgPathKey] != "" {
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
+	// Stage the volume.
+	v.Attributes[nodeStgPathKey] = device
+	s.vols[i] = v
+
+	return &csi.NodeStageVolumeResponse{}, nil
 }
 
 func (s *service) NodeUnstageVolume(
@@ -24,7 +64,36 @@ func (s *service) NodeUnstageVolume(
 	req *csi.NodeUnstageVolumeRequest) (
 	*csi.NodeUnstageVolumeResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "")
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+
+	if len(req.GetStagingTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging Target Path cannot be empty")
+	}
+
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	// nodeStgPathKey is the key in the volume's attributes that is set to a
+	// mock stage path if the volume has been published by the node
+	nodeStgPathKey := path.Join(s.nodeID, req.StagingTargetPath)
+
+	// Check to see if the volume has already been unstaged.
+	if v.Attributes[nodeStgPathKey] == "" {
+		return &csi.NodeUnstageVolumeResponse{}, nil
+	}
+
+	// Unpublish the volume.
+	delete(v.Attributes, nodeStgPathKey)
+	s.vols[i] = v
+
+	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
 func (s *service) NodePublishVolume(
