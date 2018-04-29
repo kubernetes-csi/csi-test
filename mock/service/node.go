@@ -110,6 +110,18 @@ func (s *service) NodePublishVolume(
 			"publish volume info 'device' key required")
 	}
 
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target Path cannot be empty")
+	}
+
+	if req.GetVolumeCapability() == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
+	}
+
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
@@ -135,7 +147,11 @@ func (s *service) NodePublishVolume(
 	}
 
 	// Publish the volume.
-	v.Attributes[nodeMntPathKey] = device
+	if req.GetStagingTargetPath() != "" {
+		v.Attributes[nodeMntPathKey] = req.GetStagingTargetPath()
+	} else {
+		v.Attributes[nodeMntPathKey] = device
+	}
 	s.vols[i] = v
 
 	return &csi.NodePublishVolumeResponse{}, nil
