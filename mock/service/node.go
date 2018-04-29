@@ -49,6 +49,8 @@ func (s *service) NodeStageVolume(
 
 	// Check to see if the volume has already been staged.
 	if v.Attributes[nodeStgPathKey] != "" {
+		// TODO: Check for the capabilities to be equal. Return "ALREADY_EXISTS"
+		// if the capabilities don't match.
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
@@ -196,6 +198,13 @@ func (s *service) NodeGetCapabilities(
 				Type: &csi.NodeServiceCapability_Rpc{
 					Rpc: &csi.NodeServiceCapability_RPC{
 						Type: csi.NodeServiceCapability_RPC_UNKNOWN,
+					},
+				},
+			},
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 					},
 				},
 			},
