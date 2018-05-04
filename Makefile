@@ -14,6 +14,8 @@
 
 IMAGE_NAME = quay.io/k8scsi/mock-driver
 IMAGE_VERSION = canary
+APP := ./bin/mock
+
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -21,17 +23,20 @@ else
 TESTARGS =
 endif
 
-all: mock
+all: $(APP)
 
-mock:
+$(APP):
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o ./bin/mock ./mock/main.go
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o $(APP) ./mock/main.go
 
 clean:
 	rm -rf bin
 
-container: mock
+container: $(APP)
 	docker build -f Dockerfile.mock -t $(IMAGE_NAME):$(IMAGE_VERSION) .
 
 push: container
 	docker push $(IMAGE_NAME):$(IMAGE_VERSION)
+
+.PHONY: all clean container push
+
