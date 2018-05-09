@@ -364,3 +364,157 @@ func testFullWorkflowSuccess(s csi.ControllerClient, c csi.NodeClient, controlle
 		})
 	Expect(err).NotTo(HaveOccurred())
 }
+
+var _ = Describe("NodeStageVolume [Node Server]", func() {
+	var (
+		s                          csi.ControllerClient
+		c                          csi.NodeClient
+		controllerPublishSupported bool
+		nodeStageSupported         bool
+		device                     string
+	)
+
+	BeforeEach(func() {
+		s = csi.NewControllerClient(conn)
+		c = csi.NewNodeClient(conn)
+		device = "/dev/mock"
+		controllerPublishSupported = isControllerCapabilitySupported(
+			s,
+			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
+		nodeStageSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
+		if nodeStageSupported {
+			err := createMountTargetLocation(config.StagingPath)
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			Skip("NodeStageVolume not supported")
+		}
+	})
+
+	It("should fail when no volume id is provided", func() {
+
+		_, err := c.NodeStageVolume(
+			context.Background(),
+			&csi.NodeStageVolumeRequest{
+				StagingTargetPath: config.StagingPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				PublishInfo: map[string]string{
+					"device": device,
+				},
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no staging target path is provided", func() {
+
+		_, err := c.NodeStageVolume(
+			context.Background(),
+			&csi.NodeStageVolumeRequest{
+				VolumeId: "id",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				PublishInfo: map[string]string{
+					"device": device,
+				},
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no volume capability is provided", func() {
+
+		_, err := c.NodeStageVolume(
+			context.Background(),
+			&csi.NodeStageVolumeRequest{
+				VolumeId:          "id",
+				StagingTargetPath: config.StagingPath,
+				PublishInfo: map[string]string{
+					"device": device,
+				},
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+		testFullWorkflowSuccess(s, c, controllerPublishSupported, nodeStageSupported)
+	})
+})
+
+var _ = Describe("NodeUnstageVolume [Node Server]", func() {
+	var (
+		s                          csi.ControllerClient
+		c                          csi.NodeClient
+		controllerPublishSupported bool
+		nodeStageSupported         bool
+	)
+
+	BeforeEach(func() {
+		s = csi.NewControllerClient(conn)
+		c = csi.NewNodeClient(conn)
+		controllerPublishSupported = isControllerCapabilitySupported(
+			s,
+			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
+		nodeStageSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
+		if nodeStageSupported {
+			err := createMountTargetLocation(config.StagingPath)
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			Skip("NodeUnstageVolume not supported")
+		}
+	})
+
+	It("should fail when no volume id is provided", func() {
+
+		_, err := c.NodeUnstageVolume(
+			context.Background(),
+			&csi.NodeUnstageVolumeRequest{
+				StagingTargetPath: config.StagingPath,
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail when no staging target path is provided", func() {
+
+		_, err := c.NodeUnstageVolume(
+			context.Background(),
+			&csi.NodeUnstageVolumeRequest{
+				VolumeId: "id",
+			})
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should return appropriate values (no optional values added)", func() {
+		testFullWorkflowSuccess(s, c, controllerPublishSupported, nodeStageSupported)
+	})
+})
