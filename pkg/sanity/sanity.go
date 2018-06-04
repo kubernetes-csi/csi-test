@@ -51,10 +51,11 @@ var (
 
 // Config provides the configuration for the sanity tests
 type Config struct {
-	TargetPath  string
-	StagingPath string
-	Address     string
-	SecretsFile string
+	TargetPath     string
+	StagingPath    string
+	Address        string
+	SecretsFile    string
+	TestVolumeSize int64
 }
 
 // Test will test the CSI driver at the specified address
