@@ -18,6 +18,9 @@ package sanity
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,6 +50,43 @@ func isNodeCapabilitySupported(c csi.NodeClient,
 		}
 	}
 	return false
+}
+
+// SudoMount provides wrappers around several commands used by the k8s
+// mount utility code. It then runs those commands under pseudo. This
+// allows building and running tests as normal users.
+type SudoMount struct {
+	tmpDir     string
+	searchPath string
+}
+
+func SetupSudoMount() SudoMount {
+	tmpDir, err := ioutil.TempDir("", "sanity-node")
+	Expect(err).NotTo(HaveOccurred())
+	s := SudoMount{
+		tmpDir:     tmpDir,
+		searchPath: os.Getenv("PATH"),
+	}
+	for _, cmd := range []string{"mount", "umount", "blkid", "fsck", "mkfs.ext2", "mkfs.ext3", "mkfs.ext4"} {
+		wrapper := filepath.Join(s.tmpDir, cmd)
+		content := fmt.Sprintf(`#!/bin/sh
+PATH=%q
+if [ $(id -u) != 0 ]; then
+   exec sudo %s "$@"
+else
+   exec %s "$@"
+fi
+`, s.searchPath, cmd, cmd)
+		err := ioutil.WriteFile(wrapper, []byte(content), 0777)
+		Expect(err).NotTo(HaveOccurred())
+	}
+	os.Setenv("PATH", tmpDir+":"+s.searchPath)
+	return s
+}
+
+func (s SudoMount) Close() {
+	os.RemoveAll(s.tmpDir)
+	os.Setenv("PATH", s.searchPath)
 }
 
 var _ = Describe("NodeGetCapabilities [Node Server]", func() {
@@ -234,6 +274,10 @@ var _ = Describe("NodeUnpublishVolume [Node Server]", func() {
 
 // TODO: Tests for NodeStageVolume/NodeUnstageVolume
 func testFullWorkflowSuccess(s csi.ControllerClient, c csi.NodeClient, controllerPublishSupported, nodeStageSupported bool) {
+	// Enable mounting as normal user via sudo.
+	sudoMount := SetupSudoMount()
+	defer sudoMount.Close()
+
 	// Create Volume First
 	By("creating a single node writer volume")
 	name := "sanity"
