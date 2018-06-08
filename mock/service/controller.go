@@ -341,3 +341,18 @@ func (s *service) ControllerGetCapabilities(
 		},
 	}, nil
 }
+
+func (s *service) CreateSnapshot(ctx context.Context,
+	req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+	return nil, status.Error(codes.InvalidArgument, "Not Implemented")
+}
+
+func (s *service) DeleteSnapshot(ctx context.Context,
+	req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+	return nil, status.Error(codes.InvalidArgument, "Not Implemented")
+}
+
+func (s *service) ListSnapshots(ctx context.Context,
+	req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	return nil, status.Error(codes.InvalidArgument, "Not Implemented")
+}
