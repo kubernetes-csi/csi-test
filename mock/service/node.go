@@ -230,5 +230,8 @@ func (s *service) NodeGetCapabilities(
 
 func (s *service) NodeGetInfo(ctx context.Context,
 	req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{}, nil
+
+	return &csi.NodeGetInfoResponse{
+		NodeId: s.nodeID,
+	}, nil
 }
