@@ -30,8 +30,18 @@ import (
 )
 
 const (
-	TestVolumeSize = 10 * 1024 * 1024 * 1024
+	// DefTestVolumeSize defines the base size of dynamically
+	// provisioned volumes. 10GB by default, can be overridden by
+	// setting Config.TestVolumeSize.
+	DefTestVolumeSize int64 = 10 * 1024 * 1024 * 1024
 )
+
+func TestVolumeSize() int64 {
+	if config.TestVolumeSize > 0 {
+		return config.TestVolumeSize
+	}
+	return DefTestVolumeSize
+}
 
 func verifyVolumeInfo(v *csi.Volume) {
 	Expect(v).NotTo(BeNil())
@@ -256,7 +266,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 				},
 			},
 			CapacityRange: &csi.CapacityRange{
-				RequiredBytes: TestVolumeSize,
+				RequiredBytes: TestVolumeSize(),
 			},
 		}
 
@@ -277,7 +287,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize()))
 		}
 		By("cleaning up deleting the volume")
 
@@ -296,7 +306,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size := int64(TestVolumeSize)
+		size := TestVolumeSize()
 
 		req := &csi.CreateVolumeRequest{
 			Name: name,
@@ -372,7 +382,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size1 := int64(TestVolumeSize)
+		size1 := TestVolumeSize()
 
 		req := &csi.CreateVolumeRequest{
 			Name: name,
@@ -401,7 +411,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 		Expect(vol1).NotTo(BeNil())
 		Expect(vol1.GetVolume()).NotTo(BeNil())
 		Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
-		size2 := int64(2 * TestVolumeSize)
+		size2 := 2 * TestVolumeSize()
 
 		req2 := &csi.CreateVolumeRequest{
 			Name: name,
