@@ -79,6 +79,11 @@ var _ = Describe("Probe [Identity Service]", func() {
 		Expect(ok).To(BeTrue())
 		Expect(serverError.Code() == codes.FailedPrecondition ||
 			serverError.Code() == codes.OK).To(BeTrue())
+
+		if res.GetReady() != nil {
+			Expect(res.GetReady().GetValue() == true ||
+				res.GetReady().GetValue() == false).To(BeTrue())
+		}
 	})
 })
 
