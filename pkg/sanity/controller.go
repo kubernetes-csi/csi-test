@@ -19,13 +19,12 @@ package sanity
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-
-	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -171,10 +170,189 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			}
 		})
 
-		// TODO: Add test to test for tokens
+		It("should fail when an invalid starting_token is passed", func() {
+			vols, err := c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{
+					StartingToken: "invalid-token",
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(vols).To(BeNil())
 
-		// TODO: Add test which checks list of volume is there when created,
-		//       and not there when deleted.
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.Aborted))
+		})
+
+		It("should fail when the starting_token is greater than total number of vols", func() {
+			// Get total number of volumes.
+			vols, err := c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+
+			totalVols := len(vols.GetEntries())
+
+			// Send starting_token that is greater than the total number of volumes.
+			vols, err = c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{
+					StartingToken: strconv.Itoa(totalVols + 5),
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(vols).To(BeNil())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.Aborted))
+		})
+
+		It("check the presence of new volumes in the volume list", func() {
+			// List Volumes before creating new volume.
+			vols, err := c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+
+			totalVols := len(vols.GetEntries())
+
+			By("creating a volume")
+			name := "sanity"
+
+			// Create a new volume.
+			req := &csi.CreateVolumeRequest{
+				Name: name,
+				VolumeCapabilities: []*csi.VolumeCapability{
+					{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+				Secrets: sc.Secrets.CreateVolumeSecret,
+			}
+
+			vol, err := c.CreateVolume(context.Background(), req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.GetVolume()).NotTo(BeNil())
+			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+
+			// List volumes and check for the newly created volume.
+			vols, err = c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+			Expect(len(vols.GetEntries())).To(Equal(totalVols + 1))
+
+			By("cleaning up deleting the volume")
+
+			delReq := &csi.DeleteVolumeRequest{
+				VolumeId: vol.GetVolume().GetVolumeId(),
+				Secrets:  sc.Secrets.DeleteVolumeSecret,
+			}
+
+			_, err = c.DeleteVolume(context.Background(), delReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// List volumes and check if the deleted volume exists in the volume list.
+			vols, err = c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+			Expect(len(vols.GetEntries())).To(Equal(totalVols))
+		})
+
+		It("should return next token when a limited number of entries are requested", func() {
+			// minVolCount is the minimum number of volumes expected to exist,
+			// based on which paginated volume listing is performed.
+			minVolCount := 5
+			// maxEntried is the maximum entries in list volume request.
+			maxEntries := 2
+			// currentTotalVols is the total number of volumes at a given time. It
+			// is used to verify that all the volumes have been listed.
+			currentTotalVols := 0
+			// newVolIDs to keep a record of the newly created volume ids.
+			var newVolIDs []string
+
+			// Get the number of existing volumes.
+			vols, err := c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+
+			initialTotalVols := len(vols.GetEntries())
+			currentTotalVols = initialTotalVols
+
+			// Ensure minimum minVolCount volumes exist.
+			if initialTotalVols < minVolCount {
+
+				By("creating required new volumes")
+				requiredVols := minVolCount - initialTotalVols
+				name := "sanity"
+				for i := 1; i <= requiredVols; i++ {
+					req := &csi.CreateVolumeRequest{
+						Name: name + strconv.Itoa(i),
+						VolumeCapabilities: []*csi.VolumeCapability{
+							{
+								AccessType: &csi.VolumeCapability_Mount{
+									Mount: &csi.VolumeCapability_MountVolume{},
+								},
+								AccessMode: &csi.VolumeCapability_AccessMode{
+									Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+								},
+							},
+						},
+						Secrets: sc.Secrets.CreateVolumeSecret,
+					}
+
+					vol, err := c.CreateVolume(context.Background(), req)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(vol).NotTo(BeNil())
+				}
+
+				// Update the current total vols count.
+				currentTotalVols += requiredVols
+			}
+
+			// Request list volumes with max entries maxEntries.
+			vols, err = c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{
+					MaxEntries: int32(maxEntries),
+				})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+
+			nextToken := vols.GetNextToken()
+
+			Expect(nextToken).To(Equal(strconv.Itoa(maxEntries)))
+			Expect(len(vols.GetEntries())).To(Equal(maxEntries))
+
+			if initialTotalVols < minVolCount {
+
+				By("cleaning up deleting the volumes")
+				for _, volID := range newVolIDs {
+					delReq := &csi.DeleteVolumeRequest{
+						VolumeId: volID,
+						Secrets:  sc.Secrets.DeleteVolumeSecret,
+					}
+
+					_, err := c.DeleteVolume(context.Background(), delReq)
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
+		})
 	})
 
 	Describe("CreateVolume", func() {
