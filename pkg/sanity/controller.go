@@ -645,6 +645,31 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 		_, err = c.DeleteVolume(context.Background(), delReq)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("should fail when the requested volume does not exist", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId: "some-vol-id",
+				VolumeCapabilities: []*csi.VolumeCapability{
+					{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			},
+		)
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound))
+	})
 })
 
 var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
