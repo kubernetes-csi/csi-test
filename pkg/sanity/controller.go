@@ -96,6 +96,8 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 			case csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME:
 			case csi.ControllerServiceCapability_RPC_LIST_VOLUMES:
 			case csi.ControllerServiceCapability_RPC_GET_CAPACITY:
+			case csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT:
+			case csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS:
 			default:
 				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 			}
