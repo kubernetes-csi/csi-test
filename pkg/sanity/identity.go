@@ -50,6 +50,7 @@ var _ = Describe("GetPluginCapabilities [Identity Service]", func() {
 		for _, cap := range res.GetCapabilities() {
 			switch cap.GetService().GetType() {
 			case csi.PluginCapability_Service_CONTROLLER_SERVICE:
+			case csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS:
 			default:
 				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetService().GetType()))
 			}
