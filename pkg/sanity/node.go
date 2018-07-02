@@ -49,6 +49,26 @@ func isNodeCapabilitySupported(c csi.NodeClient,
 	return false
 }
 
+func isPluginCapabilitySupported(c csi.IdentityClient,
+	capType csi.PluginCapability_Service_Type,
+) bool {
+
+	caps, err := c.GetPluginCapabilities(
+		context.Background(),
+		&csi.GetPluginCapabilitiesRequest{})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(caps).NotTo(BeNil())
+	Expect(caps.GetCapabilities()).NotTo(BeNil())
+
+	for _, cap := range caps.GetCapabilities() {
+		Expect(cap.GetService()).NotTo(BeNil())
+		if cap.GetService().GetType() == capType {
+			return true
+		}
+	}
+	return false
+}
+
 var _ = Describe("NodeGetCapabilities [Node Server]", func() {
 	var (
 		c csi.NodeClient
@@ -98,6 +118,35 @@ var _ = Describe("NodeGetId [Node Server]", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nid).NotTo(BeNil())
 		Expect(nid.GetNodeId()).NotTo(BeEmpty())
+	})
+})
+
+var _ = Describe("NodeGetInfo [Node Server]", func() {
+	var (
+		c                                csi.NodeClient
+		i                                csi.IdentityClient
+		accessibilityConstraintSupported bool
+	)
+
+	BeforeEach(func() {
+		c = csi.NewNodeClient(conn)
+		i = csi.NewIdentityClient(conn)
+		accessibilityConstraintSupported = isPluginCapabilitySupported(i, csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS)
+	})
+
+	It("should return approproate values", func() {
+		ninfo, err := c.NodeGetInfo(
+			context.Background(),
+			&csi.NodeGetInfoRequest{})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ninfo).NotTo(BeNil())
+		Expect(ninfo.GetNodeId()).NotTo(BeEmpty())
+		Expect(ninfo.GetMaxVolumesPerNode()).NotTo(BeNumerically("<", 0))
+
+		if accessibilityConstraintSupported {
+			Expect(ninfo.GetAccessibleTopology()).NotTo(BeNil())
+		}
 	})
 })
 
