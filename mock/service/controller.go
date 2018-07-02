@@ -16,6 +16,7 @@ import (
 
 const (
 	MaxStorageCapacity = tib
+	ReadOnlyKey        = "readonly"
 )
 
 func (s *service) CreateVolume(
@@ -135,21 +136,48 @@ func (s *service) ControllerPublishVolume(
 
 	// Check to see if the volume is already published.
 	if device := v.Attributes[devPathKey]; device != "" {
+		var volRo bool
+		var roVal string
+		if ro, ok := v.Attributes[ReadOnlyKey]; ok {
+			roVal = ro
+		}
+
+		if roVal == "true" {
+			volRo = true
+		} else {
+			volRo = false
+		}
+
+		// Check if readonly flag is compatible with the publish request.
+		if req.GetReadonly() != volRo {
+			return nil, status.Error(codes.AlreadyExists, "Volume published but has incompatible readonly flag")
+		}
+
 		return &csi.ControllerPublishVolumeResponse{
 			PublishInfo: map[string]string{
-				"device": device,
+				"device":   device,
+				"readonly": roVal,
 			},
 		}, nil
+	}
+
+	var roVal string
+	if req.GetReadonly() {
+		roVal = "true"
+	} else {
+		roVal = "false"
 	}
 
 	// Publish the volume.
 	device := "/dev/mock"
 	v.Attributes[devPathKey] = device
+	v.Attributes[ReadOnlyKey] = roVal
 	s.vols[i] = v
 
 	return &csi.ControllerPublishVolumeResponse{
 		PublishInfo: map[string]string{
-			"device": device,
+			"device":   device,
+			"readonly": roVal,
 		},
 	}, nil
 }
@@ -192,6 +220,7 @@ func (s *service) ControllerUnpublishVolume(
 
 	// Unpublish the volume.
 	delete(v.Attributes, devPathKey)
+	delete(v.Attributes, ReadOnlyKey)
 	s.vols[i] = v
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
