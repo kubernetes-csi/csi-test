@@ -96,6 +96,8 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 			case csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME:
 			case csi.ControllerServiceCapability_RPC_LIST_VOLUMES:
 			case csi.ControllerServiceCapability_RPC_GET_CAPACITY:
+			case csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT:
+			case csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS:
 			default:
 				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 			}
@@ -645,6 +647,31 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 		_, err = c.DeleteVolume(context.Background(), delReq)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("should fail when the requested volume does not exist", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId: "some-vol-id",
+				VolumeCapabilities: []*csi.VolumeCapability{
+					{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			},
+		)
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound))
+	})
 })
 
 var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
@@ -776,6 +803,212 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(conpubvol).NotTo(BeNil())
+
+		By("cleaning up unpublishing the volume")
+
+		unpubReq := &csi.ControllerUnpublishVolumeRequest{
+			VolumeId: vol.GetVolume().GetId(),
+			// NodeID is optional in ControllerUnpublishVolume
+			NodeId: nid.GetNodeId(),
+		}
+
+		if secrets != nil {
+			unpubReq.ControllerUnpublishSecrets = secrets.ControllerUnpublishVolumeSecret
+		}
+
+		conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conunpubvol).NotTo(BeNil())
+
+		By("cleaning up deleting the volume")
+
+		delReq := &csi.DeleteVolumeRequest{
+			VolumeId: vol.GetVolume().GetId(),
+		}
+
+		if secrets != nil {
+			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		}
+
+		_, err = c.DeleteVolume(context.Background(), delReq)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should fail when the volume does not exist", func() {
+
+		By("calling controller publish on a non-existent volume")
+
+		pubReq := &csi.ControllerPublishVolumeRequest{
+			VolumeId: "some-vol-id",
+			NodeId:   "some-node-id",
+			VolumeCapability: &csi.VolumeCapability{
+				AccessType: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{},
+				},
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+			},
+			Readonly: false,
+		}
+
+		if secrets != nil {
+			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		}
+
+		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+		Expect(err).To(HaveOccurred())
+		Expect(conpubvol).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound))
+	})
+
+	It("should fail when the node does not exist", func() {
+
+		// Create Volume First
+		By("creating a single node writer volume")
+		name := "sanity"
+		req := &csi.CreateVolumeRequest{
+			Name: name,
+			VolumeCapabilities: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			},
+		}
+
+		if secrets != nil {
+			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		}
+
+		vol, err := c.CreateVolume(context.Background(), req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolume()).NotTo(BeNil())
+		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+
+		// ControllerPublishVolume
+		By("calling controllerpublish on that volume")
+
+		pubReq := &csi.ControllerPublishVolumeRequest{
+			VolumeId: vol.GetVolume().GetId(),
+			NodeId:   "some-fake-node-id",
+			VolumeCapability: &csi.VolumeCapability{
+				AccessType: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{},
+				},
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+			},
+			Readonly: false,
+		}
+
+		if secrets != nil {
+			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		}
+
+		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+		Expect(err).To(HaveOccurred())
+		Expect(conpubvol).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound))
+
+		By("cleaning up deleting the volume")
+
+		delReq := &csi.DeleteVolumeRequest{
+			VolumeId: vol.GetVolume().GetId(),
+		}
+
+		if secrets != nil {
+			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		}
+
+		_, err = c.DeleteVolume(context.Background(), delReq)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should fail when the volume is already published but is incompatible", func() {
+
+		// Create Volume First
+		By("creating a single node writer volume")
+		name := "sanity"
+		req := &csi.CreateVolumeRequest{
+			Name: name,
+			VolumeCapabilities: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			},
+		}
+
+		if secrets != nil {
+			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		}
+
+		vol, err := c.CreateVolume(context.Background(), req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolume()).NotTo(BeNil())
+		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+
+		By("getting a node id")
+		nid, err := n.NodeGetId(
+			context.Background(),
+			&csi.NodeGetIdRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(nid).NotTo(BeNil())
+		Expect(nid.GetNodeId()).NotTo(BeEmpty())
+
+		// ControllerPublishVolume
+		By("calling controllerpublish on that volume")
+
+		pubReq := &csi.ControllerPublishVolumeRequest{
+			VolumeId: vol.GetVolume().GetId(),
+			NodeId:   nid.GetNodeId(),
+			VolumeCapability: &csi.VolumeCapability{
+				AccessType: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{},
+				},
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+			},
+			Readonly: false,
+		}
+
+		if secrets != nil {
+			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		}
+
+		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conpubvol).NotTo(BeNil())
+
+		// Publish again with different attributes.
+		pubReq.Readonly = true
+
+		conpubvol, err = c.ControllerPublishVolume(context.Background(), pubReq)
+		Expect(err).To(HaveOccurred())
+		Expect(conpubvol).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.AlreadyExists))
 
 		By("cleaning up unpublishing the volume")
 
