@@ -96,6 +96,8 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 			case csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME:
 			case csi.ControllerServiceCapability_RPC_LIST_VOLUMES:
 			case csi.ControllerServiceCapability_RPC_GET_CAPACITY:
+			case csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT:
+			case csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS:
 			default:
 				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 			}
@@ -644,6 +646,31 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should fail when the requested volume does not exist", func() {
+
+		_, err := c.ValidateVolumeCapabilities(
+			context.Background(),
+			&csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId: "some-vol-id",
+				VolumeCapabilities: []*csi.VolumeCapability{
+					{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+			},
+		)
+		Expect(err).To(HaveOccurred())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound))
 	})
 })
 
