@@ -223,7 +223,8 @@ var _ = DescribeSanity("NodePublishVolume [Node Server]", func(sc *SanityContext
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
-		testFullWorkflowSuccess(sc, s, c, controllerPublishSupported, nodeStageSupported)
+		name := uniqueString("sanity-node-publish")
+		testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
 	})
 })
 
@@ -275,15 +276,15 @@ var _ = DescribeSanity("NodeUnpublishVolume [Node Server]", func(sc *SanityConte
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
-		testFullWorkflowSuccess(sc, s, c, controllerPublishSupported, nodeStageSupported)
+		name := uniqueString("sanity-node-unpublish")
+		testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
 	})
 })
 
 // TODO: Tests for NodeStageVolume/NodeUnstageVolume
-func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.NodeClient, controllerPublishSupported, nodeStageSupported bool) {
+func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.NodeClient, name string, controllerPublishSupported, nodeStageSupported bool) {
 	// Create Volume First
 	By("creating a single node writer volume")
-	name := "sanity"
 	req := &csi.CreateVolumeRequest{
 		Name: name,
 		VolumeCapabilities: []*csi.VolumeCapability{
@@ -558,7 +559,8 @@ var _ = DescribeSanity("NodeStageVolume [Node Server]", func(sc *SanityContext) 
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
-		testFullWorkflowSuccess(sc, s, c, controllerPublishSupported, nodeStageSupported)
+		name := uniqueString("sanity-node-stage")
+		testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
 	})
 })
 
@@ -614,6 +616,7 @@ var _ = DescribeSanity("NodeUnstageVolume [Node Server]", func(sc *SanityContext
 	})
 
 	It("should return appropriate values (no optional values added)", func() {
-		testFullWorkflowSuccess(sc, s, c, controllerPublishSupported, nodeStageSupported)
+		name := uniqueString("sanity-node-unstage")
+		testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
 	})
 })
