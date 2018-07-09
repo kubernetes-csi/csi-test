@@ -332,7 +332,8 @@ func testFullWorkflowSuccess(s csi.ControllerClient, c csi.NodeClient, controlle
 					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 				},
 			},
-			Readonly: false,
+			VolumeAttributes: vol.GetVolume().GetAttributes(),
+			Readonly:         false,
 		}
 
 		if secrets != nil {
@@ -356,6 +357,7 @@ func testFullWorkflowSuccess(s csi.ControllerClient, c csi.NodeClient, controlle
 					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 				},
 			},
+			VolumeAttributes:  vol.GetVolume().GetAttributes(),
 			StagingTargetPath: config.StagingPath,
 		}
 		if controllerPublishSupported {
@@ -382,6 +384,7 @@ func testFullWorkflowSuccess(s csi.ControllerClient, c csi.NodeClient, controlle
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
 		},
+		VolumeAttributes: vol.GetVolume().GetAttributes(),
 	}
 	if nodeStageSupported {
 		nodepubvolRequest.StagingTargetPath = config.StagingPath
