@@ -85,6 +85,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			s,
 			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
 		nodeStageSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
+		if nodeStageSupported {
+			err := createMountTargetLocation(sc.Config.StagingPath)
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 
 	Describe("NodeGetCapabilities", func() {
@@ -150,13 +154,6 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 	})
 
 	Describe("NodePublishVolume", func() {
-		BeforeEach(func() {
-			if nodeStageSupported {
-				err := createMountTargetLocation(sc.Config.StagingPath)
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
 		It("should fail when no volume id is provided", func() {
 
 			req := &csi.NodePublishVolumeRequest{}
@@ -209,21 +206,9 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
-
-		It("should return appropriate values (no optional values added)", func() {
-			name := uniqueString("sanity-node-publish")
-			testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
-		})
 	})
 
 	Describe("NodeUnpublishVolume", func() {
-		BeforeEach(func() {
-			if nodeStageSupported {
-				err := createMountTargetLocation(sc.Config.StagingPath)
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
 		It("should fail when no volume id is provided", func() {
 
 			_, err := c.NodeUnpublishVolume(
@@ -249,11 +234,6 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
-
-		It("should return appropriate values (no optional values added)", func() {
-			name := uniqueString("sanity-node-unpublish")
-			testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
-		})
 	})
 
 	Describe("NodeStageVolume", func() {
@@ -262,13 +242,11 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		)
 
 		BeforeEach(func() {
-			device = "/dev/mock"
-			if nodeStageSupported {
-				err := createMountTargetLocation(sc.Config.StagingPath)
-				Expect(err).NotTo(HaveOccurred())
-			} else {
+			if !nodeStageSupported {
 				Skip("NodeStageVolume not supported")
 			}
+
+			device = "/dev/mock"
 		})
 
 		It("should fail when no volume id is provided", func() {
@@ -350,19 +328,11 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
-
-		It("should return appropriate values (no optional values added)", func() {
-			name := uniqueString("sanity-node-stage")
-			testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
-		})
 	})
 
 	Describe("NodeUnstageVolume", func() {
 		BeforeEach(func() {
-			if nodeStageSupported {
-				err := createMountTargetLocation(sc.Config.StagingPath)
-				Expect(err).NotTo(HaveOccurred())
-			} else {
+			if !nodeStageSupported {
 				Skip("NodeUnstageVolume not supported")
 			}
 		})
@@ -394,11 +364,11 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
+	})
 
-		It("should return appropriate values (no optional values added)", func() {
-			name := uniqueString("sanity-node-unstage")
-			testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
-		})
+	It("should work", func() {
+		name := uniqueString("sanity-node-full")
+		testFullWorkflowSuccess(sc, s, c, name, controllerPublishSupported, nodeStageSupported)
 	})
 })
 
