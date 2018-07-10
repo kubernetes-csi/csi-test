@@ -38,7 +38,6 @@ func isNodeCapabilitySupported(c csi.NodeClient,
 		&csi.NodeGetCapabilitiesRequest{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(caps).NotTo(BeNil())
-	Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
 		Expect(cap.GetRpc()).NotTo(BeNil())
@@ -86,7 +85,6 @@ var _ = Describe("NodeGetCapabilities [Node Server]", func() {
 		By("checking successful response")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(caps).NotTo(BeNil())
-		Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 		for _, cap := range caps.GetCapabilities() {
 			Expect(cap.GetRpc()).NotTo(BeNil())
