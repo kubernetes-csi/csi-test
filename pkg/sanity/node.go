@@ -38,7 +38,6 @@ func isNodeCapabilitySupported(c csi.NodeClient,
 		&csi.NodeGetCapabilitiesRequest{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(caps).NotTo(BeNil())
-	Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
 		Expect(cap.GetRpc()).NotTo(BeNil())
@@ -86,7 +85,6 @@ var _ = DescribeSanity("NodeGetCapabilities [Node Server]", func(sc *SanityConte
 		By("checking successful response")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(caps).NotTo(BeNil())
-		Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 		for _, cap := range caps.GetCapabilities() {
 			Expect(cap.GetRpc()).NotTo(BeNil())
@@ -332,7 +330,8 @@ func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.No
 					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 				},
 			},
-			Readonly: false,
+			VolumeAttributes: vol.GetVolume().GetAttributes(),
+			Readonly:         false,
 		}
 
 		if sc.Secrets != nil {
@@ -357,6 +356,7 @@ func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.No
 				},
 			},
 			StagingTargetPath: sc.Config.StagingPath,
+			VolumeAttributes:  vol.GetVolume().GetAttributes(),
 		}
 		if controllerPublishSupported {
 			nodeStageVolReq.PublishInfo = conpubvol.GetPublishInfo()
@@ -382,6 +382,7 @@ func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.No
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
 		},
+		VolumeAttributes: vol.GetVolume().GetAttributes(),
 	}
 	if nodeStageSupported {
 		nodepubvolRequest.StagingTargetPath = sc.Config.StagingPath
