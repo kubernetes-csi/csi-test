@@ -81,11 +81,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 		n csi.NodeClient
+
+		cl *Cleanup
 	)
 
 	BeforeEach(func() {
 		c = csi.NewControllerClient(sc.Conn)
 		n = csi.NewNodeClient(sc.Conn)
+
+		cl = &Cleanup{
+			NodeClient:       n,
+			ControllerClient: c,
+			Context:          sc,
+		}
+	})
+
+	AfterEach(func() {
+		cl.DeleteVolumes()
 	})
 
 	Describe("ControllerGetCapabilities", func() {
@@ -167,12 +179,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 		})
 
 		It("should fail when no name is provided", func() {
-			_, err := c.CreateVolume(
+			vol, err := c.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
 			)
+			cl.MaybeRegisterVolume("", vol, err)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -181,13 +194,15 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
-			_, err := c.CreateVolume(
+			name := uniqueString("sanity-controller-create-no-volume-capabilities")
+			vol, err := c.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
-					Name: "name",
+					Name: name,
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
 			)
+			cl.MaybeRegisterVolume(name, vol, err)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -221,6 +236,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			By("cleaning up deleting the volume")
 
@@ -232,6 +248,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 
 		It("should return appropriate values SingleNodeWriter WithCapacity 1Gi Type:Mount", func() {
@@ -259,20 +276,17 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
 			)
-			if serverError, ok := status.FromError(err); ok {
-				if serverError.Code() == codes.OutOfRange || serverError.Code() == codes.Unimplemented {
-					Skip("Required bytes not supported")
-				} else {
-					Expect(err).NotTo(HaveOccurred())
-				}
-			} else {
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(vol).NotTo(BeNil())
-				Expect(vol.GetVolume()).NotTo(BeNil())
-				Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-				Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize(sc)))
+			if serverError, ok := status.FromError(err); ok &&
+				(serverError.Code() == codes.OutOfRange || serverError.Code() == codes.Unimplemented) {
+				Skip("Required bytes not supported")
 			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.GetVolume()).NotTo(BeNil())
+			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize(sc)))
+
 			By("cleaning up deleting the volume")
 
 			_, err = c.DeleteVolume(
@@ -283,6 +297,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 		It("should not fail when requesting to create a volume with already exisiting name and same capacity.", func() {
 
@@ -314,6 +329,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol1).NotTo(BeNil())
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol1.GetVolume().GetId()})
 			Expect(vol1.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
 
 			vol2, err := c.CreateVolume(
@@ -353,6 +369,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 		It("should fail when requesting to create a volume with already exisiting name and different capacity.", func() {
 
@@ -385,6 +402,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol1).NotTo(BeNil())
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol1.GetVolume().GetId()})
 			size2 := 2 * TestVolumeSize(sc)
 
 			_, err = c.CreateVolume(
@@ -423,6 +441,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 	})
 
@@ -487,6 +506,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			// Delete Volume
 			By("deleting a volume")
@@ -499,6 +519,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 	})
 
@@ -556,6 +577,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			// ValidateVolumeCapabilities
 			By("validating volume capabilities")
@@ -588,6 +610,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 
 		It("should fail when the requested volume does not exist", func() {
@@ -698,6 +721,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			By("getting a node id")
 			nid, err := n.NodeGetId(
@@ -728,6 +752,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId(), NodeID: nid.GetNodeId()})
 			Expect(conpubvol).NotTo(BeNil())
 
 			By("cleaning up unpublishing the volume")
@@ -754,6 +779,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 
 		It("should fail when the volume does not exist", func() {
@@ -812,6 +838,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
@@ -850,6 +877,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 
 		It("should fail when the volume is already published but is incompatible", func() {
@@ -879,6 +907,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			By("getting a node id")
 			nid, err := n.NodeGetId(
@@ -946,6 +975,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 	})
 
@@ -998,6 +1028,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
 			By("getting a node id")
 			nid, err := n.NodeGetId(
@@ -1028,6 +1059,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId(), NodeID: nid.GetNodeId()})
 			Expect(conpubvol).NotTo(BeNil())
 
 			// ControllerUnpublishVolume
@@ -1055,6 +1087,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
 		})
 	})
 })
