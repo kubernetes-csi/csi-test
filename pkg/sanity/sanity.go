@@ -88,6 +88,8 @@ func (sc *SanityContext) setup() {
 	if len(sc.Config.SecretsFile) > 0 {
 		sc.Secrets, err = loadSecrets(sc.Config.SecretsFile)
 		Expect(err).NotTo(HaveOccurred())
+	} else {
+		sc.Secrets = &CSISecrets{}
 	}
 
 	By("connecting to CSI driver")
