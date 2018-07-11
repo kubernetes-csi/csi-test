@@ -167,14 +167,12 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 		})
 
 		It("should fail when no name is provided", func() {
-
-			req := &csi.CreateVolumeRequest{}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			_, err := c.CreateVolume(context.Background(), req)
+			_, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -183,16 +181,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
-
-			req := &csi.CreateVolumeRequest{
-				Name: "name",
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			_, err := c.CreateVolume(context.Background(), req)
+			_, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: "name",
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -205,25 +200,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a volume")
 			name := uniqueString("sanity-controller-create-single-no-capacity")
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -231,15 +224,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -248,28 +239,26 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a volume")
 			name := uniqueString("sanity-controller-create-single-with-capacity")
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: TestVolumeSize(sc),
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: TestVolumeSize(sc),
-				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			if serverError, ok := status.FromError(err); ok {
 				if serverError.Code() == codes.OutOfRange || serverError.Code() == codes.Unimplemented {
 					Skip("Required bytes not supported")
@@ -286,15 +275,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			}
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should not fail when requesting to create a volume with already exisiting name and same capacity.", func() {
@@ -303,56 +290,52 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			name := uniqueString("sanity-controller-create-twice")
 			size := TestVolumeSize(sc)
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol1, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: size,
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: size,
-				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol1, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol1).NotTo(BeNil())
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
 			Expect(vol1.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
 
-			req2 := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol2, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: size,
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: size,
-				},
-			}
-
-			if sc.Secrets != nil {
-				req2.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol2, err := c.CreateVolume(context.Background(), req2)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol2).NotTo(BeNil())
 			Expect(vol2.GetVolume()).NotTo(BeNil())
@@ -362,15 +345,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol1.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol1.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should fail when requesting to create a volume with already exisiting name and different capacity.", func() {
@@ -379,58 +360,54 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			name := uniqueString("sanity-controller-create-twice-different")
 			size1 := TestVolumeSize(sc)
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol1, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: size1,
+						LimitBytes:    size1,
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: size1,
-					LimitBytes:    size1,
-				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol1, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(vol1).NotTo(BeNil())
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
 			size2 := 2 * TestVolumeSize(sc)
 
-			req2 := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			_, err = c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: size2,
+						LimitBytes:    size2,
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-				CapacityRange: &csi.CapacityRange{
-					RequiredBytes: size2,
-					LimitBytes:    size2,
-				},
-			}
-
-			if sc.Secrets != nil {
-				req2.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			_, err = c.CreateVolume(context.Background(), req2)
+			)
 			Expect(err).To(HaveOccurred())
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
@@ -438,15 +415,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol1.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol1.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -460,13 +435,12 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should fail when no volume id is provided", func() {
 
-			req := &csi.DeleteVolumeRequest{}
-
-			if sc.Secrets != nil {
-				req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err := c.DeleteVolume(context.Background(), req)
+			_, err := c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -476,15 +450,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should succeed when an invalid volume id is used", func() {
 
-			req := &csi.DeleteVolumeRequest{
-				VolumeId: "reallyfakevolumeid",
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err := c.DeleteVolume(context.Background(), req)
+			_, err := c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                "reallyfakevolumeid",
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -494,26 +466,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a volume")
 			name := uniqueString("sanity-controller-create-appropriate")
 
-			createReq := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				createReq.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), createReq)
-
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -522,15 +491,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// Delete Volume
 			By("deleting a volume")
 
-			req := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), req)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -568,25 +535,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a single node writer volume")
 			name := uniqueString("sanity-controller-validate")
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -615,15 +580,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -662,13 +625,12 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should fail when no volume id is provided", func() {
 
-			req := &csi.ControllerPublishVolumeRequest{}
-
-			if sc.Secrets != nil {
-				req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			_, err := c.ControllerPublishVolume(context.Background(), req)
+			_, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -678,15 +640,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should fail when no node id is provided", func() {
 
-			req := &csi.ControllerPublishVolumeRequest{
-				VolumeId: "id",
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			_, err := c.ControllerPublishVolume(context.Background(), req)
+			_, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId:                 "id",
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -696,16 +656,14 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should fail when no volume capability is provided", func() {
 
-			req := &csi.ControllerPublishVolumeRequest{
-				VolumeId: "id",
-				NodeId:   "fakenode",
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			_, err := c.ControllerPublishVolume(context.Background(), req)
+			_, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId: "id",
+					NodeId:   "fakenode",
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -718,25 +676,24 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// Create Volume First
 			By("creating a single node writer volume")
 			name := uniqueString("sanity-controller-publish")
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -753,55 +710,49 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
-			pubReq := &csi.ControllerPublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				NodeId:   nid.GetNodeId(),
-				VolumeCapability: &csi.VolumeCapability{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
+			conpubvol, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					NodeId:   nid.GetNodeId(),
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
 					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
+					Readonly:                 false,
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
 				},
-				Readonly: false,
-			}
-
-			if sc.Secrets != nil {
-				pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conpubvol).NotTo(BeNil())
 
 			By("cleaning up unpublishing the volume")
 
-			unpubReq := &csi.ControllerUnpublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				// NodeID is optional in ControllerUnpublishVolume
-				NodeId: nid.GetNodeId(),
-			}
-
-			if sc.Secrets != nil {
-				unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
-			}
-
-			conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
+			conunpubvol, err := c.ControllerUnpublishVolume(
+				context.Background(),
+				&csi.ControllerUnpublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					// NodeID is optional in ControllerUnpublishVolume
+					NodeId: nid.GetNodeId(),
+					ControllerUnpublishSecrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conunpubvol).NotTo(BeNil())
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -809,25 +760,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("calling controller publish on a non-existent volume")
 
-			pubReq := &csi.ControllerPublishVolumeRequest{
-				VolumeId: "some-vol-id",
-				NodeId:   "some-node-id",
-				VolumeCapability: &csi.VolumeCapability{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
+			conpubvol, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId: "some-vol-id",
+					NodeId:   "some-node-id",
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
 					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
+					Readonly:                 false,
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
 				},
-				Readonly: false,
-			}
-
-			if sc.Secrets != nil {
-				pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+			)
 			Expect(err).To(HaveOccurred())
 			Expect(conpubvol).To(BeNil())
 
@@ -841,25 +790,24 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// Create Volume First
 			By("creating a single node writer volume")
 			name := uniqueString("sanity-controller-wrong-node")
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -868,25 +816,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
-			pubReq := &csi.ControllerPublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				NodeId:   "some-fake-node-id",
-				VolumeCapability: &csi.VolumeCapability{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
+			conpubvol, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					NodeId:   "some-fake-node-id",
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
 					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
+					Readonly:                 false,
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
 				},
-				Readonly: false,
-			}
-
-			if sc.Secrets != nil {
-				pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+			)
 			Expect(err).To(HaveOccurred())
 			Expect(conpubvol).To(BeNil())
 
@@ -896,15 +842,13 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -913,25 +857,24 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// Create Volume First
 			By("creating a single node writer volume")
 			name := uniqueString("sanity-controller-published-incompatible")
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -959,11 +902,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				Readonly: false,
-			}
-
-			if sc.Secrets != nil {
-				pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
+				Readonly:                 false,
+				ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
 			}
 
 			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -983,31 +923,28 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			By("cleaning up unpublishing the volume")
 
-			unpubReq := &csi.ControllerUnpublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				// NodeID is optional in ControllerUnpublishVolume
-				NodeId: nid.GetNodeId(),
-			}
+			conunpubvol, err := c.ControllerUnpublishVolume(
+				context.Background(),
+				&csi.ControllerUnpublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					// NodeID is optional in ControllerUnpublishVolume
+					NodeId: nid.GetNodeId(),
+					ControllerUnpublishSecrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+				},
+			)
 
-			if sc.Secrets != nil {
-				unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
-			}
-
-			conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conunpubvol).NotTo(BeNil())
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -1021,13 +958,12 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should fail when no volume id is provided", func() {
 
-			req := &csi.ControllerUnpublishVolumeRequest{}
-
-			if sc.Secrets != nil {
-				req.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
-			}
-
-			_, err := c.ControllerUnpublishVolume(context.Background(), req)
+			_, err := c.ControllerUnpublishVolume(
+				context.Background(),
+				&csi.ControllerUnpublishVolumeRequest{
+					ControllerUnpublishSecrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+				},
+			)
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -1041,25 +977,23 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a single node writer volume")
 			name := uniqueString("sanity-controller-unpublish")
 
-			req := &csi.CreateVolumeRequest{
-				Name: name,
-				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
 						},
 					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
 				},
-			}
-
-			if sc.Secrets != nil {
-				req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
-			}
-
-			vol, err := c.CreateVolume(context.Background(), req)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
@@ -1076,56 +1010,50 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
-			pubReq := &csi.ControllerPublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				NodeId:   nid.GetNodeId(),
-				VolumeCapability: &csi.VolumeCapability{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
+			conpubvol, err := c.ControllerPublishVolume(
+				context.Background(),
+				&csi.ControllerPublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					NodeId:   nid.GetNodeId(),
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
 					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
+					Readonly:                 false,
+					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
 				},
-				Readonly: false,
-			}
-
-			if sc.Secrets != nil {
-				pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
-			}
-
-			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conpubvol).NotTo(BeNil())
 
 			// ControllerUnpublishVolume
 			By("calling controllerunpublish on that volume")
 
-			unpubReq := &csi.ControllerUnpublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-				// NodeID is optional in ControllerUnpublishVolume
-				NodeId: nid.GetNodeId(),
-			}
-
-			if sc.Secrets != nil {
-				unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
-			}
-
-			conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
+			conunpubvol, err := c.ControllerUnpublishVolume(
+				context.Background(),
+				&csi.ControllerUnpublishVolumeRequest{
+					VolumeId: vol.GetVolume().GetId(),
+					// NodeID is optional in ControllerUnpublishVolume
+					NodeId: nid.GetNodeId(),
+					ControllerUnpublishSecrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(conunpubvol).NotTo(BeNil())
 
 			By("cleaning up deleting the volume")
 
-			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetId(),
-			}
-
-			if sc.Secrets != nil {
-				delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
-			}
-
-			_, err = c.DeleteVolume(context.Background(), delReq)
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
