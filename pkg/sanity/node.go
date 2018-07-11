@@ -449,9 +449,7 @@ func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.No
 			},
 			StagingTargetPath: sc.Config.StagingPath,
 			VolumeAttributes:  vol.GetVolume().GetAttributes(),
-		}
-		if controllerPublishSupported {
-			nodeStageVolReq.PublishInfo = conpubvol.GetPublishInfo()
+			PublishInfo:       conpubvol.GetPublishInfo(),
 		}
 		if sc.Secrets != nil {
 			nodeStageVolReq.NodeStageSecrets = sc.Secrets.NodeStageVolumeSecret
@@ -475,12 +473,10 @@ func testFullWorkflowSuccess(sc *SanityContext, s csi.ControllerClient, c csi.No
 			},
 		},
 		VolumeAttributes: vol.GetVolume().GetAttributes(),
+		PublishInfo:      conpubvol.GetPublishInfo(),
 	}
 	if nodeStageSupported {
 		nodepubvolRequest.StagingTargetPath = sc.Config.StagingPath
-	}
-	if controllerPublishSupported {
-		nodepubvolRequest.PublishInfo = conpubvol.GetPublishInfo()
 	}
 	if sc.Secrets != nil {
 		nodepubvolRequest.NodePublishSecrets = sc.Secrets.NodePublishVolumeSecret
