@@ -19,7 +19,7 @@ limitations under the License.
 package driver
 
 import (
-	context "context"
+	"context"
 	"errors"
 	"net"
 	"sync"
@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

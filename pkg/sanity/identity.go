@@ -17,14 +17,14 @@ limitations under the License.
 package sanity
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	context "golang.org/x/net/context"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
