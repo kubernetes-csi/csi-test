@@ -38,5 +38,14 @@ container: $(APP)
 push: container
 	docker push $(IMAGE_NAME):$(IMAGE_VERSION)
 
-.PHONY: all clean container push
+test:
+	if ! [ $$(go fmt $$(go list ./... | grep -v vendor) | wc -l) -eq 0 ]; then \
+		echo "formatting errors:"; \
+		go fmt $$(go list ./... | grep -v vendor); \
+		false; \
+	fi
+	go vet $$(go list ./... | grep -v vendor)
+	go test $$(go list ./... | grep -v vendor | grep -v "cmd/csi-sanity")
+	./hack/e2e.sh
 
+.PHONY: all clean container push test
