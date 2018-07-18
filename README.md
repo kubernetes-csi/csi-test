@@ -25,5 +25,5 @@ CSI driver.
 
 ### Note
 
-* Master is for CSI v0.3.0. Please see the branches for other CSI releases.
+* Master is for CSI v0.4.0. Please see the branches for other CSI releases.
 * Only Golang 1.9+ supported. See [gRPC issue](https://github.com/grpc/grpc-go/issues/711#issuecomment-326626790)
