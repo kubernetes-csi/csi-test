@@ -16,16 +16,16 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	mock_driver "github.com/kubernetes-csi/csi-test/driver"
 	mock_utils "github.com/kubernetes-csi/csi-test/utils"
-	"golang.org/x/net/context"
 )
 
 func TestPluginInfoResponse(t *testing.T) {
