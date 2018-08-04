@@ -1,5 +1,5 @@
 APP_NAME := csi-sanity
-VER :=$(shell git describe)
+VER :=$(shell git describe --tag --dirty)
 RELEASEVER := $(shell git describe --abbrev=0)
 BRANCH := $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 SHA := $(shell git rev-parse --short HEAD)

@@ -79,8 +79,8 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 	)
 
 	BeforeEach(func() {
-		c = csi.NewNodeClient(sc.Conn)
-		s = csi.NewControllerClient(sc.Conn)
+		c = csi.NewNodeClient(conn)
+		s = csi.NewControllerClient(conn)
 
 		controllerPublishSupported = isControllerCapabilitySupported(
 			s,
@@ -145,7 +145,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		)
 
 		BeforeEach(func() {
-			i = csi.NewIdentityClient(sc.Conn)
+			i = csi.NewIdentityClient(conn)
 			accessibilityConstraintSupported = isPluginCapabilitySupported(i, csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS)
 		})
 

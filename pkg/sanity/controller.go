@@ -25,9 +25,10 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 
+	"strconv"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"strconv"
 )
 
 const (
@@ -86,8 +87,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(sc.Conn)
-		n = csi.NewNodeClient(sc.Conn)
+		c = csi.NewControllerClient(conn)
+		n = csi.NewNodeClient(conn)
 
 		cl = &Cleanup{
 			NodeClient:       n,
@@ -1098,7 +1099,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(sc.Conn)
+		c = csi.NewControllerClient(conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS) {
 			Skip("ListSnapshots not supported")
@@ -1392,7 +1393,7 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *SanityCont
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(sc.Conn)
+		c = csi.NewControllerClient(conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT) {
 			Skip("DeleteSnapshot not supported")
@@ -1455,7 +1456,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(sc.Conn)
+		c = csi.NewControllerClient(conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT) {
 			Skip("CreateSnapshot not supported")

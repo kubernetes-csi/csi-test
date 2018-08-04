@@ -58,9 +58,13 @@ type Config struct {
 // gets initialized before each test block runs.
 type SanityContext struct {
 	Config  *Config
-	Conn    *grpc.ClientConn
 	Secrets *CSISecrets
 }
+
+var (
+	conn    *grpc.ClientConn
+	address string
+)
 
 // Test will test the CSI driver at the specified address by
 // setting up a Ginkgo suite and running it.
@@ -69,10 +73,22 @@ func Test(t *testing.T, reqConfig *Config) {
 		Config: reqConfig,
 	}
 
+	address = sc.Config.Address
 	registerTestsInGinkgo(sc)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Driver Test Suite")
 }
+
+var _ = BeforeSuite(func() {
+	var err error
+	By("connecting to CSI driver")
+	conn, err = utils.Connect(address)
+	Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = AfterSuite(func() {
+	conn.Close()
+})
 
 func GinkgoTest(reqConfig *Config) {
 	sc := &SanityContext{
@@ -92,10 +108,6 @@ func (sc *SanityContext) setup() {
 		sc.Secrets = &CSISecrets{}
 	}
 
-	By("connecting to CSI driver")
-	sc.Conn, err = utils.Connect(sc.Config.Address)
-	Expect(err).NotTo(HaveOccurred())
-
 	By("creating mount and staging directories")
 	err = createMountTargetLocation(sc.Config.TargetPath)
 	Expect(err).NotTo(HaveOccurred())
@@ -106,10 +118,6 @@ func (sc *SanityContext) setup() {
 }
 
 func (sc *SanityContext) teardown() {
-	if sc.Conn != nil {
-		sc.Conn.Close()
-		sc.Conn = nil
-	}
 }
 
 func createMountTargetLocation(targetPath string) error {
