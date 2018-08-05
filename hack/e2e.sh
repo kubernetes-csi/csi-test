@@ -35,6 +35,25 @@ runTestWithCreds()
 	fi
 }
 
+runTestAPI()
+{
+	CSI_ENDPOINT=$1 ./bin/mock &
+	local pid=$!
+
+	GOCACHE=off go test -v ./hack/_apitest/api_test.go; ret=$?
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+
+	GOCACHE=off go test -v ./hack/_embedded/embedded_test.go; ret=$?
+	kill -9 $pid
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
 go build -o bin/mock ./mock || exit 1
 
 cd cmd/csi-sanity
@@ -45,6 +64,9 @@ runTest "${UDS}" "${UDS}"
 rm -f $UDS
 
 runTestWithCreds "${UDS}" "${UDS}"
+rm -f $UDS
+
+runTestAPI "${UDS}"
 rm -f $UDS
 
 exit 0

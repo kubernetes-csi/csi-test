@@ -95,6 +95,7 @@ func GinkgoTest(reqConfig *Config) {
 		Config: reqConfig,
 	}
 
+	address = sc.Config.Address
 	registerTestsInGinkgo(sc)
 }
 
