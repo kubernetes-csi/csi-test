@@ -1349,7 +1349,6 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 
 		nextToken := snapshots.GetNextToken()
 
-		Expect(nextToken).To(Equal(strconv.Itoa(maxEntries)))
 		Expect(len(snapshots.GetEntries())).To(Equal(maxEntries))
 
 		// Request list snapshots with starting_token and no max entries.
