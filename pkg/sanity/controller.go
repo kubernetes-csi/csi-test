@@ -443,6 +443,52 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(err).NotTo(HaveOccurred())
 			cl.UnregisterVolume(name)
 		})
+
+		It("should not fail when creating volume with a unicode name", func() {
+
+			name := "sanity-unicode-\xF0\x9F\x92\xA9-name"
+			By("creating a volume")
+			size := TestVolumeSize(sc)
+
+			vol, err := c.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
+						},
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: size,
+					},
+					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.GetVolume()).NotTo(BeNil())
+			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
+
+			By("cleaning up deleting the volume")
+
+			_, err = c.DeleteVolume(
+				context.Background(),
+				&csi.DeleteVolumeRequest{
+					VolumeId:                vol.GetVolume().GetId(),
+					ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			cl.UnregisterVolume(name)
+		})
 	})
 
 	Describe("DeleteVolume", func() {
@@ -1546,6 +1592,36 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
 		Expect(serverError.Code()).To(Equal(codes.AlreadyExists))
+
+		By("cleaning up deleting the snapshot")
+		delSnapReq := MakeDeleteSnapshotReq(sc, snap1.GetSnapshot().GetId())
+		_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("cleaning up deleting the volume")
+		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetId())
+		_, err = c.DeleteVolume(context.Background(), delVolReq)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should not fail when creating snapshot with unicode name", func() {
+
+		By("creating a volume")
+		volReq := MakeCreateVolumeReq(sc, "CreateSnapshot-volume-4")
+		volume, err := c.CreateVolume(context.Background(), volReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating a snapshot")
+		snapReq1 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-4-\xF0\x9F\x92\xA9", volume.GetVolume().GetId(), nil)
+		snap1, err := c.CreateSnapshot(context.Background(), snapReq1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(snap1).NotTo(BeNil())
+		verifySnapshotInfo(snap1.GetSnapshot())
+
+		snap2, err := c.CreateSnapshot(context.Background(), snapReq1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(snap2).NotTo(BeNil())
+		verifySnapshotInfo(snap2.GetSnapshot())
 
 		By("cleaning up deleting the snapshot")
 		delSnapReq := MakeDeleteSnapshotReq(sc, snap1.GetSnapshot().GetId())
