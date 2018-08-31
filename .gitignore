@@ -11,3 +11,6 @@
 *.out
 bin/mock
 cmd/csi-sanity/csi-sanity
+
+# JetBrains GoLand
+.idea
