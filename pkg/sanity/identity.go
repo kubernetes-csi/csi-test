@@ -36,7 +36,7 @@ var _ = DescribeSanity("Identity Service", func(sc *SanityContext) {
 	)
 
 	BeforeEach(func() {
-		c = csi.NewIdentityClient(sc.Conn)
+		c = csi.NewIdentityClient(conn)
 	})
 
 	Describe("GetPluginCapabilities", func() {
