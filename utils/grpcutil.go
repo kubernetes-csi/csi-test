@@ -23,9 +23,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
+
+const maxretries int = 3
 
 // Connect address by grpc
 func Connect(address string) (*grpc.ClientConn, error) {
@@ -41,16 +44,25 @@ func Connect(address string) (*grpc.ClientConn, error) {
 				}))
 	}
 
+	// Add retry support.
+	dialOptions = append(dialOptions, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))
+
 	conn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Retry a few times before returning connection error.
+	retries := 0
 	for {
 		if !conn.WaitForStateChange(ctx, conn.GetState()) {
-			return conn, fmt.Errorf("Connection timed out")
+			retries++
+			if retries >= maxretries {
+				return conn, fmt.Errorf("Connection timed out")
+			}
 		}
 		if conn.GetState() == connectivity.Ready {
 			return conn, nil
