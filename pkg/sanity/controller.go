@@ -1254,21 +1254,6 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(snapshots.GetEntries()).To(BeEmpty())
 	})
 
-	It("should fail when an invalid starting_token is passed", func() {
-		vols, err := c.ListSnapshots(
-			context.Background(),
-			&csi.ListSnapshotsRequest{
-				StartingToken: "invalid-token",
-			},
-		)
-		Expect(err).To(HaveOccurred())
-		Expect(vols).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.Aborted))
-	})
-
 	It("should fail when the starting_token is greater than total number of snapshots", func() {
 		// Get total number of snapshots.
 		snapshots, err := c.ListSnapshots(
@@ -1590,8 +1575,11 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		Expect(snap1).NotTo(BeNil())
 		verifySnapshotInfo(snap1.GetSnapshot())
 
+		volume2, err := c.CreateVolume(context.Background(), MakeCreateVolumeReq(sc, "CreateSnapshot-volume-3"))
+		Expect(err).ToNot(HaveOccurred())
+
 		By("creating a snapshot with the same name but different volume source id")
-		req2 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", "test001", nil)
+		req2 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", volume2.GetVolume().GetId(), nil)
 		_, err = c.CreateSnapshot(context.Background(), req2)
 		Expect(err).To(HaveOccurred())
 		serverError, ok := status.FromError(err)
