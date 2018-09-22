@@ -1254,31 +1254,6 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(snapshots.GetEntries()).To(BeEmpty())
 	})
 
-	It("should fail when the starting_token is greater than total number of snapshots", func() {
-		// Get total number of snapshots.
-		snapshots, err := c.ListSnapshots(
-			context.Background(),
-			&csi.ListSnapshotsRequest{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(snapshots).NotTo(BeNil())
-
-		totalSnapshots := len(snapshots.GetEntries())
-
-		// Send starting_token that is greater than the total number of snapshots.
-		snapshots, err = c.ListSnapshots(
-			context.Background(),
-			&csi.ListSnapshotsRequest{
-				StartingToken: strconv.Itoa(totalSnapshots + 5),
-			},
-		)
-		Expect(err).To(HaveOccurred())
-		Expect(snapshots).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.Aborted))
-	})
-
 	It("check the presence of new snapshots in the snapshot list", func() {
 		// List Snapshots before creating new snapshots.
 		snapshots, err := c.ListSnapshots(
