@@ -234,3 +234,9 @@ func (s *service) NodeGetInfo(ctx context.Context,
 		NodeId: s.nodeID,
 	}, nil
 }
+
+func (s *service) NodeGetVolumeStats(ctx context.Context,
+	req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	return &csi.NodeGetVolumeStatsResponse{}, nil
+
+}

@@ -301,6 +301,19 @@ func (mr *MockNodeServerMockRecorder) NodeGetInfo(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeGetInfo", reflect.TypeOf((*MockNodeServer)(nil).NodeGetInfo), arg0, arg1)
 }
 
+// NodeGetVolumeStats mocks base method
+func (m *MockNodeServer) NodeGetVolumeStats(arg0 context.Context, arg1 *v0.NodeGetVolumeStatsRequest) (*v0.NodeGetVolumeStatsResponse, error) {
+	ret := m.ctrl.Call(m, "NodeGetVolumeStats", arg0, arg1)
+	ret0, _ := ret[0].(*v0.NodeGetVolumeStatsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NodeGetVolumeStats indicates an expected call of NodeGetVolumeStats
+func (mr *MockNodeServerMockRecorder) NodeGetVolumeStats(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeGetVolumeStats", reflect.TypeOf((*MockNodeServer)(nil).NodeGetVolumeStats), arg0, arg1)
+}
+
 // NodePublishVolume mocks base method
 func (m *MockNodeServer) NodePublishVolume(arg0 context.Context, arg1 *v0.NodePublishVolumeRequest) (*v0.NodePublishVolumeResponse, error) {
 	ret := m.ctrl.Call(m, "NodePublishVolume", arg0, arg1)
