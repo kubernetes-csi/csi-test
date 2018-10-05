@@ -25,6 +25,11 @@ var Manifest = map[string]string{
 	"url": "https://github.com/kubernetes-csi/csi-test/mock",
 }
 
+type Config struct {
+	DisableAttach bool
+	DriverName    string
+}
+
 // Service is the CSI Mock service provider.
 type Service interface {
 	csi.ControllerServer
@@ -40,6 +45,7 @@ type service struct {
 	volsNID      uint64
 	snapshots    cache.SnapshotCache
 	snapshotsNID uint64
+	config       Config
 }
 
 type Volume struct {
@@ -55,8 +61,11 @@ type Volume struct {
 var MockVolumes map[string]Volume
 
 // New returns a new Service.
-func New() Service {
-	s := &service{nodeID: Name}
+func New(config Config) Service {
+	s := &service{
+		nodeID: config.DriverName,
+		config: config,
+	}
 	s.snapshots = cache.NewSnapshotCache()
 	s.vols = []csi.Volume{
 		s.newVolume("Mock Volume 1", gib100),
