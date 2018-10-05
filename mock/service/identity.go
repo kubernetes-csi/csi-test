@@ -13,7 +13,7 @@ func (s *service) GetPluginInfo(
 	*csi.GetPluginInfoResponse, error) {
 
 	return &csi.GetPluginInfoResponse{
-		Name:          Name,
+		Name:          s.config.DriverName,
 		VendorVersion: VendorVersion,
 		Manifest:      Manifest,
 	}, nil
