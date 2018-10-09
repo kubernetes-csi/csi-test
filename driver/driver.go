@@ -20,7 +20,9 @@ package driver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -102,7 +104,7 @@ func (c *CSIDriver) Start(l net.Listener) error {
 
 	// Create a new grpc server
 	c.server = grpc.NewServer(
-		grpc.UnaryInterceptor(c.authInterceptor),
+		grpc.UnaryInterceptor(c.callInterceptor),
 	)
 
 	// Register Mock servers
@@ -162,22 +164,49 @@ func (c *CSIDriver) SetDefaultCreds() {
 	}
 }
 
-func (c *CSIDriver) authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func (c *CSIDriver) callInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	err := c.authInterceptor(req)
+	if err != nil {
+		logGRPC(info.FullMethod, req, nil, err)
+		return nil, err
+	}
+	rsp, err := handler(ctx, req)
+	logGRPC(info.FullMethod, req, rsp, err)
+	return rsp, err
+}
+
+func (c *CSIDriver) authInterceptor(req interface{}) error {
 	if c.creds != nil {
 		authenticated, authErr := isAuthenticated(req, c.creds)
 		if !authenticated {
 			if authErr == ErrNoCredentials {
-				return nil, status.Error(codes.InvalidArgument, authErr.Error())
+				return status.Error(codes.InvalidArgument, authErr.Error())
 			}
 			if authErr == ErrAuthFailed {
-				return nil, status.Error(codes.Unauthenticated, authErr.Error())
+				return status.Error(codes.Unauthenticated, authErr.Error())
 			}
 		}
 	}
+	return nil
+}
 
-	h, err := handler(ctx, req)
-
-	return h, err
+func logGRPC(method string, request, reply interface{}, err error) {
+	// Log JSON with the request and response for easier parsing
+	logMessage := struct {
+		Method   string
+		Request  interface{}
+		Response interface{}
+		Error    string
+	}{
+		Method:   method,
+		Request:  request,
+		Response: reply,
+	}
+	if err != nil {
+		logMessage.Error = err.Error()
+	}
+	msg, _ := json.Marshal(logMessage)
+	fmt.Printf("gRPCCall: %s\n", msg)
 }
 
 func isAuthenticated(req interface{}, creds *CSICreds) (bool, error) {

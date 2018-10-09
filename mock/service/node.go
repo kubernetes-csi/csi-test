@@ -18,9 +18,13 @@ func (s *service) NodeStageVolume(
 
 	device, ok := req.PublishInfo["device"]
 	if !ok {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"stage volume info 'device' key required")
+		if s.config.DisableAttach {
+			device = "mock device"
+		} else {
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"stage volume info 'device' key required")
+		}
 	}
 
 	if len(req.GetVolumeId()) == 0 {
@@ -105,9 +109,13 @@ func (s *service) NodePublishVolume(
 
 	device, ok := req.PublishInfo["device"]
 	if !ok {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"publish volume info 'device' key required")
+		if s.config.DisableAttach {
+			device = "mock device"
+		} else {
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"stage volume info 'device' key required")
+		}
 	}
 
 	if len(req.GetVolumeId()) == 0 {
