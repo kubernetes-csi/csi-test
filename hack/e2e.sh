@@ -54,7 +54,7 @@ runTestAPI()
 	fi
 }
 
-go build -o bin/mock ./mock || exit 1
+test -x bin/mock || exit 1
 
 cd cmd/csi-sanity
   make clean install || exit 1
