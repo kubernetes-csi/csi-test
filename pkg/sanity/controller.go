@@ -185,6 +185,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			cl.MaybeRegisterVolume("", vol, err)
@@ -202,6 +203,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				&csi.CreateVolumeRequest{
 					Name: name,
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			cl.MaybeRegisterVolume(name, vol, err)
@@ -232,6 +234,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -276,6 +279,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						RequiredBytes: TestVolumeSize(sc),
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			if serverError, ok := status.FromError(err); ok &&
@@ -325,6 +329,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						RequiredBytes: size,
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -352,6 +357,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						RequiredBytes: size,
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -398,6 +404,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						LimitBytes:    size1,
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -426,6 +433,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						LimitBytes:    size2,
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -474,6 +482,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						RequiredBytes: size,
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -552,6 +561,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -623,6 +633,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -767,6 +778,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -884,6 +896,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -953,6 +966,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1074,6 +1088,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 						},
 					},
 					ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+					Parameters:              sc.Config.TestVolumeParameters,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1628,6 +1643,7 @@ func MakeCreateVolumeReq(sc *SanityContext, name string) *csi.CreateVolumeReques
 			RequiredBytes: size1,
 			LimitBytes:    size1,
 		},
+		Parameters: sc.Config.TestVolumeParameters,
 	}
 
 	if sc.Secrets != nil {
