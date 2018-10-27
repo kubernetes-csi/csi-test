@@ -305,7 +305,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(err).NotTo(HaveOccurred())
 			cl.UnregisterVolume(name)
 		})
-		It("should not fail when requesting to create a volume with already exisiting name and same capacity.", func() {
+		It("should not fail when requesting to create a volume with already existing name and same capacity.", func() {
 
 			By("creating a volume")
 			name := uniqueString("sanity-controller-create-twice")
@@ -379,7 +379,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(err).NotTo(HaveOccurred())
 			cl.UnregisterVolume(name)
 		})
-		It("should fail when requesting to create a volume with already exisiting name and different capacity.", func() {
+		It("should fail when requesting to create a volume with already existing name and different capacity.", func() {
 
 			By("creating a volume")
 			name := uniqueString("sanity-controller-create-twice-different")
