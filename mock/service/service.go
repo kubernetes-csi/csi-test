@@ -28,6 +28,7 @@ var Manifest = map[string]string{
 type Config struct {
 	DisableAttach bool
 	DriverName    string
+	AttachLimit   int64
 }
 
 // Service is the CSI Mock service provider.
