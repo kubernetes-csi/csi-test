@@ -238,9 +238,13 @@ func (s *service) NodeGetCapabilities(
 
 func (s *service) NodeGetInfo(ctx context.Context,
 	req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{
+	csiNodeResponse := &csi.NodeGetInfoResponse{
 		NodeId: s.nodeID,
-	}, nil
+	}
+	if s.config.AttachLimit > 0 {
+		csiNodeResponse.MaxVolumesPerNode = s.config.AttachLimit
+	}
+	return csiNodeResponse, nil
 }
 
 func (s *service) NodeGetVolumeStats(ctx context.Context,
