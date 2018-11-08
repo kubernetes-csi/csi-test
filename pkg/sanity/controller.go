@@ -1205,14 +1205,14 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		verifySnapshotInfo(snapshots.GetEntries()[0].GetSnapshot())
 		Expect(snapshots.GetEntries()[0].GetSnapshot().GetId()).To(Equal(snapshot.GetSnapshot().GetId()))
 
-		By("cleaning up deleting the volume")
-		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetId())
-		_, err = c.DeleteVolume(context.Background(), delVolReq)
-		Expect(err).NotTo(HaveOccurred())
-
 		By("cleaning up deleting the snapshot")
 		delSnapReq := MakeDeleteSnapshotReq(sc, snapshot.GetSnapshot().GetId())
 		_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("cleaning up deleting the volume")
+		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetId())
+		_, err = c.DeleteVolume(context.Background(), delVolReq)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
