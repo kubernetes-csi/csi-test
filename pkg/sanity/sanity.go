@@ -32,6 +32,24 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// Valid CSI driver roles, used for parsing tests
+type DriverRole string
+type DriverRoles []DriverRole
+
+func (drs DriverRoles) String() []string {
+	strs := []string{}
+	for _, d := range drs {
+		strs = append(strs, string(d))
+	}
+	return strs
+}
+
+const (
+	DriverRoleIdentity   DriverRole = "Identity"
+	DriverRoleController DriverRole = "Controller"
+	DriverRoleNode       DriverRole = "Node"
+)
+
 // CSISecrets consists of secrets used in CSI credentials.
 type CSISecrets struct {
 	CreateVolumeSecret              map[string]string `yaml:"CreateVolumeSecret"`
@@ -51,6 +69,8 @@ type Config struct {
 	StagingPath string
 	Address     string
 	SecretsFile string
+
+	Roles DriverRoles
 
 	TestVolumeSize           int64
 	TestVolumeParametersFile string

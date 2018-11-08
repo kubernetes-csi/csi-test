@@ -17,6 +17,10 @@ limitations under the License.
 package sanity
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 )
 
@@ -40,17 +44,20 @@ func DescribeSanity(text string, body func(*SanityContext)) bool {
 // registerTestsInGinkgo invokes the actual Gingko Describe
 // for the tests registered earlier with DescribeSanity.
 func registerTestsInGinkgo(sc *SanityContext) {
+	roleMatch := regexp.MustCompile(fmt.Sprintf(".*(?:%s).*", strings.Join(sc.Config.Roles.String(), "|")))
 	for _, test := range tests {
-		Describe(test.text, func() {
-			BeforeEach(func() {
-				sc.setup()
-			})
+		if roleMatch.MatchString(test.text) {
+			Describe(test.text, func() {
+				BeforeEach(func() {
+					sc.setup()
+				})
 
-			test.body(sc)
+				test.body(sc)
 
-			AfterEach(func() {
-				sc.teardown()
+				AfterEach(func() {
+					sc.teardown()
+				})
 			})
-		})
+		}
 	}
 }
