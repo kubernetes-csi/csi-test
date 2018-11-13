@@ -390,10 +390,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
 		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
 
-		By("getting a node id")
-		nid, err := c.NodeGetId(
+		By("getting a node info")
+		nid, err := c.NodeGetInfo(
 			context.Background(),
-			&csi.NodeGetIdRequest{})
+			&csi.NodeGetInfoRequest{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nid).NotTo(BeNil())
 		Expect(nid.GetNodeId()).NotTo(BeEmpty())
