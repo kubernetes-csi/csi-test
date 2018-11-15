@@ -13,7 +13,7 @@
 # limitations under the License.
 
 IMAGE_NAME = quay.io/k8scsi/mock-driver
-IMAGE_VERSION = canary
+IMAGE_VERSION = v1.0.0-1
 APP := ./bin/mock
 
 
