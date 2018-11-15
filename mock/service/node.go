@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) NodeStageVolume(
@@ -16,7 +16,7 @@ func (s *service) NodeStageVolume(
 	req *csi.NodeStageVolumeRequest) (
 	*csi.NodeStageVolumeResponse, error) {
 
-	device, ok := req.PublishInfo["device"]
+	device, ok := req.PublishContext["device"]
 	if !ok {
 		if s.config.DisableAttach {
 			device = "mock device"
@@ -52,14 +52,14 @@ func (s *service) NodeStageVolume(
 	nodeStgPathKey := path.Join(s.nodeID, req.StagingTargetPath)
 
 	// Check to see if the volume has already been staged.
-	if v.Attributes[nodeStgPathKey] != "" {
+	if v.VolumeContext[nodeStgPathKey] != "" {
 		// TODO: Check for the capabilities to be equal. Return "ALREADY_EXISTS"
 		// if the capabilities don't match.
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
 	// Stage the volume.
-	v.Attributes[nodeStgPathKey] = device
+	v.VolumeContext[nodeStgPathKey] = device
 	s.vols[i] = v
 
 	return &csi.NodeStageVolumeResponse{}, nil
@@ -91,12 +91,12 @@ func (s *service) NodeUnstageVolume(
 	nodeStgPathKey := path.Join(s.nodeID, req.StagingTargetPath)
 
 	// Check to see if the volume has already been unstaged.
-	if v.Attributes[nodeStgPathKey] == "" {
+	if v.VolumeContext[nodeStgPathKey] == "" {
 		return &csi.NodeUnstageVolumeResponse{}, nil
 	}
 
 	// Unpublish the volume.
-	delete(v.Attributes, nodeStgPathKey)
+	delete(v.VolumeContext, nodeStgPathKey)
 	s.vols[i] = v
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
@@ -107,7 +107,7 @@ func (s *service) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest) (
 	*csi.NodePublishVolumeResponse, error) {
 
-	device, ok := req.PublishInfo["device"]
+	device, ok := req.PublishContext["device"]
 	if !ok {
 		if s.config.DisableAttach {
 			device = "mock device"
@@ -143,7 +143,7 @@ func (s *service) NodePublishVolume(
 	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
 	// Check to see if the volume has already been published.
-	if v.Attributes[nodeMntPathKey] != "" {
+	if v.VolumeContext[nodeMntPathKey] != "" {
 
 		// Requests marked Readonly fail due to volumes published by
 		// the Mock driver supporting only RW mode.
@@ -156,9 +156,9 @@ func (s *service) NodePublishVolume(
 
 	// Publish the volume.
 	if req.GetStagingTargetPath() != "" {
-		v.Attributes[nodeMntPathKey] = req.GetStagingTargetPath()
+		v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
 	} else {
-		v.Attributes[nodeMntPathKey] = device
+		v.VolumeContext[nodeMntPathKey] = device
 	}
 	s.vols[i] = v
 
@@ -190,25 +190,15 @@ func (s *service) NodeUnpublishVolume(
 	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
 	// Check to see if the volume has already been unpublished.
-	if v.Attributes[nodeMntPathKey] == "" {
+	if v.VolumeContext[nodeMntPathKey] == "" {
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
 	// Unpublish the volume.
-	delete(v.Attributes, nodeMntPathKey)
+	delete(v.VolumeContext, nodeMntPathKey)
 	s.vols[i] = v
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
-}
-
-func (s *service) NodeGetId(
-	ctx context.Context,
-	req *csi.NodeGetIdRequest) (
-	*csi.NodeGetIdResponse, error) {
-
-	return &csi.NodeGetIdResponse{
-		NodeId: s.nodeID,
-	}, nil
 }
 
 func (s *service) NodeGetCapabilities(
