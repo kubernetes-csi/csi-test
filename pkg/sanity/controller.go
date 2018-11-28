@@ -953,6 +953,9 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 		})
 
 		It("should fail when the volume is already published but is incompatible", func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_READONLY) {
+				Skip("ControllerPublishVolume.readonly field not supported")
+			}
 
 			// Create Volume First
 			By("creating a single node writer volume")
