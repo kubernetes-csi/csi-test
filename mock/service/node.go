@@ -222,6 +222,13 @@ func (s *service) NodeGetCapabilities(
 					},
 				},
 			},
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+					},
+				},
+			},
 		},
 	}, nil
 }
@@ -239,6 +246,33 @@ func (s *service) NodeGetInfo(ctx context.Context,
 
 func (s *service) NodeGetVolumeStats(ctx context.Context,
 	req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	return &csi.NodeGetVolumeStatsResponse{}, nil
 
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+
+	if len(req.GetVolumePath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume Path cannot be empty")
+	}
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	nodeMntPathKey := path.Join(s.nodeID, req.VolumePath)
+
+	_, exists := v.VolumeContext[nodeMntPathKey]
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "volume %q doest not exist on the specified path %q", req.VolumeId, req.VolumeId)
+	}
+
+	return &csi.NodeGetVolumeStatsResponse{
+		Usage: []*csi.VolumeUsage{
+			{
+				Total: v.GetCapacityBytes(),
+				Unit:  csi.VolumeUsage_BYTES,
+			},
+		},
+	}, nil
 }
