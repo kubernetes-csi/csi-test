@@ -10,11 +10,7 @@ DIR=.
 ifdef APP_SUFFIX
   VERSION = $(VER)-$(subst /,-,$(APP_SUFFIX))
 else
-ifeq (master,$(BRANCH))
   VERSION = $(VER)
-else
-  VERSION = $(VER)-$(BRANCH)
-endif
 endif
 
 LDFLAGS :=-ldflags "-w -X github.com/kubernetes-csi/csi-test/cmd/csi-sanity.VERSION=$(VERSION) -extldflags '-z relro -z now'"
