@@ -13,7 +13,7 @@ else
 ifeq (master,$(BRANCH))
   VERSION = $(VER)
 else
-  VERSION = $(VER)-$(BRANCH)
+  VERSION = $(VER)
 endif
 endif
 
