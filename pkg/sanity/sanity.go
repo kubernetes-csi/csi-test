@@ -89,6 +89,7 @@ func Test(t *testing.T, reqConfig *Config) {
 	registerTestsInGinkgo(sc)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Driver Test Suite")
+	sc.Conn.Close()
 }
 
 func GinkgoTest(reqConfig *Config) {
