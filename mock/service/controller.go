@@ -57,8 +57,33 @@ func (s *service) CreateVolume(
 	if capacity >= MaxStorageCapacity {
 		return nil, status.Errorf(codes.OutOfRange, "Requested capacity %d exceeds maximum allowed %d", capacity, MaxStorageCapacity)
 	}
-	// Create the volume and add it to the service's in-mem volume slice.
-	v := s.newVolume(req.Name, capacity)
+
+	var v csi.Volume
+	// Create volume from content source if provided.
+	if req.GetVolumeContentSource() != nil {
+		switch req.GetVolumeContentSource().GetType().(type) {
+		case *csi.VolumeContentSource_Snapshot:
+			sid := req.GetVolumeContentSource().GetSnapshot().GetSnapshotId()
+			// Check if the source snapshot exists.
+			if snapID, _ := s.snapshots.FindSnapshot("id", sid); snapID >= 0 {
+				v = s.newVolumeFromSnapshot(req.Name, capacity, snapID)
+			} else {
+				return nil, status.Errorf(codes.NotFound, "Requested source snapshot %s not found", sid)
+			}
+		case *csi.VolumeContentSource_Volume:
+			vid := req.GetVolumeContentSource().GetVolume().GetVolumeId()
+			// Check if the source volume exists.
+			if volID, _ := s.findVolNoLock("id", vid); volID > 0 {
+				v = s.newVolumeFromVolume(req.Name, capacity, volID)
+			} else {
+				return nil, status.Errorf(codes.NotFound, "Requested source volume %s not found", vid)
+			}
+		}
+	} else {
+		v = s.newVolume(req.Name, capacity)
+	}
+
+	// Add the created volume to the service's in-mem volume slice.
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 	s.vols = append(s.vols, v)
@@ -395,6 +420,13 @@ func (s *service) ControllerGetCapabilities(
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
 					Type: csi.ControllerServiceCapability_RPC_PUBLISH_READONLY,
+				},
+			},
+		},
+		{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
 				},
 			},
 		},

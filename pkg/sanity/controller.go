@@ -508,6 +508,133 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(err).NotTo(HaveOccurred())
 			cl.UnregisterVolume(name)
 		})
+
+		It("should create volume from an existing source snapshot", func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT) {
+				Skip("Snapshot not supported")
+			}
+
+			By("creating a volume")
+			vol1Name := uniqueString("sanity-controller-source-vol")
+			vol1Req := MakeCreateVolumeReq(sc, vol1Name)
+			volume1, err := c.CreateVolume(context.Background(), vol1Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("creating a snapshot")
+			snapName := uniqueString("sanity-controller-snap-from-vol")
+			snapReq := MakeCreateSnapshotReq(sc, snapName, volume1.GetVolume().GetVolumeId(), nil)
+			snap, err := c.CreateSnapshot(context.Background(), snapReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(snap).NotTo(BeNil())
+			verifySnapshotInfo(snap.GetSnapshot())
+
+			By("creating a volume from source snapshot")
+			vol2Name := uniqueString("sanity-controller-vol-from-snap")
+			vol2Req := MakeCreateVolumeReq(sc, vol2Name)
+			vol2Req.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Snapshot{
+					Snapshot: &csi.VolumeContentSource_SnapshotSource{
+						SnapshotId: snap.GetSnapshot().GetSnapshotId(),
+					},
+				},
+			}
+			volume2, err := c.CreateVolume(context.Background(), vol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("cleaning up deleting the volume created from snapshot")
+			delVol2Req := MakeDeleteVolumeReq(sc, volume2.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("cleaning up deleting the snapshot")
+			delSnapReq := MakeDeleteSnapshotReq(sc, snap.GetSnapshot().GetSnapshotId())
+			_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("cleaning up deleting the source volume")
+			delVol1Req := MakeDeleteVolumeReq(sc, volume1.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVol1Req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should fail when the volume source snapshot is not found", func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT) {
+				Skip("Snapshot not supported")
+			}
+
+			By("creating a volume from source snapshot")
+			volName := uniqueString("sanity-controller-vol-from-snap")
+			volReq := MakeCreateVolumeReq(sc, volName)
+			volReq.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Snapshot{
+					Snapshot: &csi.VolumeContentSource_SnapshotSource{
+						SnapshotId: "non-existing-snapshot-id",
+					},
+				},
+			}
+			_, err := c.CreateVolume(context.Background(), volReq)
+			Expect(err).To(HaveOccurred())
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("should create volume from an existing source volume", func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CLONE_VOLUME) {
+				Skip("Volume Cloning not supported")
+			}
+
+			By("creating a volume")
+			vol1Name := uniqueString("sanity-controller-source-vol")
+			vol1Req := MakeCreateVolumeReq(sc, vol1Name)
+			volume1, err := c.CreateVolume(context.Background(), vol1Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("creating a volume from source volume")
+			vol2Name := uniqueString("sanity-controller-vol-from-vol")
+			vol2Req := MakeCreateVolumeReq(sc, vol2Name)
+			vol2Req.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Volume{
+					Volume: &csi.VolumeContentSource_VolumeSource{
+						VolumeId: volume1.GetVolume().GetVolumeId(),
+					},
+				},
+			}
+			volume2, err := c.CreateVolume(context.Background(), vol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("cleaning up deleting the volume created from source volume")
+			delVol2Req := MakeDeleteVolumeReq(sc, volume2.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("cleaning up deleting the source volume")
+			delVol1Req := MakeDeleteVolumeReq(sc, volume1.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVol1Req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should fail when the volume source volume is not found", func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CLONE_VOLUME) {
+				Skip("Volume Cloning not supported")
+			}
+
+			By("creating a volume from source snapshot")
+			volName := uniqueString("sanity-controller-vol-from-snap")
+			volReq := MakeCreateVolumeReq(sc, volName)
+			volReq.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Volume{
+					Volume: &csi.VolumeContentSource_VolumeSource{
+						VolumeId: "non-existing-volume-id",
+					},
+				},
+			}
+			_, err := c.CreateVolume(context.Background(), volReq)
+			Expect(err).To(HaveOccurred())
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
+		})
 	})
 
 	Describe("DeleteVolume", func() {

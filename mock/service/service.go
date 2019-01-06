@@ -103,6 +103,30 @@ func (s *service) newVolume(name string, capcity int64) csi.Volume {
 	}
 }
 
+func (s *service) newVolumeFromSnapshot(name string, capacity int64, snapshotID int) csi.Volume {
+	vol := s.newVolume(name, capacity)
+	vol.ContentSource = &csi.VolumeContentSource{
+		Type: &csi.VolumeContentSource_Snapshot{
+			Snapshot: &csi.VolumeContentSource_SnapshotSource{
+				SnapshotId: string(snapshotID),
+			},
+		},
+	}
+	return vol
+}
+
+func (s *service) newVolumeFromVolume(name string, capacity int64, volumeID int) csi.Volume {
+	vol := s.newVolume(name, capacity)
+	vol.ContentSource = &csi.VolumeContentSource{
+		Type: &csi.VolumeContentSource_Volume{
+			Volume: &csi.VolumeContentSource_VolumeSource{
+				VolumeId: string(volumeID),
+			},
+		},
+	}
+	return vol
+}
+
 func (s *service) findVol(k, v string) (volIdx int, volInfo csi.Volume) {
 	s.volsRWL.RLock()
 	defer s.volsRWL.RUnlock()
