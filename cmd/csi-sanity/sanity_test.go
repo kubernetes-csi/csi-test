@@ -42,6 +42,7 @@ func init() {
 	flag.StringVar(&config.SecretsFile, prefix+"secrets", "", "CSI secrets file")
 	flag.Int64Var(&config.TestVolumeSize, prefix+"testvolumesize", sanity.DefTestVolumeSize, "Base volume size used for provisioned volumes")
 	flag.StringVar(&config.TestVolumeParametersFile, prefix+"testvolumeparameters", "", "YAML file of volume parameters for provisioned volumes")
+	flag.BoolVar(&config.TestNodeVolumeAttachLimit, prefix+"testnodevolumeattachlimit", false, "Test node volume attach limit")
 	flag.StringVar(&config.JUnitFile, prefix+"junitfile", "", "JUnit XML output file where test results will be written")
 	flag.Parse()
 }

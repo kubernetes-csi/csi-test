@@ -14,7 +14,7 @@ runTest()
 	CSI_ENDPOINT=$1 ./bin/mock-driver &
 	local pid=$!
 
-	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2; ret=$?
+	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.testnodevolumeattachlimit; ret=$?
 	kill -9 $pid
 
 	if [ $ret -ne 0 ] ; then
@@ -27,7 +27,7 @@ runTestWithCreds()
 	CSI_ENDPOINT=$1 CSI_ENABLE_CREDS=true ./bin/mock-driver &
 	local pid=$!
 
-	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.secrets=mock/mocksecret.yaml; ret=$?
+	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.secrets=mock/mocksecret.yaml --csi.testnodevolumeattachlimit; ret=$?
 	kill -9 $pid
 
 	if [ $ret -ne 0 ] ; then
