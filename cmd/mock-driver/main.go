@@ -32,7 +32,7 @@ func main() {
 	var config service.Config
 	flag.BoolVar(&config.DisableAttach, "disable-attach", false, "Disables RPC_PUBLISH_UNPUBLISH_VOLUME capability.")
 	flag.StringVar(&config.DriverName, "name", service.Name, "CSI driver name.")
-	flag.Int64Var(&config.AttachLimit, "attach-limit", 0, "number of attachable volumes on a node")
+	flag.Int64Var(&config.AttachLimit, "attach-limit", 2, "number of attachable volumes on a node")
 	flag.BoolVar(&config.NodeExpansionRequired, "node-expand-required", false, "Enables NodeServiceCapability_RPC_EXPAND_VOLUME capacity.")
 	flag.BoolVar(&config.DisableControllerExpansion, "disable-controller-expansion", false, "Disables ControllerServiceCapability_RPC_EXPAND_VOLUME capability.")
 	flag.BoolVar(&config.DisableOnlineExpansion, "disable-online-expansion", false, "Disables online volume expansion capability.")
