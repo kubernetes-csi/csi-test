@@ -140,7 +140,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			accessibilityConstraintSupported = isPluginCapabilitySupported(i, csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS)
 		})
 
-		It("should return approproate values", func() {
+		It("should return appropriate values", func() {
 			ninfo, err := c.NodeGetInfo(
 				context.Background(),
 				&csi.NodeGetInfoRequest{})
