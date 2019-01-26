@@ -36,6 +36,7 @@ var (
 
 func init() {
 	flag.StringVar(&config.Address, prefix+"endpoint", "", "CSI endpoint")
+	flag.StringVar(&config.ControllerAddress, prefix+"controllerendpoint", "", "CSI controller endpoint")
 	flag.BoolVar(&version, prefix+"version", false, "Version of this program")
 	flag.StringVar(&config.TargetPath, prefix+"mountdir", os.TempDir()+"/csi", "Mount point for NodePublish")
 	flag.StringVar(&config.StagingPath, prefix+"stagingdir", os.TempDir()+"/csi", "Mount point for NodeStage if staging is supported")

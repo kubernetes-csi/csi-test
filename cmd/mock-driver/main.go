@@ -48,51 +48,136 @@ func main() {
 		os.Exit(1)
 	}
 
+	controllerEndpoint := os.Getenv("CSI_CONTROLLER_ENDPOINT")
+	if len(controllerEndpoint) == 0 {
+		// If empty, set to the common endpoint.
+		controllerEndpoint = endpoint
+	}
+	if strings.Contains(controllerEndpoint, ":") {
+		fmt.Println("CSI_CONTROLLER_ENDPOINT must be a unix path")
+		os.Exit(1)
+	}
+
 	// Create mock driver
 	s := service.New(config)
-	servers := &driver.CSIDriverServers{
-		Controller: s,
-		Identity:   s,
-		Node:       s,
-	}
-	d := driver.NewCSIDriver(servers)
 
-	// If creds is enabled, set the default creds.
-	setCreds := os.Getenv("CSI_ENABLE_CREDS")
-	if len(setCreds) > 0 && setCreds == "true" {
-		d.SetDefaultCreds()
-	}
+	if endpoint == controllerEndpoint {
+		servers := &driver.CSIDriverServers{
+			Controller: s,
+			Identity:   s,
+			Node:       s,
+		}
+		d := driver.NewCSIDriver(servers)
 
-	// Listen
-	os.Remove(endpoint)
-	l, err := net.Listen("unix", endpoint)
-	if err != nil {
-		fmt.Printf("Error: Unable to listen on %s socket: %v\n",
-			endpoint,
-			err)
-		os.Exit(1)
-	}
-	defer os.Remove(endpoint)
+		// If creds is enabled, set the default creds.
+		setCreds := os.Getenv("CSI_ENABLE_CREDS")
+		if len(setCreds) > 0 && setCreds == "true" {
+			d.SetDefaultCreds()
+		}
 
-	// Start server
-	if err := d.Start(l); err != nil {
-		fmt.Printf("Error: Unable to start mock CSI server: %v\n",
-			err)
-		os.Exit(1)
-	}
-	fmt.Println("mock driver started")
+		// Listen
+		os.Remove(endpoint)
+		os.Remove(controllerEndpoint)
+		l, err := net.Listen("unix", endpoint)
+		if err != nil {
+			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+				endpoint,
+				err)
+			os.Exit(1)
+		}
+		defer os.Remove(endpoint)
 
-	// Wait for signal
-	sigc := make(chan os.Signal, 1)
-	sigs := []os.Signal{
-		syscall.SIGTERM,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGQUIT,
-	}
-	signal.Notify(sigc, sigs...)
+		// Start server
+		if err := d.Start(l); err != nil {
+			fmt.Printf("Error: Unable to start mock CSI server: %v\n",
+				err)
+			os.Exit(1)
+		}
+		fmt.Println("mock driver started")
 
-	<-sigc
-	d.Stop()
-	fmt.Println("mock driver stopped")
+		// Wait for signal
+		sigc := make(chan os.Signal, 1)
+		sigs := []os.Signal{
+			syscall.SIGTERM,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		}
+		signal.Notify(sigc, sigs...)
+
+		<-sigc
+		d.Stop()
+		fmt.Println("mock driver stopped")
+	} else {
+		controllerServer := &driver.CSIDriverControllerServer{
+			Controller: s,
+			Identity:   s,
+		}
+		dc := driver.NewCSIDriverController(controllerServer)
+
+		nodeServer := &driver.CSIDriverNodeServer{
+			Node:     s,
+			Identity: s,
+		}
+		dn := driver.NewCSIDriverNode(nodeServer)
+
+		setCreds := os.Getenv("CSI_ENABLE_CREDS")
+		if len(setCreds) > 0 && setCreds == "true" {
+			dc.SetDefaultCreds()
+			dn.SetDefaultCreds()
+		}
+
+		// Listen controller.
+		os.Remove(controllerEndpoint)
+		l, err := net.Listen("unix", controllerEndpoint)
+		if err != nil {
+			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+				controllerEndpoint,
+				err)
+			os.Exit(1)
+		}
+		defer os.Remove(controllerEndpoint)
+
+		// Start controller server.
+		if err = dc.Start(l); err != nil {
+			fmt.Printf("Error: Unable to start mock CSI controller server: %v\n",
+				err)
+			os.Exit(1)
+		}
+		fmt.Println("mock controller driver started")
+
+		// Listen node.
+		os.Remove(endpoint)
+		l, err = net.Listen("unix", endpoint)
+		if err != nil {
+			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+				endpoint,
+				err)
+			os.Exit(1)
+		}
+		defer os.Remove(endpoint)
+
+		// Start node server.
+		if err = dn.Start(l); err != nil {
+			fmt.Printf("Error: Unable to start mock CSI node server: %v\n",
+				err)
+			os.Exit(1)
+		}
+		fmt.Println("mock node driver started")
+
+		// Wait for signal
+		sigc := make(chan os.Signal, 1)
+		sigs := []os.Signal{
+			syscall.SIGTERM,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		}
+		signal.Notify(sigc, sigs...)
+
+		<-sigc
+		dc.Stop()
+		dn.Stop()
+		fmt.Println("mock drivers stopped")
+	}
 }
