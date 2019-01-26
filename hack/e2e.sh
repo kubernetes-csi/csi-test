@@ -2,6 +2,8 @@
 
 TESTARGS=$@
 UDS="/tmp/e2e-csi-sanity.sock"
+UDS_NODE="/tmp/e2e-csi-sanity-node.sock"
+UDS_CONTROLLER="/tmp/e2e-csi-sanity-ctrl.sock"
 CSI_ENDPOINTS="$CSI_ENDPOINTS ${UDS}"
 CSI_MOCK_VERSION="master"
 
@@ -15,6 +17,19 @@ runTest()
 	local pid=$!
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.testnodevolumeattachlimit; ret=$?
+	kill -9 $pid
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
+runTestWithDifferentAddresses()
+{
+	CSI_ENDPOINT=$1 CSI_CONTROLLER_ENDPOINT=$2 ./bin/mock-driver &
+	local pid=$!
+
+	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$1 --csi.controllerendpoint=$2; ret=$?
 	kill -9 $pid
 
 	if [ $ret -ne 0 ] ; then
@@ -68,5 +83,9 @@ rm -f $UDS
 
 runTestAPI "${UDS}"
 rm -f $UDS
+
+runTestWithDifferentAddresses "${UDS_NODE}" "${UDS_CONTROLLER}"
+rm -f $UDS_NODE
+rm -f $UDS_CONTROLLER
 
 exit 0
