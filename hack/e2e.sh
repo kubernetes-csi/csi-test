@@ -69,6 +69,20 @@ runTestAPI()
 	fi
 }
 
+runTestAPIWithCustomTargetPaths()
+{
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	local pid=$!
+
+	# Running a specific test to verify that the custom target paths are called
+	# a deterministic number of times.
+	GOCACHE=off go test -v ./hack/_apitest2/api_test.go -ginkgo.focus="NodePublishVolume"; ret=$?
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
 make
 
 cd cmd/csi-sanity
@@ -87,5 +101,8 @@ rm -f $UDS
 runTestWithDifferentAddresses "${UDS_NODE}" "${UDS_CONTROLLER}"
 rm -f $UDS_NODE
 rm -f $UDS_CONTROLLER
+
+runTestAPIWithCustomTargetPaths "${UDS}"
+rm -rf $UDS
 
 exit 0

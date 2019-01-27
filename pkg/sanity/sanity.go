@@ -60,6 +60,13 @@ type Config struct {
 	TestNodeVolumeAttachLimit bool
 
 	JUnitFile string
+
+	// Callback functions to customize the creation of target and staging
+	// directories. Returns the new paths for mount and staging.
+	// If not defined, directories are created in the default way at TargetPath
+	// and StagingPath.
+	CreateTargetDir  func(path string) (string, error)
+	CreateStagingDir func(path string) (string, error)
 }
 
 // SanityContext holds the variables that each test can depend on. It
@@ -72,6 +79,10 @@ type SanityContext struct {
 
 	connAddress           string
 	controllerConnAddress string
+
+	// Target and staging paths derived from the sanity config.
+	targetPath  string
+	stagingPath string
 }
 
 // Test will test the CSI driver at the specified address by
@@ -153,12 +164,15 @@ func (sc *SanityContext) setup() {
 	}
 
 	By("creating mount and staging directories")
-	err = createMountTargetLocation(sc.Config.TargetPath)
-	Expect(err).NotTo(HaveOccurred())
-	if len(sc.Config.StagingPath) > 0 {
-		err = createMountTargetLocation(sc.Config.StagingPath)
-		Expect(err).NotTo(HaveOccurred())
-	}
+	// If callback function for creating target dir is specified, use it.
+	targetPath, err := createMountTargetLocation(sc.Config.TargetPath, sc.Config.CreateTargetDir)
+	Expect(err).NotTo(HaveOccurred(), "failed to create target directory %s", targetPath)
+	sc.targetPath = targetPath
+
+	// If callback function for creating staging dir is specified, use it.
+	stagingPath, err := createMountTargetLocation(sc.Config.StagingPath, sc.Config.CreateStagingDir)
+	Expect(err).NotTo(HaveOccurred(), "failed to create staging directory %s", stagingPath)
+	sc.stagingPath = stagingPath
 }
 
 func (sc *SanityContext) teardown() {
@@ -174,18 +188,35 @@ func (sc *SanityContext) teardown() {
 	// (https://github.com/kubernetes-csi/csi-test/pull/98).
 }
 
-func createMountTargetLocation(targetPath string) error {
-	fileInfo, err := os.Stat(targetPath)
-	if err != nil && os.IsNotExist(err) {
-		return os.MkdirAll(targetPath, 0755)
-	} else if err != nil {
-		return err
-	}
-	if !fileInfo.IsDir() {
-		return fmt.Errorf("Target location %s is not a directory", targetPath)
+func createMountTargetLocation(targetPath string, customCreateDir func(string) (string, error)) (string, error) {
+
+	// Return the target path if empty.
+	if len(targetPath) < 0 {
+		return targetPath, nil
 	}
 
-	return nil
+	var newTargetPath string
+
+	if customCreateDir != nil {
+		newpath, err := customCreateDir(targetPath)
+		if err != nil {
+			return "", err
+		}
+		newTargetPath = newpath
+	} else {
+		fileInfo, err := os.Stat(targetPath)
+		if err != nil && os.IsNotExist(err) {
+			return "", os.MkdirAll(targetPath, 0755)
+		} else if err != nil {
+			return "", err
+		}
+		if !fileInfo.IsDir() {
+			return "", fmt.Errorf("Target location %s is not a directory", targetPath)
+		}
+		newTargetPath = targetPath
+	}
+
+	return newTargetPath, nil
 }
 
 func loadSecrets(path string) (*CSISecrets, error) {
