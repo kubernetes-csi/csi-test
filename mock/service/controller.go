@@ -386,6 +386,13 @@ func (s *service) ControllerGetCapabilities(
 				},
 			},
 		},
+		{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+				},
+			},
+		},
 	}
 
 	if !s.config.DisableAttach {
@@ -467,6 +474,49 @@ func (s *service) ListSnapshots(ctx context.Context,
 
 	// case 3: no parameter is set, so we return all the snapshots.
 	return getAllSnapshots(s, req)
+}
+
+func (s *service) ControllerExpandVolume(
+	ctx context.Context,
+	req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+	if len(req.VolumeId) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+
+	if req.CapacityRange == nil {
+		return nil, status.Error(codes.InvalidArgument, "Request capacity cannot be empty")
+	}
+
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	requestBytes := req.CapacityRange.RequiredBytes
+
+	if v.CapacityBytes > requestBytes {
+		return nil, status.Error(codes.InvalidArgument, "cannot change volume capacity to a smaller size")
+	}
+
+	resp := &csi.ControllerExpandVolumeResponse{
+		CapacityBytes:         requestBytes,
+		NodeExpansionRequired: s.config.NodeExpansionRequired,
+	}
+
+	// Check to see if the volume already satisfied request size.
+	if v.CapacityBytes == requestBytes {
+		log.WithField("volumeID", v.VolumeId).Infof("Volume capacity is already %s, no need to expand", requestBytes)
+		return resp, nil
+	}
+
+	// Update volume's capacity to the requested size.
+	v.CapacityBytes = requestBytes
+	s.vols[i] = v
+
+	return resp, nil
 }
 
 func getSnapshotById(s *service, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
