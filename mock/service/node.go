@@ -2,6 +2,7 @@ package service
 
 import (
 	"path"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -201,35 +202,94 @@ func (s *service) NodeUnpublishVolume(
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
+func (s *service) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
+	}
+	if len(req.GetVolumePath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume Path cannot be empty")
+	}
+	if req.GetCapacityRange() == nil {
+		return nil, status.Error(codes.InvalidArgument, "Request capacity cannot be empty")
+	}
+
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	// TODO: NodeExpandVolume MUST be called after successful NodeStageVolume as we has STAGE_UNSTAGE_VOLUME node capacity.
+
+	requestCapacity := req.GetCapacityRange().RequiredBytes
+	resp := &csi.NodeExpandVolumeResponse{CapacityBytes: requestCapacity}
+
+	// fsCapacityKey is the key in the volume's attributes that is set to the file system's size.
+	fsCapacityKey := path.Join(s.nodeID, req.GetVolumePath(), "size")
+	oldCapacityStr, exist := v.VolumeContext[fsCapacityKey]
+	if exist {
+		oldCapacity, err := strconv.ParseInt(oldCapacityStr, 10, 64)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if oldCapacity > requestCapacity {
+			return nil, status.Error(codes.InvalidArgument, "cannot change file system size to a smaller size")
+		}
+		if oldCapacity == requestCapacity {
+			// File system capacity is equal to requested size, no need to expand.
+			return resp, nil
+		}
+	}
+
+	// Update volume's fs capacity to requested size.
+	v.VolumeContext[fsCapacityKey] = strconv.FormatInt(requestCapacity, 10)
+	s.vols[i] = v
+
+	return resp, nil
+}
+
 func (s *service) NodeGetCapabilities(
 	ctx context.Context,
 	req *csi.NodeGetCapabilitiesRequest) (
 	*csi.NodeGetCapabilitiesResponse, error) {
 
-	return &csi.NodeGetCapabilitiesResponse{
-		Capabilities: []*csi.NodeServiceCapability{
-			{
-				Type: &csi.NodeServiceCapability_Rpc{
-					Rpc: &csi.NodeServiceCapability_RPC{
-						Type: csi.NodeServiceCapability_RPC_UNKNOWN,
-					},
-				},
-			},
-			{
-				Type: &csi.NodeServiceCapability_Rpc{
-					Rpc: &csi.NodeServiceCapability_RPC{
-						Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
-					},
-				},
-			},
-			{
-				Type: &csi.NodeServiceCapability_Rpc{
-					Rpc: &csi.NodeServiceCapability_RPC{
-						Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
-					},
+	capabilities := []*csi.NodeServiceCapability{
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_UNKNOWN,
 				},
 			},
 		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
+				},
+			},
+		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+				},
+			},
+		},
+	}
+	if s.config.NodeExpansionRequired {
+		capabilities = append(capabilities, &csi.NodeServiceCapability{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+				},
+			},
+		})
+	}
+
+	return &csi.NodeGetCapabilitiesResponse{
+		Capabilities: capabilities,
 	}, nil
 }
 
