@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 )
 
@@ -55,6 +56,8 @@ type Config struct {
 	TestVolumeSize           int64
 	TestVolumeParametersFile string
 	TestVolumeParameters     map[string]string
+
+	JUnitFile string
 }
 
 // SanityContext holds the variables that each test can depend on. It
@@ -88,7 +91,13 @@ func Test(t *testing.T, reqConfig *Config) {
 
 	registerTestsInGinkgo(sc)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CSI Driver Test Suite")
+
+	var specReporters []Reporter
+	if reqConfig.JUnitFile != "" {
+		junitReporter := reporters.NewJUnitReporter(reqConfig.JUnitFile)
+		specReporters = append(specReporters, junitReporter)
+	}
+	RunSpecsWithDefaultAndCustomReporters(t, "CSI Driver Test Suite", specReporters)
 	sc.Conn.Close()
 }
 
