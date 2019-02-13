@@ -123,6 +123,9 @@ func (sc *SanityContext) setup() {
 	// dynamically (and differently!) in a BeforeEach, so only
 	// reuse the connection if the address is still the same.
 	if sc.Conn == nil || sc.connAddress != sc.Config.Address {
+		if sc.Conn != nil {
+			sc.Conn.Close()
+		}
 		By("connecting to CSI driver")
 		sc.Conn, err = utils.Connect(sc.Config.Address)
 		Expect(err).NotTo(HaveOccurred())
