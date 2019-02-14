@@ -12,41 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IMAGE_NAME = quay.io/k8scsi/mock-driver
-IMAGE_VERSION = canary
-APP := ./bin/mock
+# This repository builds two commands, mock-driver and csi-sanity,
+# but csi-sanity has its own build rules and only mock-driver gets
+# published as a container image.
+CMDS=mock-driver
+all: build build-sanity
 
+include release-tools/build.make
 
-ifdef V
-TESTARGS = -v -args -alsologtostderr -v 5
-else
-TESTARGS =
-endif
-
-all: $(APP)
-
-$(APP):
-	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o $(APP) ./mock/main.go
-
-clean:
-	rm -rf bin
-
-container: $(APP)
-	docker build -f Dockerfile.mock -t $(IMAGE_NAME):$(IMAGE_VERSION) .
-
-push: container
-	docker push $(IMAGE_NAME):$(IMAGE_VERSION)
-
-test: $(APP)
-	files=$$(find ./ -name '*.go' | grep -v '^./vendor' ); \
-        if [ $$(gofmt -d $$files | wc -l) -ne 0 ]; then \
-                echo "formatting errors:"; \
-                gofmt -d $$files; \
-                false; \
-        fi
-	go vet $$(go list ./... | grep -v vendor)
-	go test $$(go list ./... | grep -v vendor | grep -v "cmd/csi-sanity")
+# We have to exclude generic testing of the csi-sanity command because
+# the test binary only works in combination with a CSI driver.
+# Instead we test with the special ./hack/e2e.sh.
+TEST_GO_FILTER_CMD+=| grep -v /cmd/csi-sanity
+.PHONY: test-sanity
+test: test-sanity
+test-sanity:
+	@ echo; echo "### test-sanity"
 	./hack/e2e.sh
 
-.PHONY: all clean container push test
+build-sanity:
+	$(MAKE) -C cmd/csi-sanity all
