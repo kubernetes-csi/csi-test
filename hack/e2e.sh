@@ -11,7 +11,7 @@ CSI_MOCK_VERSION="master"
 #      See https://github.com/grpc/grpc/blob/master/doc/naming.md
 runTest()
 {
-	CSI_ENDPOINT=$1 ./bin/mock &
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
 	local pid=$!
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2; ret=$?
@@ -24,7 +24,7 @@ runTest()
 
 runTestWithCreds()
 {
-	CSI_ENDPOINT=$1 CSI_ENABLE_CREDS=true ./bin/mock &
+	CSI_ENDPOINT=$1 CSI_ENABLE_CREDS=true ./bin/mock-driver &
 	local pid=$!
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.secrets=mock/mocksecret.yaml; ret=$?
@@ -37,7 +37,7 @@ runTestWithCreds()
 
 runTestAPI()
 {
-	CSI_ENDPOINT=$1 ./bin/mock &
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
 	local pid=$!
 
 	GOCACHE=off go test -v ./hack/_apitest/api_test.go; ret=$?
