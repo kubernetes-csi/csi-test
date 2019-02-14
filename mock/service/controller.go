@@ -508,7 +508,7 @@ func (s *service) ControllerExpandVolume(
 
 	// Check to see if the volume already satisfied request size.
 	if v.CapacityBytes == requestBytes {
-		log.WithField("volumeID", v.VolumeId).Infof("Volume capacity is already %s, no need to expand", requestBytes)
+		log.WithField("volumeID", v.VolumeId).Infof("Volume capacity is already %d, no need to expand", requestBytes)
 		return resp, nil
 	}
 
