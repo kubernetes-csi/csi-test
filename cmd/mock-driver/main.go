@@ -34,6 +34,7 @@ func main() {
 	flag.StringVar(&config.DriverName, "name", service.Name, "CSI driver name.")
 	flag.Int64Var(&config.AttachLimit, "attach-limit", 0, "number of attachable volumes on a node")
 	flag.BoolVar(&config.NodeExpansionRequired, "node-expand-required", false, "Enables NodeServiceCapability_RPC_EXPAND_VOLUME capacity.")
+	flag.BoolVar(&config.DisableControllerExpansion, "disable-controller-expansion", false, "Disables ControllerServiceCapability_RPC_EXPAND_VOLUME capability.")
 	flag.Parse()
 
 	endpoint := os.Getenv("CSI_ENDPOINT")

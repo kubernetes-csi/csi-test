@@ -386,13 +386,6 @@ func (s *service) ControllerGetCapabilities(
 				},
 			},
 		},
-		{
-			Type: &csi.ControllerServiceCapability_Rpc{
-				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
-				},
-			},
-		},
 	}
 
 	if !s.config.DisableAttach {
@@ -400,6 +393,16 @@ func (s *service) ControllerGetCapabilities(
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
 					Type: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+				},
+			},
+		})
+	}
+
+	if !s.config.DisableControllerExpansion {
+		caps = append(caps, &csi.ControllerServiceCapability{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 				},
 			},
 		})
