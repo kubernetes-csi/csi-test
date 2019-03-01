@@ -34,12 +34,25 @@ func (s *service) GetPluginCapabilities(
 	req *csi.GetPluginCapabilitiesRequest) (
 	*csi.GetPluginCapabilitiesResponse, error) {
 
+	volExpType := csi.PluginCapability_VolumeExpansion_ONLINE
+
+	if s.config.DisableOnlineExpansion {
+		volExpType = csi.PluginCapability_VolumeExpansion_OFFLINE
+	}
+
 	return &csi.GetPluginCapabilitiesResponse{
 		Capabilities: []*csi.PluginCapability{
 			{
 				Type: &csi.PluginCapability_Service_{
 					Service: &csi.PluginCapability_Service{
 						Type: csi.PluginCapability_Service_CONTROLLER_SERVICE,
+					},
+				},
+			},
+			{
+				Type: &csi.PluginCapability_VolumeExpansion_{
+					VolumeExpansion: &csi.PluginCapability_VolumeExpansion{
+						Type: volExpType,
 					},
 				},
 			},
