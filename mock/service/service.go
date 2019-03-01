@@ -32,6 +32,7 @@ type Config struct {
 	AttachLimit                int64
 	NodeExpansionRequired      bool
 	DisableControllerExpansion bool
+	DisableOnlineExpansion     bool
 }
 
 // Service is the CSI Mock service provider.
