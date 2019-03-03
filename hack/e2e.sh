@@ -83,6 +83,36 @@ runTestAPIWithCustomTargetPaths()
 	fi
 }
 
+runTestWithCustomTargetPaths()
+{
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	local pid=$!
+
+	# Create a script for custom target path creation.
+	echo '#!/bin/bash
+targetpath="/tmp/csi/$@"
+mkdir -p $targetpath
+echo $targetpath
+' > custompath.bash
+	chmod +x custompath.bash
+	local scriptpath="$PWD/custompath.bash"
+
+	./cmd/csi-sanity/csi-sanity $TESTARGS \
+		--csi.endpoint=$2 \
+		--csi.mountdir="foo/target/mount" \
+		--csi.stagingdir="foo/staging/mount" \
+		--csi.createmountpathcmd=$scriptpath \
+		--csi.createstagingpathcmd=$scriptpath; ret=$?
+	kill -9 $pid
+
+	# Delete the script.
+	rm $scriptpath
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
 make
 
 cd cmd/csi-sanity
@@ -103,6 +133,9 @@ rm -f $UDS_NODE
 rm -f $UDS_CONTROLLER
 
 runTestAPIWithCustomTargetPaths "${UDS}"
+rm -rf $UDS
+
+runTestWithCustomTargetPaths "${UDS}" "${UDS}"
 rm -rf $UDS
 
 exit 0
