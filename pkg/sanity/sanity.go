@@ -17,11 +17,15 @@ limitations under the License.
 package sanity
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/kubernetes-csi/csi-test/utils"
 	yaml "gopkg.in/yaml.v2"
@@ -67,6 +71,14 @@ type Config struct {
 	// and StagingPath.
 	CreateTargetDir  func(path string) (string, error)
 	CreateStagingDir func(path string) (string, error)
+
+	// Commands to be executed for customized creation of the target and staging
+	// paths. This command must be available on the host where sanity runs. The
+	// stdout of the commands are the paths for mount and staging.
+	CreateTargetPathCmd  string
+	CreateStagingPathCmd string
+	// Timeout for the executed commands for path creation.
+	CreatePathCmdTimeout int
 }
 
 // SanityContext holds the variables that each test can depend on. It
@@ -164,13 +176,14 @@ func (sc *SanityContext) setup() {
 	}
 
 	By("creating mount and staging directories")
+
 	// If callback function for creating target dir is specified, use it.
-	targetPath, err := createMountTargetLocation(sc.Config.TargetPath, sc.Config.CreateTargetDir)
+	targetPath, err := createMountTargetLocation(sc.Config.TargetPath, sc.Config.CreateTargetPathCmd, sc.Config.CreateTargetDir, sc.Config.CreatePathCmdTimeout)
 	Expect(err).NotTo(HaveOccurred(), "failed to create target directory %s", targetPath)
 	sc.targetPath = targetPath
 
 	// If callback function for creating staging dir is specified, use it.
-	stagingPath, err := createMountTargetLocation(sc.Config.StagingPath, sc.Config.CreateStagingDir)
+	stagingPath, err := createMountTargetLocation(sc.Config.StagingPath, sc.Config.CreateStagingPathCmd, sc.Config.CreateStagingDir, sc.Config.CreatePathCmdTimeout)
 	Expect(err).NotTo(HaveOccurred(), "failed to create staging directory %s", stagingPath)
 	sc.stagingPath = stagingPath
 }
@@ -192,7 +205,10 @@ func (sc *SanityContext) teardown() {
 	// (https://github.com/kubernetes-csi/csi-test/pull/98).
 }
 
-func createMountTargetLocation(targetPath string, customCreateDir func(string) (string, error)) (string, error) {
+// createMountTargetLocation takes a target path parameter and creates the
+// target path using a custom command, custom function or falls back to the
+// default using mkdir and returns the new target path.
+func createMountTargetLocation(targetPath string, createPathCmd string, customCreateDir func(string) (string, error), timeout int) (string, error) {
 
 	// Return the target path if empty.
 	if targetPath == "" {
@@ -201,13 +217,28 @@ func createMountTargetLocation(targetPath string, customCreateDir func(string) (
 
 	var newTargetPath string
 
-	if customCreateDir != nil {
+	if createPathCmd != "" {
+		// Create the target path using the create path command.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, createPathCmd, targetPath)
+		cmd.Stderr = os.Stderr
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("target path creation command %s failed: %v", createPathCmd, err)
+		}
+		// Set the command's stdout as the new target path.
+		newTargetPath = strings.TrimSpace(string(out))
+	} else if customCreateDir != nil {
+		// Create the target path using the custom create dir function.
 		newpath, err := customCreateDir(targetPath)
 		if err != nil {
 			return "", err
 		}
 		newTargetPath = newpath
 	} else {
+		// Create the target path using mkdir.
 		fileInfo, err := os.Stat(targetPath)
 		if err != nil {
 			if !os.IsNotExist(err) {
