@@ -176,6 +176,10 @@ func (sc *SanityContext) setup() {
 }
 
 func (sc *SanityContext) teardown() {
+	// Delete the created paths if any.
+	os.RemoveAll(sc.targetPath)
+	os.RemoveAll(sc.stagingPath)
+
 	// We intentionally do not close the connection to the CSI
 	// driver here because the large amount of connection attempts
 	// caused test failures
@@ -191,7 +195,7 @@ func (sc *SanityContext) teardown() {
 func createMountTargetLocation(targetPath string, customCreateDir func(string) (string, error)) (string, error) {
 
 	// Return the target path if empty.
-	if len(targetPath) < 0 {
+	if targetPath == "" {
 		return targetPath, nil
 	}
 
@@ -205,11 +209,16 @@ func createMountTargetLocation(targetPath string, customCreateDir func(string) (
 		newTargetPath = newpath
 	} else {
 		fileInfo, err := os.Stat(targetPath)
-		if err != nil && os.IsNotExist(err) {
-			return "", os.MkdirAll(targetPath, 0755)
-		} else if err != nil {
-			return "", err
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return "", err
+			}
+			if err := os.MkdirAll(targetPath, 0755); err != nil {
+				return "", err
+			}
+			return targetPath, nil
 		}
+
 		if !fileInfo.IsDir() {
 			return "", fmt.Errorf("Target location %s is not a directory", targetPath)
 		}
