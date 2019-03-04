@@ -3,11 +3,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f1976930cb2f6da9d51858bc9eb3620b2f9e75f1f22c878a50eadf236400265e"
+  digest = "1:74dfccc611aba1b8326242610e3dedfaeeed8213a6cb44b4dd8f53b71f1eccc4"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi"]
   pruneopts = "UT"
-  revision = "37e74064635d27c8e33537c863b37ccb1182d4f8"
+  revision = "39d8cecd794146d615eeed07bf3c290c41625aa1"
 
 [[projects]]
   digest = "1:bc38c7c481812e178d85160472e231c5e1c9a7f5845d67e23ee4e706933c10d8"
