@@ -60,8 +60,7 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 	Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
-		Expect(cap.GetService()).NotTo(BeNil())
-		if cap.GetService().GetType() == capType {
+		if cap.GetService() != nil && cap.GetService().GetType() == capType {
 			return true
 		}
 	}

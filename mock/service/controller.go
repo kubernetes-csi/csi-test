@@ -498,6 +498,10 @@ func (s *service) ControllerExpandVolume(
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
+	if s.config.DisableOnlineExpansion && MockVolumes[v.GetVolumeId()].ISPublished {
+		return nil, status.Error(codes.Aborted, "volume is published and online volume expansion is not supported")
+	}
+
 	requestBytes := req.CapacityRange.RequiredBytes
 
 	if v.CapacityBytes > requestBytes {
