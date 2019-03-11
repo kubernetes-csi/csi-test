@@ -56,14 +56,15 @@ const secretField = "secretKey"
 // secrets. This mock driver has a single string secret with secretField as the
 // key.
 type CSICreds struct {
-	CreateVolumeSecret              string
-	DeleteVolumeSecret              string
-	ControllerPublishVolumeSecret   string
-	ControllerUnpublishVolumeSecret string
-	NodeStageVolumeSecret           string
-	NodePublishVolumeSecret         string
-	CreateSnapshotSecret            string
-	DeleteSnapshotSecret            string
+	CreateVolumeSecret                         string
+	DeleteVolumeSecret                         string
+	ControllerPublishVolumeSecret              string
+	ControllerUnpublishVolumeSecret            string
+	NodeStageVolumeSecret                      string
+	NodePublishVolumeSecret                    string
+	CreateSnapshotSecret                       string
+	DeleteSnapshotSecret                       string
+	ControllerValidateVolumeCapabilitiesSecret string
 }
 
 type CSIDriver struct {
@@ -174,14 +175,15 @@ func stop(lock *sync.Mutex, wg *sync.WaitGroup, server *grpc.Server, running boo
 // setDefaultCreds sets the default credentials, given a CSICreds instance.
 func setDefaultCreds(creds *CSICreds) {
 	creds = &CSICreds{
-		CreateVolumeSecret:              "secretval1",
-		DeleteVolumeSecret:              "secretval2",
-		ControllerPublishVolumeSecret:   "secretval3",
-		ControllerUnpublishVolumeSecret: "secretval4",
-		NodeStageVolumeSecret:           "secretval5",
-		NodePublishVolumeSecret:         "secretval6",
-		CreateSnapshotSecret:            "secretval7",
-		DeleteSnapshotSecret:            "secretval8",
+		CreateVolumeSecret:                         "secretval1",
+		DeleteVolumeSecret:                         "secretval2",
+		ControllerPublishVolumeSecret:              "secretval3",
+		ControllerUnpublishVolumeSecret:            "secretval4",
+		NodeStageVolumeSecret:                      "secretval5",
+		NodePublishVolumeSecret:                    "secretval6",
+		CreateSnapshotSecret:                       "secretval7",
+		DeleteSnapshotSecret:                       "secretval8",
+		ControllerValidateVolumeCapabilitiesSecret: "secretval9",
 	}
 }
 
@@ -248,6 +250,8 @@ func isAuthenticated(req interface{}, creds *CSICreds) (bool, error) {
 		return authenticateCreateSnapshot(r, creds)
 	case *csi.DeleteSnapshotRequest:
 		return authenticateDeleteSnapshot(r, creds)
+	case *csi.ValidateVolumeCapabilitiesRequest:
+		return authenticateControllerValidateVolumeCapabilities(r, creds)
 	default:
 		return true, nil
 	}
@@ -283,6 +287,10 @@ func authenticateCreateSnapshot(req *csi.CreateSnapshotRequest, creds *CSICreds)
 
 func authenticateDeleteSnapshot(req *csi.DeleteSnapshotRequest, creds *CSICreds) (bool, error) {
 	return credsCheck(req.GetSecrets(), creds.DeleteSnapshotSecret)
+}
+
+func authenticateControllerValidateVolumeCapabilities(req *csi.ValidateVolumeCapabilitiesRequest, creds *CSICreds) (bool, error) {
+	return credsCheck(req.GetSecrets(), creds.ControllerValidateVolumeCapabilitiesSecret)
 }
 
 func credsCheck(secrets map[string]string, secretVal string) (bool, error) {

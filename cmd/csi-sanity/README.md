@@ -33,6 +33,8 @@ NodeStageVolumeSecret:
   secretKey: secretval5
 NodePublishVolumeSecret:
   secretKey: secretval6
+ControllerValidateVolumeCapabilitiesSecret:
+  secretKey: secretval7
 ```
 
 Pass the file path to csi-sanity as:

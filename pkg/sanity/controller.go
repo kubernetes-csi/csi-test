@@ -594,7 +594,9 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			_, err := c.ValidateVolumeCapabilities(
 				context.Background(),
-				&csi.ValidateVolumeCapabilitiesRequest{})
+				&csi.ValidateVolumeCapabilitiesRequest{
+					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+				})
 			Expect(err).To(HaveOccurred())
 
 			serverError, ok := status.FromError(err)
@@ -636,6 +638,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
+					Secrets:  sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
 			Expect(err).To(HaveOccurred())
 
@@ -702,6 +705,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 							},
 						},
 					},
+					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(valivolcap).NotTo(BeNil())
@@ -741,6 +745,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 							},
 						},
 					},
+					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
