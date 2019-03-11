@@ -39,14 +39,15 @@ import (
 
 // CSISecrets consists of secrets used in CSI credentials.
 type CSISecrets struct {
-	CreateVolumeSecret              map[string]string `yaml:"CreateVolumeSecret"`
-	DeleteVolumeSecret              map[string]string `yaml:"DeleteVolumeSecret"`
-	ControllerPublishVolumeSecret   map[string]string `yaml:"ControllerPublishVolumeSecret"`
-	ControllerUnpublishVolumeSecret map[string]string `yaml:"ControllerUnpublishVolumeSecret"`
-	NodeStageVolumeSecret           map[string]string `yaml:"NodeStageVolumeSecret"`
-	NodePublishVolumeSecret         map[string]string `yaml:"NodePublishVolumeSecret"`
-	CreateSnapshotSecret            map[string]string `yaml:"CreateSnapshotSecret"`
-	DeleteSnapshotSecret            map[string]string `yaml:"DeleteSnapshotSecret"`
+	CreateVolumeSecret                         map[string]string `yaml:"CreateVolumeSecret"`
+	DeleteVolumeSecret                         map[string]string `yaml:"DeleteVolumeSecret"`
+	ControllerPublishVolumeSecret              map[string]string `yaml:"ControllerPublishVolumeSecret"`
+	ControllerUnpublishVolumeSecret            map[string]string `yaml:"ControllerUnpublishVolumeSecret"`
+	ControllerValidateVolumeCapabilitiesSecret map[string]string `yaml:"ControllerValidateVolumeCapabilitiesSecret"`
+	NodeStageVolumeSecret                      map[string]string `yaml:"NodeStageVolumeSecret"`
+	NodePublishVolumeSecret                    map[string]string `yaml:"NodePublishVolumeSecret"`
+	CreateSnapshotSecret                       map[string]string `yaml:"CreateSnapshotSecret"`
+	DeleteSnapshotSecret                       map[string]string `yaml:"DeleteSnapshotSecret"`
 }
 
 // Config provides the configuration for the sanity tests. It
