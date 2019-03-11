@@ -148,3 +148,14 @@ func (s *service) newSnapshot(name, sourceVolumeId string, parameters map[string
 		},
 	}
 }
+
+// getAttachCount returns the number of attached volumes on the node.
+func (s *service) getAttachCount(devPathKey string) int64 {
+	var count int64
+	for _, v := range s.vols {
+		if device := v.VolumeContext[devPathKey]; device != "" {
+			count++
+		}
+	}
+	return count
+}

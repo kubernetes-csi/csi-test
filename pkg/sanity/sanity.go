@@ -53,9 +53,10 @@ type Config struct {
 	Address     string
 	SecretsFile string
 
-	TestVolumeSize           int64
-	TestVolumeParametersFile string
-	TestVolumeParameters     map[string]string
+	TestVolumeSize            int64
+	TestVolumeParametersFile  string
+	TestVolumeParameters      map[string]string
+	TestNodeVolumeAttachLimit bool
 
 	JUnitFile string
 }
