@@ -26,9 +26,10 @@ var _ = AfterSuite(func() {})
 var _ = Describe("MyCSIDriver", func() {
 	Context("Config A", func() {
 		config := &sanity.Config{
-			TargetPath:  os.TempDir() + "/csi",
-			StagingPath: os.TempDir() + "/csi",
-			Address:     "/tmp/e2e-csi-sanity.sock",
+			TargetPath:                os.TempDir() + "/csi",
+			StagingPath:               os.TempDir() + "/csi",
+			Address:                   "/tmp/e2e-csi-sanity.sock",
+			TestNodeVolumeAttachLimit: true,
 		}
 
 		BeforeEach(func() {})

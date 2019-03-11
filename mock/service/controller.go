@@ -166,6 +166,11 @@ func (s *service) ControllerPublishVolume(
 		}, nil
 	}
 
+	// Check attach limit before publishing only if attach limit is set.
+	if s.config.AttachLimit > 0 && s.getAttachCount(devPathKey) >= s.config.AttachLimit {
+		return nil, status.Errorf(codes.ResourceExhausted, "Cannot attach any more volumes to this node")
+	}
+
 	var roVal string
 	if req.GetReadonly() {
 		roVal = "true"
