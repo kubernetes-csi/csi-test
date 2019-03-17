@@ -68,9 +68,16 @@ type Config struct {
 	// Callback functions to customize the creation of target and staging
 	// directories. Returns the new paths for mount and staging.
 	// If not defined, directories are created in the default way at TargetPath
-	// and StagingPath.
+	// and StagingPath on the host.
 	CreateTargetDir  func(path string) (string, error)
 	CreateStagingDir func(path string) (string, error)
+
+	// Callback functions to customize the removal of the target and staging
+	// directories.
+	// If not defined, directories are removed in the default way at TargetPath
+	// and StagingPath on the host.
+	RemoveTargetPath  func(path string) error
+	RemoveStagingPath func(path string) error
 
 	// Commands to be executed for customized creation of the target and staging
 	// paths. This command must be available on the host where sanity runs. The
@@ -79,6 +86,13 @@ type Config struct {
 	CreateStagingPathCmd string
 	// Timeout for the executed commands for path creation.
 	CreatePathCmdTimeout int
+
+	// Commands to be executed for customized removal of the target and staging
+	// paths. Thie command must be available on the host where sanity runs.
+	RemoveTargetPathCmd  string
+	RemoveStagingPathCmd string
+	// Timeout for the executed commands for path removal.
+	RemovePathCmdTimeout int
 }
 
 // SanityContext holds the variables that each test can depend on. It
@@ -190,8 +204,8 @@ func (sc *SanityContext) setup() {
 
 func (sc *SanityContext) teardown() {
 	// Delete the created paths if any.
-	os.RemoveAll(sc.targetPath)
-	os.RemoveAll(sc.stagingPath)
+	removeMountTargetLocation(sc.targetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
+	removeMountTargetLocation(sc.stagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
 
 	// We intentionally do not close the connection to the CSI
 	// driver here because the large amount of connection attempts
@@ -257,6 +271,34 @@ func createMountTargetLocation(targetPath string, createPathCmd string, customCr
 	}
 
 	return newTargetPath, nil
+}
+
+// removeMountTargetLocation takes a target path parameter and removes the path
+// using a custom command, custom function or falls back to the default removal
+// by deleting the path on the host.
+func removeMountTargetLocation(targetPath string, removePathCmd string, customRemovePath func(string) error, timeout int) error {
+	if targetPath == "" {
+		return nil
+	}
+
+	if removePathCmd != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, removePathCmd, targetPath)
+		cmd.Stderr = os.Stderr
+		_, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("target path removal command %s failed: %v", removePathCmd, err)
+		}
+	} else if customRemovePath != nil {
+		if err := customRemovePath(targetPath); err != nil {
+			return err
+		}
+	} else {
+		return os.RemoveAll(targetPath)
+	}
+	return nil
 }
 
 func loadSecrets(path string) (*CSISecrets, error) {

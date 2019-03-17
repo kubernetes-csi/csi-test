@@ -93,20 +93,29 @@ runTestWithCustomTargetPaths()
 targetpath="/tmp/csi/$@"
 mkdir -p $targetpath
 echo $targetpath
-' > custompath.bash
-	chmod +x custompath.bash
-	local scriptpath="$PWD/custompath.bash"
+' > custompathcreation.bash
+
+	# Create a script for custom target path removal.
+	echo '#!/bin/bash
+rm -rf $@
+' > custompathremoval.bash
+
+	chmod +x custompathcreation.bash custompathremoval.bash
+	local creationscriptpath="$PWD/custompathcreation.bash"
+	local removalscriptpath="$PWD/custompathremoval.bash"
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS \
 		--csi.endpoint=$2 \
 		--csi.mountdir="foo/target/mount" \
 		--csi.stagingdir="foo/staging/mount" \
-		--csi.createmountpathcmd=$scriptpath \
-		--csi.createstagingpathcmd=$scriptpath; ret=$?
+		--csi.createmountpathcmd=$creationscriptpath \
+		--csi.createstagingpathcmd=$creationscriptpath \
+		--csi.removemountpathcmd=$removalscriptpath \
+		--csi.removestagingpathcmd=$removalscriptpath; ret=$?
 	kill -9 $pid
 
 	# Delete the script.
-	rm $scriptpath
+	rm $creationscriptpath $removalscriptpath
 
 	if [ $ret -ne 0 ] ; then
 		exit $ret
