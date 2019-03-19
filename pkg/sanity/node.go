@@ -80,7 +80,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 
 	BeforeEach(func() {
 		c = csi.NewNodeClient(sc.Conn)
-		s = csi.NewControllerClient(sc.Conn)
+		s = csi.NewControllerClient(sc.ControllerConn)
 
 		controllerPublishSupported = isControllerCapabilitySupported(
 			s,

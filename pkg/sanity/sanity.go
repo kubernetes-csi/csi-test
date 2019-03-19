@@ -48,10 +48,11 @@ type CSISecrets struct {
 // Config provides the configuration for the sanity tests. It
 // needs to be initialized by the user of the sanity package.
 type Config struct {
-	TargetPath  string
-	StagingPath string
-	Address     string
-	SecretsFile string
+	TargetPath        string
+	StagingPath       string
+	Address           string
+	ControllerAddress string
+	SecretsFile       string
 
 	TestVolumeSize            int64
 	TestVolumeParametersFile  string
@@ -64,11 +65,13 @@ type Config struct {
 // SanityContext holds the variables that each test can depend on. It
 // gets initialized before each test block runs.
 type SanityContext struct {
-	Config  *Config
-	Conn    *grpc.ClientConn
-	Secrets *CSISecrets
+	Config         *Config
+	Conn           *grpc.ClientConn
+	ControllerConn *grpc.ClientConn
+	Secrets        *CSISecrets
 
-	connAddress string
+	connAddress           string
+	controllerConnAddress string
 }
 
 // Test will test the CSI driver at the specified address by
@@ -133,6 +136,20 @@ func (sc *SanityContext) setup() {
 		sc.connAddress = sc.Config.Address
 	} else {
 		By(fmt.Sprintf("reusing connection to CSI driver at %s", sc.connAddress))
+	}
+
+	if sc.ControllerConn == nil || sc.controllerConnAddress != sc.Config.ControllerAddress {
+		// If controller address is empty, use the common connection.
+		if sc.Config.ControllerAddress == "" {
+			sc.ControllerConn = sc.Conn
+			sc.controllerConnAddress = sc.Config.Address
+		} else {
+			sc.ControllerConn, err = utils.Connect(sc.Config.ControllerAddress)
+			Expect(err).NotTo(HaveOccurred())
+			sc.controllerConnAddress = sc.Config.ControllerAddress
+		}
+	} else {
+		By(fmt.Sprintf("reusing connection to CSI driver controller at %s", sc.controllerConnAddress))
 	}
 
 	By("creating mount and staging directories")
