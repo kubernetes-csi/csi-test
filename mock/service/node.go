@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"path"
 	"strconv"
 
@@ -38,6 +39,10 @@ func (s *service) NodeStageVolume(
 
 	if req.GetVolumeCapability() == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
+	}
+
+	if err := checkTargetExists(req.StagingTargetPath); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	s.volsRWL.Lock()
@@ -131,6 +136,10 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
+	if err := checkTargetExists(req.TargetPath); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
@@ -157,6 +166,9 @@ func (s *service) NodePublishVolume(
 
 	// Publish the volume.
 	if req.GetStagingTargetPath() != "" {
+		if err := checkTargetExists(req.GetStagingTargetPath()); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
 	} else {
 		v.VolumeContext[nodeMntPathKey] = device
@@ -335,4 +347,14 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 			},
 		},
 	}, nil
+}
+
+// checkTargetExists checks if a given path exists and returns error if the path
+// does not exists.
+func checkTargetExists(targetPath string) error {
+	_, err := os.Stat(targetPath)
+	if err != nil && os.IsNotExist(err) {
+		return status.Errorf(codes.Internal, "target path %s does not exists", targetPath)
+	}
+	return nil
 }

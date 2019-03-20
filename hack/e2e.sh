@@ -69,6 +69,59 @@ runTestAPI()
 	fi
 }
 
+runTestAPIWithCustomTargetPaths()
+{
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	local pid=$!
+
+	# Running a specific test to verify that the custom target paths are called
+	# a deterministic number of times.
+	GOCACHE=off go test -v ./hack/_apitest2/api_test.go -ginkgo.focus="NodePublishVolume"; ret=$?
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
+runTestWithCustomTargetPaths()
+{
+	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	local pid=$!
+
+	# Create a script for custom target path creation.
+	echo '#!/bin/bash
+targetpath="/tmp/csi/$@"
+mkdir -p $targetpath
+echo $targetpath
+' > custompathcreation.bash
+
+	# Create a script for custom target path removal.
+	echo '#!/bin/bash
+rm -rf $@
+' > custompathremoval.bash
+
+	chmod +x custompathcreation.bash custompathremoval.bash
+	local creationscriptpath="$PWD/custompathcreation.bash"
+	local removalscriptpath="$PWD/custompathremoval.bash"
+
+	./cmd/csi-sanity/csi-sanity $TESTARGS \
+		--csi.endpoint=$2 \
+		--csi.mountdir="foo/target/mount" \
+		--csi.stagingdir="foo/staging/mount" \
+		--csi.createmountpathcmd=$creationscriptpath \
+		--csi.createstagingpathcmd=$creationscriptpath \
+		--csi.removemountpathcmd=$removalscriptpath \
+		--csi.removestagingpathcmd=$removalscriptpath; ret=$?
+	kill -9 $pid
+
+	# Delete the script.
+	rm $creationscriptpath $removalscriptpath
+
+	if [ $ret -ne 0 ] ; then
+		exit $ret
+	fi
+}
+
 make
 
 cd cmd/csi-sanity
@@ -87,5 +140,11 @@ rm -f $UDS
 runTestWithDifferentAddresses "${UDS_NODE}" "${UDS_CONTROLLER}"
 rm -f $UDS_NODE
 rm -f $UDS_CONTROLLER
+
+runTestAPIWithCustomTargetPaths "${UDS}"
+rm -rf $UDS
+
+runTestWithCustomTargetPaths "${UDS}" "${UDS}"
+rm -rf $UDS
 
 exit 0
