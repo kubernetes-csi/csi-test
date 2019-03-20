@@ -17,11 +17,15 @@ limitations under the License.
 package sanity
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/kubernetes-csi/csi-test/utils"
 	yaml "gopkg.in/yaml.v2"
@@ -60,6 +64,35 @@ type Config struct {
 	TestNodeVolumeAttachLimit bool
 
 	JUnitFile string
+
+	// Callback functions to customize the creation of target and staging
+	// directories. Returns the new paths for mount and staging.
+	// If not defined, directories are created in the default way at TargetPath
+	// and StagingPath on the host.
+	CreateTargetDir  func(path string) (string, error)
+	CreateStagingDir func(path string) (string, error)
+
+	// Callback functions to customize the removal of the target and staging
+	// directories.
+	// If not defined, directories are removed in the default way at TargetPath
+	// and StagingPath on the host.
+	RemoveTargetPath  func(path string) error
+	RemoveStagingPath func(path string) error
+
+	// Commands to be executed for customized creation of the target and staging
+	// paths. This command must be available on the host where sanity runs. The
+	// stdout of the commands are the paths for mount and staging.
+	CreateTargetPathCmd  string
+	CreateStagingPathCmd string
+	// Timeout for the executed commands for path creation.
+	CreatePathCmdTimeout int
+
+	// Commands to be executed for customized removal of the target and staging
+	// paths. Thie command must be available on the host where sanity runs.
+	RemoveTargetPathCmd  string
+	RemoveStagingPathCmd string
+	// Timeout for the executed commands for path removal.
+	RemovePathCmdTimeout int
 }
 
 // SanityContext holds the variables that each test can depend on. It
@@ -72,6 +105,10 @@ type SanityContext struct {
 
 	connAddress           string
 	controllerConnAddress string
+
+	// Target and staging paths derived from the sanity config.
+	targetPath  string
+	stagingPath string
 }
 
 // Test will test the CSI driver at the specified address by
@@ -153,15 +190,23 @@ func (sc *SanityContext) setup() {
 	}
 
 	By("creating mount and staging directories")
-	err = createMountTargetLocation(sc.Config.TargetPath)
-	Expect(err).NotTo(HaveOccurred())
-	if len(sc.Config.StagingPath) > 0 {
-		err = createMountTargetLocation(sc.Config.StagingPath)
-		Expect(err).NotTo(HaveOccurred())
-	}
+
+	// If callback function for creating target dir is specified, use it.
+	targetPath, err := createMountTargetLocation(sc.Config.TargetPath, sc.Config.CreateTargetPathCmd, sc.Config.CreateTargetDir, sc.Config.CreatePathCmdTimeout)
+	Expect(err).NotTo(HaveOccurred(), "failed to create target directory %s", targetPath)
+	sc.targetPath = targetPath
+
+	// If callback function for creating staging dir is specified, use it.
+	stagingPath, err := createMountTargetLocation(sc.Config.StagingPath, sc.Config.CreateStagingPathCmd, sc.Config.CreateStagingDir, sc.Config.CreatePathCmdTimeout)
+	Expect(err).NotTo(HaveOccurred(), "failed to create staging directory %s", stagingPath)
+	sc.stagingPath = stagingPath
 }
 
 func (sc *SanityContext) teardown() {
+	// Delete the created paths if any.
+	removeMountTargetLocation(sc.targetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
+	removeMountTargetLocation(sc.stagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
+
 	// We intentionally do not close the connection to the CSI
 	// driver here because the large amount of connection attempts
 	// caused test failures
@@ -174,17 +219,85 @@ func (sc *SanityContext) teardown() {
 	// (https://github.com/kubernetes-csi/csi-test/pull/98).
 }
 
-func createMountTargetLocation(targetPath string) error {
-	fileInfo, err := os.Stat(targetPath)
-	if err != nil && os.IsNotExist(err) {
-		return os.MkdirAll(targetPath, 0755)
-	} else if err != nil {
-		return err
-	}
-	if !fileInfo.IsDir() {
-		return fmt.Errorf("Target location %s is not a directory", targetPath)
+// createMountTargetLocation takes a target path parameter and creates the
+// target path using a custom command, custom function or falls back to the
+// default using mkdir and returns the new target path.
+func createMountTargetLocation(targetPath string, createPathCmd string, customCreateDir func(string) (string, error), timeout int) (string, error) {
+
+	// Return the target path if empty.
+	if targetPath == "" {
+		return targetPath, nil
 	}
 
+	var newTargetPath string
+
+	if createPathCmd != "" {
+		// Create the target path using the create path command.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, createPathCmd, targetPath)
+		cmd.Stderr = os.Stderr
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("target path creation command %s failed: %v", createPathCmd, err)
+		}
+		// Set the command's stdout as the new target path.
+		newTargetPath = strings.TrimSpace(string(out))
+	} else if customCreateDir != nil {
+		// Create the target path using the custom create dir function.
+		newpath, err := customCreateDir(targetPath)
+		if err != nil {
+			return "", err
+		}
+		newTargetPath = newpath
+	} else {
+		// Create the target path using mkdir.
+		fileInfo, err := os.Stat(targetPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return "", err
+			}
+			if err := os.MkdirAll(targetPath, 0755); err != nil {
+				return "", err
+			}
+			return targetPath, nil
+		}
+
+		if !fileInfo.IsDir() {
+			return "", fmt.Errorf("Target location %s is not a directory", targetPath)
+		}
+		newTargetPath = targetPath
+	}
+
+	return newTargetPath, nil
+}
+
+// removeMountTargetLocation takes a target path parameter and removes the path
+// using a custom command, custom function or falls back to the default removal
+// by deleting the path on the host.
+func removeMountTargetLocation(targetPath string, removePathCmd string, customRemovePath func(string) error, timeout int) error {
+	if targetPath == "" {
+		return nil
+	}
+
+	if removePathCmd != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, removePathCmd, targetPath)
+		cmd.Stderr = os.Stderr
+		_, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("target path removal command %s failed: %v", removePathCmd, err)
+		}
+	} else if customRemovePath != nil {
+		if err := customRemovePath(targetPath); err != nil {
+			return err
+		}
+	} else {
+		return os.RemoveAll(targetPath)
+	}
 	return nil
 }
 
