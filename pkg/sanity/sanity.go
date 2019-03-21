@@ -140,7 +140,9 @@ func Test(t *testing.T, reqConfig *Config) {
 		specReporters = append(specReporters, junitReporter)
 	}
 	RunSpecsWithDefaultAndCustomReporters(t, "CSI Driver Test Suite", specReporters)
-	sc.Conn.Close()
+	if sc.Conn != nil {
+		sc.Conn.Close()
+	}
 }
 
 func GinkgoTest(reqConfig *Config) {
