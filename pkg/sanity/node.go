@@ -186,7 +186,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.NodePublishVolumeRequest{
 					VolumeId:   "id",
-					TargetPath: sc.targetPath,
+					TargetPath: sc.targetPath + "/target",
 					Secrets:    sc.Secrets.NodePublishVolumeSecret,
 				},
 			)
@@ -534,7 +534,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.NodePublishVolumeRequest{
 					VolumeId:          vol.GetVolume().GetVolumeId(),
-					TargetPath:        sc.targetPath,
+					TargetPath:        sc.targetPath + "/target",
 					StagingTargetPath: stagingPath,
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
@@ -573,7 +573,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.NodeUnpublishVolumeRequest{
 					VolumeId:   vol.GetVolume().GetVolumeId(),
-					TargetPath: sc.targetPath,
+					TargetPath: sc.targetPath + "/target",
 				})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(nodeunpubvol).NotTo(BeNil())
@@ -718,7 +718,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			context.Background(),
 			&csi.NodePublishVolumeRequest{
 				VolumeId:          vol.GetVolume().GetVolumeId(),
-				TargetPath:        sc.targetPath,
+				TargetPath:        sc.targetPath + "/target",
 				StagingTargetPath: stagingPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Mount{
@@ -743,7 +743,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.NodeGetVolumeStatsRequest{
 					VolumeId:   vol.GetVolume().GetVolumeId(),
-					VolumePath: sc.targetPath,
+					VolumePath: sc.targetPath + "/target",
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -756,7 +756,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			context.Background(),
 			&csi.NodeUnpublishVolumeRequest{
 				VolumeId:   vol.GetVolume().GetVolumeId(),
-				TargetPath: sc.targetPath,
+				TargetPath: sc.targetPath + "/target",
 			})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nodeunpubvol).NotTo(BeNil())

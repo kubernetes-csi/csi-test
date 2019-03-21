@@ -53,8 +53,14 @@ type CSISecrets struct {
 // Config provides the configuration for the sanity tests. It
 // needs to be initialized by the user of the sanity package.
 type Config struct {
-	TargetPath        string
-	StagingPath       string
+	// TargetPath is the *parent* directory for NodePublishVolumeRequest.target_path.
+	// It gets created and removed by csi-sanity.
+	TargetPath string
+
+	// StagingPath is the NodeStageVolumeRequest.staging_target_path.
+	// It gets created and removed by csi-sanity.
+	StagingPath string
+
 	Address           string
 	ControllerAddress string
 	SecretsFile       string
@@ -70,6 +76,17 @@ type Config struct {
 	// directories. Returns the new paths for mount and staging.
 	// If not defined, directories are created in the default way at TargetPath
 	// and StagingPath on the host.
+	//
+	// Both functions can replace the suggested path. What the test then uses
+	// is the path returned by them.
+	//
+	// Note that target and staging directory have different
+	// semantics in the CSI spec: for NodeStateVolume,
+	// CreateTargetDir must create the directory and return the
+	// full path to it. For NodePublishVolume, CreateStagingDir
+	// must create the *parent* directory of `path` (or some other
+	// directory) and return the full path for an entry inside
+	// that created directory.
 	CreateTargetDir  func(path string) (string, error)
 	CreateStagingDir func(path string) (string, error)
 
@@ -77,6 +94,12 @@ type Config struct {
 	// directories.
 	// If not defined, directories are removed in the default way at TargetPath
 	// and StagingPath on the host.
+	//
+	// Both functions are passed the actual paths as used during the test.
+	//
+	// Note that RemoveTargetPath only needs to remove the *parent* of the
+	// given path. The CSI driver should have removed the entry at that path
+	// already.
 	RemoveTargetPath  func(path string) error
 	RemoveStagingPath func(path string) error
 
@@ -253,20 +276,11 @@ func createMountTargetLocation(targetPath string, createPathCmd string, customCr
 		}
 		newTargetPath = newpath
 	} else {
-		// Create the target path using mkdir.
-		fileInfo, err := os.Stat(targetPath)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				return "", err
-			}
-			if err := os.MkdirAll(targetPath, 0755); err != nil {
-				return "", err
-			}
-			return targetPath, nil
-		}
-
-		if !fileInfo.IsDir() {
-			return "", fmt.Errorf("Target location %s is not a directory", targetPath)
+		// Create the target path. Only the directory itself
+		// and not its parents get created, and it is an error
+		// if the directory already exists.
+		if err := os.Mkdir(targetPath, 0755); err != nil {
+			return "", err
 		}
 		newTargetPath = targetPath
 	}
@@ -297,7 +311,8 @@ func removeMountTargetLocation(targetPath string, removePathCmd string, customRe
 			return err
 		}
 	} else {
-		return os.RemoveAll(targetPath)
+		// It's an error if the directory is not empty by now.
+		return os.Remove(targetPath)
 	}
 	return nil
 }
