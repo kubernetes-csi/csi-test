@@ -9,8 +9,8 @@ import (
 
 func TestMyDriver(t *testing.T) {
 	config := &sanity.Config{
-		TargetPath:                os.TempDir() + "/csi",
-		StagingPath:               os.TempDir() + "/csi",
+		TargetPath:                os.TempDir() + "/csi-target",
+		StagingPath:               os.TempDir() + "/csi-staging",
 		Address:                   "/tmp/e2e-csi-sanity.sock",
 		TestNodeVolumeAttachLimit: true,
 	}
