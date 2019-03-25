@@ -136,7 +136,7 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	if err := checkTargetExists(req.TargetPath); err != nil {
+	if err := checkTargetNotExists(req.TargetPath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -353,8 +353,24 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 // does not exists.
 func checkTargetExists(targetPath string) error {
 	_, err := os.Stat(targetPath)
-	if err != nil && os.IsNotExist(err) {
+	if err == nil {
+		return nil
+	}
+	if os.IsNotExist(err) {
 		return status.Errorf(codes.Internal, "target path %s does not exists", targetPath)
 	}
-	return nil
+	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
+}
+
+// checkTargetNotExists checks if a given path does not exist and returns error if the path
+// does exist.
+func checkTargetNotExists(targetPath string) error {
+	_, err := os.Stat(targetPath)
+	if err == nil {
+		return status.Errorf(codes.Internal, "target path %s does exist", targetPath)
+	}
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
 }
