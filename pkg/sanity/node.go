@@ -117,6 +117,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				case csi.NodeServiceCapability_RPC_UNKNOWN:
 				case csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME:
 				case csi.NodeServiceCapability_RPC_GET_VOLUME_STATS:
+				case csi.NodeServiceCapability_RPC_EXPAND_VOLUME:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
