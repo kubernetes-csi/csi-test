@@ -316,7 +316,7 @@ func (s *service) ListVolumes(
 		i, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
 			return nil, status.Errorf(
-				codes.InvalidArgument,
+				codes.Aborted,
 				"startingToken=%d !< int32=%d",
 				startingToken, math.MaxUint32)
 		}
@@ -325,7 +325,7 @@ func (s *service) ListVolumes(
 
 	if startingToken > ulenVols {
 		return nil, status.Errorf(
-			codes.InvalidArgument,
+			codes.Aborted,
 			"startingToken=%d > len(vols)=%d",
 			startingToken, ulenVols)
 	}
