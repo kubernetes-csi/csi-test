@@ -1588,7 +1588,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		}
 	})
 
-	It("should return snapshots that match the specify snapshot id", func() {
+	It("should return snapshots that match the specified snapshot id", func() {
 
 		By("creating a volume")
 		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-1")
@@ -1620,7 +1620,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should return empty when the specify snapshot id is not exist", func() {
+	It("should return empty when the specified snapshot id does not exist", func() {
 
 		snapshots, err := c.ListSnapshots(
 			context.Background(),
@@ -1630,7 +1630,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(snapshots.GetEntries()).To(BeEmpty())
 	})
 
-	It("should return snapshots that match the specify source volume id)", func() {
+	It("should return snapshots that match the specified source volume id)", func() {
 
 		By("creating a volume")
 		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-2")
@@ -1663,7 +1663,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should return empty when the specify source volume id is not exist", func() {
+	It("should return empty when the specified source volume id does not exist", func() {
 
 		snapshots, err := c.ListSnapshots(
 			context.Background(),
