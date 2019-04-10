@@ -16,6 +16,7 @@
 # but csi-sanity has its own build rules and only mock-driver gets
 # published as a container image.
 CMDS=mock-driver
+export GOFLAGS=-mod=vendor
 all: build build-sanity
 
 include release-tools/build.make
