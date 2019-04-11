@@ -117,6 +117,16 @@ test-fmt:
 		false; \
 	fi
 
+# This test only runs when dep >= 0.5 is installed, which is the case for the CI setup.
+.PHONY: test-vendor
+test: test-vendor
+test-vendor:
+	@ echo; echo "### $@:"
+	@ case "$$(dep version 2>/dev/null | grep 'version *:')" in \
+		*v0.[56789]*) dep check && echo "vendor up-to-date" || false;; \
+		*) echo "skipping check, dep >= 0.5 required";; \
+	esac
+
 .PHONY: test-subtree
 test: test-subtree
 test-subtree:
@@ -131,6 +141,10 @@ test: test-shellcheck
 test-shellcheck:
 	@ echo; echo "### $@:"
 	@ ret=0; \
+	if ! command -v docker; then \
+		echo "skipped, no Docker"; \
+		return 0; \
+        fi; \
 	for dir in $(abspath $(TEST_SHELLCHECK_DIRS)); do \
 		echo; \
 		echo "$$dir:"; \
