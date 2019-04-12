@@ -27,7 +27,7 @@ TEST_GO_FILTER_CMD+=| grep -v /cmd/csi-sanity
 .PHONY: test-sanity
 test: test-sanity
 test-sanity:
-	@ echo; echo "### test-sanity"
+	@ echo; echo "### $@:"
 	./hack/e2e.sh
 
 build-sanity:

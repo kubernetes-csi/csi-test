@@ -12,6 +12,9 @@
 # deployment) does not pass csi-sanity testing.
 : ${CSI_PROW_KUBERNETES_VERSION:=1.14.0}
 
+# This repo supports and wants sanity testing.
+CSI_PROW_TESTS_SANITY=sanity
+
 . release-tools/prow.sh
 
 # Here we override "install_sanity" to use the pre-built one.
