@@ -54,8 +54,8 @@ runTestAPI()
 	local pid=$!
         trap 'cleanup $pid $1' EXIT
 
-	GOCACHE=off go test -v ./hack/_apitest/api_test.go && \
-	GOCACHE=off go test -v ./hack/_embedded/embedded_test.go
+	go test -count=1 -v ./hack/_apitest/api_test.go && \
+	go test -count=1 -v ./hack/_embedded/embedded_test.go
 )
 
 runTestAPIWithCustomTargetPaths()
@@ -66,7 +66,7 @@ runTestAPIWithCustomTargetPaths()
 
 	# Running a specific test to verify that the custom target paths are called
 	# a deterministic number of times.
-	GOCACHE=off go test -v ./hack/_apitest2/api_test.go -ginkgo.focus="NodePublishVolume"
+	go test -count=1 -v ./hack/_apitest2/api_test.go -ginkgo.focus="NodePublishVolume"
 )
 
 runTestWithCustomTargetPaths()
