@@ -131,8 +131,8 @@ type SanityContext struct {
 	controllerConnAddress string
 
 	// Target and staging paths derived from the sanity config.
-	targetPath  string
-	stagingPath string
+	TargetPath  string
+	StagingPath string
 }
 
 // Test will test the CSI driver at the specified address by
@@ -176,7 +176,7 @@ func GinkgoTest(reqConfig *Config) {
 	registerTestsInGinkgo(sc)
 }
 
-func (sc *SanityContext) setup() {
+func (sc *SanityContext) Setup() {
 	var err error
 
 	if len(sc.Config.SecretsFile) > 0 {
@@ -220,18 +220,18 @@ func (sc *SanityContext) setup() {
 	// If callback function for creating target dir is specified, use it.
 	targetPath, err := createMountTargetLocation(sc.Config.TargetPath, sc.Config.CreateTargetPathCmd, sc.Config.CreateTargetDir, sc.Config.CreatePathCmdTimeout)
 	Expect(err).NotTo(HaveOccurred(), "failed to create target directory %s", targetPath)
-	sc.targetPath = targetPath
+	sc.TargetPath = targetPath
 
 	// If callback function for creating staging dir is specified, use it.
 	stagingPath, err := createMountTargetLocation(sc.Config.StagingPath, sc.Config.CreateStagingPathCmd, sc.Config.CreateStagingDir, sc.Config.CreatePathCmdTimeout)
 	Expect(err).NotTo(HaveOccurred(), "failed to create staging directory %s", stagingPath)
-	sc.stagingPath = stagingPath
+	sc.StagingPath = stagingPath
 }
 
-func (sc *SanityContext) teardown() {
+func (sc *SanityContext) Teardown() {
 	// Delete the created paths if any.
-	removeMountTargetLocation(sc.targetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
-	removeMountTargetLocation(sc.stagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
+	removeMountTargetLocation(sc.TargetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
+	removeMountTargetLocation(sc.StagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
 
 	// We intentionally do not close the connection to the CSI
 	// driver here because the large amount of connection attempts
@@ -335,11 +335,11 @@ func loadSecrets(path string) (*CSISecrets, error) {
 	return &creds, nil
 }
 
-var uniqueSuffix = "-" + pseudoUUID()
+var uniqueSuffix = "-" + PseudoUUID()
 
-// pseudoUUID returns a unique string generated from random
+// PseudoUUID returns a unique string generated from random
 // bytes, empty string in case of error.
-func pseudoUUID() string {
+func PseudoUUID() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
 		// Shouldn't happen?!
@@ -348,9 +348,9 @@ func pseudoUUID() string {
 	return fmt.Sprintf("%08X-%08X", b[0:4], b[4:8])
 }
 
-// uniqueString returns a unique string by appending a random
+// UniqueString returns a unique string by appending a random
 // number. In case of an error, just the prefix is returned, so it
 // alone should already be fairly unique.
-func uniqueString(prefix string) string {
+func UniqueString(prefix string) string {
 	return prefix + uniqueSuffix
 }
