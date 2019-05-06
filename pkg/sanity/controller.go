@@ -1151,8 +1151,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 							},
 						},
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
-					Parameters: sc.Config.TestVolumeParameters,
+					Secrets:                   sc.Secrets.CreateVolumeSecret,
+					Parameters:                sc.Config.TestVolumeParameters,
 					AccessibilityRequirements: accReqs,
 				},
 			)
@@ -1514,8 +1514,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 							},
 						},
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
-					Parameters: sc.Config.TestVolumeParameters,
+					Secrets:                   sc.Secrets.CreateVolumeSecret,
+					Parameters:                sc.Config.TestVolumeParameters,
 					AccessibilityRequirements: accReqs,
 				},
 			)
