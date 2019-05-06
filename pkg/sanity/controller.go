@@ -1118,6 +1118,21 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 		It("should return appropriate values (no optional values added)", func() {
 
+			By("getting node information")
+			ni, err := n.NodeGetInfo(
+				context.Background(),
+				&csi.NodeGetInfoRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ni).NotTo(BeNil())
+			Expect(ni.GetNodeId()).NotTo(BeEmpty())
+
+			var accReqs *csi.TopologyRequirement
+			if ni.AccessibleTopology != nil {
+				accReqs = &csi.TopologyRequirement{
+					Requisite: []*csi.Topology{ni.AccessibleTopology},
+				}
+			}
+
 			// Create Volume First
 			By("creating a single node writer volume")
 			name := UniqueString("sanity-controller-publish")
@@ -1138,6 +1153,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
+					AccessibilityRequirements: accReqs,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1146,14 +1162,6 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 
-			By("getting a node id")
-			nid, err := n.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
@@ -1161,7 +1169,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   nid.GetNodeId(),
+					NodeId:   ni.GetNodeId(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
@@ -1175,7 +1183,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: nid.GetNodeId()})
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
 			Expect(conpubvol).NotTo(BeNil())
 
 			By("cleaning up unpublishing the volume")
@@ -1185,7 +1193,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				&csi.ControllerUnpublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
 					// NodeID is optional in ControllerUnpublishVolume
-					NodeId:  nid.GetNodeId(),
+					NodeId:  ni.GetNodeId(),
 					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
 				},
 			)
@@ -1477,6 +1485,21 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			By("creating a single node writer volume")
 			name := UniqueString("sanity-controller-unpublish")
 
+			By("getting node information")
+			ni, err := n.NodeGetInfo(
+				context.Background(),
+				&csi.NodeGetInfoRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ni).NotTo(BeNil())
+			Expect(ni.GetNodeId()).NotTo(BeEmpty())
+
+			var accReqs *csi.TopologyRequirement
+			if ni.AccessibleTopology != nil {
+				accReqs = &csi.TopologyRequirement{
+					Requisite: []*csi.Topology{ni.AccessibleTopology},
+				}
+			}
+
 			vol, err := c.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
@@ -1493,6 +1516,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
+					AccessibilityRequirements: accReqs,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1501,14 +1525,6 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 
-			By("getting a node id")
-			nid, err := n.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
@@ -1516,7 +1532,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   nid.GetNodeId(),
+					NodeId:   ni.GetNodeId(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
@@ -1530,7 +1546,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: nid.GetNodeId()})
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
 			Expect(conpubvol).NotTo(BeNil())
 
 			// ControllerUnpublishVolume
@@ -1541,7 +1557,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				&csi.ControllerUnpublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
 					// NodeID is optional in ControllerUnpublishVolume
-					NodeId:  nid.GetNodeId(),
+					NodeId:  ni.GetNodeId(),
 					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
 				},
 			)
