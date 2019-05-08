@@ -281,8 +281,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// currentTotalVols is the total number of volumes at a given time. It
 			// is used to verify that all the volumes have been listed.
 			currentTotalVols := 0
-			// newVolIDs to keep a record of the newly created volume ids.
-			var newVolIDs []string
+			// newVols to keep a record of the newly created volume names and ids.
+			newVols := map[string]string{}
 
 			// Get the number of existing volumes.
 			vols, err := c.ListVolumes(
@@ -299,10 +299,10 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 				By("creating required new volumes")
 				requiredVols := minVolCount - initialTotalVols
-				name := "sanity"
 				for i := 1; i <= requiredVols; i++ {
+					name := "sanity" + strconv.Itoa(i)
 					req := &csi.CreateVolumeRequest{
-						Name: name + strconv.Itoa(i),
+						Name: name,
 						VolumeCapabilities: []*csi.VolumeCapability{
 							{
 								AccessType: &csi.VolumeCapability_Mount{
@@ -319,6 +319,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 					vol, err := c.CreateVolume(context.Background(), req)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(vol).NotTo(BeNil())
+					cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.Volume.VolumeId})
+					newVols[name] = vol.Volume.VolumeId
 				}
 
 				// Update the current total vols count.
@@ -342,7 +344,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			if initialTotalVols < minVolCount {
 
 				By("cleaning up deleting the volumes")
-				for _, volID := range newVolIDs {
+				for name, volID := range newVols {
 					delReq := &csi.DeleteVolumeRequest{
 						VolumeId: volID,
 						Secrets:  sc.Secrets.DeleteVolumeSecret,
@@ -350,6 +352,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 					_, err := c.DeleteVolume(context.Background(), delReq)
 					Expect(err).NotTo(HaveOccurred())
+					cl.UnregisterVolume(name)
 				}
 			}
 		})
