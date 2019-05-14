@@ -1116,6 +1116,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
+		// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
+		// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
 		It("should return appropriate values (no optional values added)", func() {
 
 			By("getting node information")
@@ -1128,6 +1130,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			var accReqs *csi.TopologyRequirement
 			if ni.AccessibleTopology != nil {
+				// Topology requirements are honored if provided by the driver
 				accReqs = &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{ni.AccessibleTopology},
 				}
@@ -1479,6 +1482,8 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
+		// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
+		// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
 		It("should return appropriate values (no optional values added)", func() {
 
 			// Create Volume First
@@ -1495,6 +1500,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 
 			var accReqs *csi.TopologyRequirement
 			if ni.AccessibleTopology != nil {
+				// Topology requirements are honored if provided by the driver
 				accReqs = &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{ni.AccessibleTopology},
 				}
