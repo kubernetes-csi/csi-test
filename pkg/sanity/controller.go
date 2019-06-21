@@ -36,6 +36,12 @@ const (
 	// setting Config.TestVolumeSize.
 	DefTestVolumeSize int64 = 10 * 1024 * 1024 * 1024
 
+	// DefTestVolumeExpand defines the size increment for volume
+	// expansion. It can be overriden by setting an
+	// Config.TestVolumeExpandSize, which will be taken as absolute
+	// value.
+	DefTestExpandIncrement int64 = 1 * 1024 * 1024 * 1024
+
 	MaxNameLength int = 128
 )
 
@@ -44,6 +50,13 @@ func TestVolumeSize(sc *SanityContext) int64 {
 		return sc.Config.TestVolumeSize
 	}
 	return DefTestVolumeSize
+}
+
+func TestVolumeExpandSize(sc *SanityContext) int64 {
+	if sc.Config.TestVolumeExpandSize > 0 {
+		return sc.Config.TestVolumeExpandSize
+	}
+	return TestVolumeSize(sc) + DefTestExpandIncrement
 }
 
 func verifyVolumeInfo(v *csi.Volume) {
@@ -150,7 +163,6 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			// The value of zero is a possible value.
 		})
 	})
-
 	Describe("ListVolumes", func() {
 		BeforeEach(func() {
 			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_LIST_VOLUMES) {
@@ -2050,6 +2062,109 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetVolumeId())
 		_, err = c.DeleteVolume(context.Background(), delVolReq)
 		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContext) {
+	var (
+		c  csi.ControllerClient
+		cl *Cleanup
+	)
+
+	BeforeEach(func() {
+		c = csi.NewControllerClient(sc.ControllerConn)
+		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME) {
+			Skip("ControllerExpandVolume not supported")
+		}
+		cl = &Cleanup{
+			ControllerClient: c,
+			Context:          sc,
+		}
+	})
+	AfterEach(func() {
+		cl.DeleteVolumes()
+	})
+	It("should fail if no volume id is given", func() {
+		expReq := &csi.ControllerExpandVolumeRequest{
+			VolumeId: "",
+			CapacityRange: &csi.CapacityRange{
+				RequiredBytes: TestVolumeExpandSize(sc),
+			},
+		}
+		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should fail if no capacity range is given", func() {
+		expReq := &csi.ControllerExpandVolumeRequest{
+			VolumeId: "",
+		}
+		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+	})
+
+	It("should work", func() {
+
+		By("creating a new volume")
+		name := UniqueString("sanity-expand-volume")
+
+		// Create a new volume.
+		req := &csi.CreateVolumeRequest{
+			Name: name,
+			VolumeCapabilities: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			},
+			Secrets: sc.Secrets.CreateVolumeSecret,
+			CapacityRange: &csi.CapacityRange{
+				RequiredBytes: TestVolumeSize(sc),
+			},
+		}
+
+		vol, err := c.CreateVolume(context.Background(), req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(vol).NotTo(BeNil())
+		Expect(vol.GetVolume()).NotTo(BeNil())
+		Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
+		By("expanding the volume")
+		expReq := &csi.ControllerExpandVolumeRequest{
+			VolumeId: vol.GetVolume().GetVolumeId(),
+			CapacityRange: &csi.CapacityRange{
+				RequiredBytes: TestVolumeExpandSize(sc),
+			},
+		}
+		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
+		Expect(rsp.GetCapacityBytes()).To(Equal(TestVolumeExpandSize(sc)))
+
+		By("cleaning up deleting the volume")
+		_, err = c.DeleteVolume(
+			context.Background(),
+			&csi.DeleteVolumeRequest{
+				VolumeId: vol.GetVolume().GetVolumeId(),
+				Secrets:  sc.Secrets.DeleteVolumeSecret,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		cl.UnregisterVolume(name)
 	})
 })
 
