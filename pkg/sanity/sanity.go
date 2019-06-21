@@ -65,7 +65,10 @@ type Config struct {
 	ControllerAddress string
 	SecretsFile       string
 
-	TestVolumeSize            int64
+	TestVolumeSize int64
+
+	// Target size for ExpandVolume requests. If not specified it defaults to TestVolumeSize + 1 GB
+	TestVolumeExpandSize      int64
 	TestVolumeParametersFile  string
 	TestVolumeParameters      map[string]string
 	TestNodeVolumeAttachLimit bool
