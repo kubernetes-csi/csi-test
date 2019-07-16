@@ -197,32 +197,7 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(serverError.Code()).To(Equal(codes.Aborted))
 		})
 
-		It("should fail when the starting_token is greater than total number of vols", func() {
-			// Get total number of volumes.
-			vols, err := c.ListVolumes(
-				context.Background(),
-				&csi.ListVolumesRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vols).NotTo(BeNil())
-
-			totalVols := len(vols.GetEntries())
-
-			// Send starting_token that is greater than the total number of volumes.
-			vols, err = c.ListVolumes(
-				context.Background(),
-				&csi.ListVolumesRequest{
-					StartingToken: strconv.Itoa(totalVols + 5),
-				},
-			)
-			Expect(err).To(HaveOccurred())
-			Expect(vols).To(BeNil())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.Aborted))
-		})
-
-		It("check the presence of new volumes in the volume list", func() {
+		It("check the presence of new volumes and absence of deleted ones in the volume list", func() {
 			// List Volumes before creating new volume.
 			vols, err := c.ListVolumes(
 				context.Background(),
@@ -284,17 +259,14 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(len(vols.GetEntries())).To(Equal(totalVols))
 		})
 
-		It("should return next token when a limited number of entries are requested", func() {
+		It("pagination should detect volumes added between pages and accept tokens when the last volume from a page is deleted", func() {
 			// minVolCount is the minimum number of volumes expected to exist,
 			// based on which paginated volume listing is performed.
-			minVolCount := 5
+			minVolCount := 3
 			// maxEntried is the maximum entries in list volume request.
 			maxEntries := 2
-			// currentTotalVols is the total number of volumes at a given time. It
-			// is used to verify that all the volumes have been listed.
-			currentTotalVols := 0
-			// newVols to keep a record of the newly created volume names and ids.
-			newVols := map[string]string{}
+			// existing_vols to keep a record of the volumes that should exist
+			existing_vols := map[string]bool{}
 
 			// Get the number of existing volumes.
 			vols, err := c.ListVolumes(
@@ -304,14 +276,17 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 			Expect(vols).NotTo(BeNil())
 
 			initialTotalVols := len(vols.GetEntries())
-			currentTotalVols = initialTotalVols
 
-			// Ensure minimum minVolCount volumes exist.
-			if initialTotalVols < minVolCount {
+			for _, vol := range vols.GetEntries() {
+				existing_vols[vol.Volume.VolumeId] = true
+			}
 
+			if minVolCount <= initialTotalVols {
+				minVolCount = initialTotalVols
+			} else {
+				// Ensure minimum minVolCount volumes exist.
 				By("creating required new volumes")
-				requiredVols := minVolCount - initialTotalVols
-				for i := 1; i <= requiredVols; i++ {
+				for i := initialTotalVols; i < minVolCount; i++ {
 					name := "sanity" + strconv.Itoa(i)
 					req := &csi.CreateVolumeRequest{
 						Name: name,
@@ -331,12 +306,10 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 					vol, err := c.CreateVolume(context.Background(), req)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(vol).NotTo(BeNil())
-					cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.Volume.VolumeId})
-					newVols[name] = vol.Volume.VolumeId
+					// Register the volume so it's automatically cleaned
+					cl.RegisterVolume(vol.Volume.VolumeId, VolumeInfo{VolumeID: vol.Volume.VolumeId})
+					existing_vols[vol.Volume.VolumeId] = true
 				}
-
-				// Update the current total vols count.
-				currentTotalVols += requiredVols
 			}
 
 			// Request list volumes with max entries maxEntries.
@@ -347,25 +320,59 @@ var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
 				})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vols).NotTo(BeNil())
+			Expect(len(vols.GetEntries())).To(Equal(maxEntries))
 
 			nextToken := vols.GetNextToken()
 
-			Expect(nextToken).To(Equal(strconv.Itoa(maxEntries)))
-			Expect(len(vols.GetEntries())).To(Equal(maxEntries))
-
-			if initialTotalVols < minVolCount {
-
-				By("cleaning up deleting the volumes")
-				for name, volID := range newVols {
-					delReq := &csi.DeleteVolumeRequest{
-						VolumeId: volID,
-						Secrets:  sc.Secrets.DeleteVolumeSecret,
-					}
-
-					_, err := c.DeleteVolume(context.Background(), delReq)
-					Expect(err).NotTo(HaveOccurred())
-					cl.UnregisterVolume(name)
+			By("removing all listed volumes")
+			for _, vol := range vols.GetEntries() {
+				Expect(existing_vols[vol.Volume.VolumeId]).To(BeTrue())
+				delReq := &csi.DeleteVolumeRequest{
+					VolumeId: vol.Volume.VolumeId,
+					Secrets:  sc.Secrets.DeleteVolumeSecret,
 				}
+
+				_, err := c.DeleteVolume(context.Background(), delReq)
+				Expect(err).NotTo(HaveOccurred())
+				vol_id := vol.Volume.VolumeId
+				existing_vols[vol_id] = false
+				cl.UnregisterVolume(vol_id)
+			}
+
+			By("creating a new volume")
+			req := &csi.CreateVolumeRequest{
+				Name: "new-addition",
+				VolumeCapabilities: []*csi.VolumeCapability{
+					{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				},
+				Secrets: sc.Secrets.CreateVolumeSecret,
+			}
+			vol, err := c.CreateVolume(context.Background(), req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.Volume).NotTo(BeNil())
+			existing_vols[vol.Volume.VolumeId] = true
+
+			vols, err = c.ListVolumes(
+				context.Background(),
+				&csi.ListVolumesRequest{
+					StartingToken: nextToken,
+				})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vols).NotTo(BeNil())
+			expected_num_volumes := minVolCount - maxEntries + 1
+			// Depending on the plugin implementation we may be missing volumes, but should not get duplicates
+			Expect(len(vols.GetEntries()) <= expected_num_volumes).To(BeTrue())
+			for _, vol := range vols.GetEntries() {
+				Expect(existing_vols[vol.Volume.VolumeId]).To(BeTrue())
+				existing_vols[vol.Volume.VolumeId] = false
 			}
 		})
 	})
