@@ -92,7 +92,7 @@ func isControllerCapabilitySupported(
 	return false
 }
 
-var _ = DescribeSanity("Controller Service", func(sc *SanityContext) {
+var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 		n csi.NodeClient

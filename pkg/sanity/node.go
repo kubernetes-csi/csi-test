@@ -57,7 +57,6 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 		&csi.GetPluginCapabilitiesRequest{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(caps).NotTo(BeNil())
-	Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
 		if cap.GetService() != nil && cap.GetService().GetType() == capType {
@@ -73,6 +72,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		c  csi.NodeClient
 		s  csi.ControllerClient
 
+		providesControllerService  bool
 		controllerPublishSupported bool
 		nodeStageSupported         bool
 		nodeVolumeStatsSupported   bool
@@ -82,9 +82,25 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		c = csi.NewNodeClient(sc.Conn)
 		s = csi.NewControllerClient(sc.ControllerConn)
 
-		controllerPublishSupported = isControllerCapabilitySupported(
-			s,
-			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
+		i := csi.NewIdentityClient(sc.Conn)
+		req := &csi.GetPluginCapabilitiesRequest{}
+		res, err := i.GetPluginCapabilities(context.Background(), req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		for _, cap := range res.GetCapabilities() {
+			switch cap.GetType().(type) {
+			case *csi.PluginCapability_Service_:
+				switch cap.GetService().GetType() {
+				case csi.PluginCapability_Service_CONTROLLER_SERVICE:
+					providesControllerService = true
+				}
+			}
+		}
+		if providesControllerService {
+			controllerPublishSupported = isControllerCapabilitySupported(
+				s,
+				csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
+		}
 		nodeStageSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
 		nodeVolumeStatsSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
 		cl = &Cleanup{
@@ -625,6 +641,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 	// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
 	// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
 	It("should work", func() {
+		if !providesControllerService {
+			Skip("Controller Service not provided: CreateVolume not supported")
+		}
+
 		name := UniqueString("sanity-node-full")
 
 		By("getting node information")
