@@ -33,6 +33,7 @@ type Config struct {
 	NodeExpansionRequired      bool
 	DisableControllerExpansion bool
 	DisableOnlineExpansion     bool
+	PermissiveTargetPath       bool
 }
 
 // Service is the CSI Mock service provider.
