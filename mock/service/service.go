@@ -60,6 +60,7 @@ type Volume struct {
 	NodeID          string
 	ISStaged        bool
 	ISPublished     bool
+	ISEphemeral     bool
 	StageTargetPath string
 	TargetPath      string
 }
