@@ -117,9 +117,10 @@ func (s *service) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest) (
 	*csi.NodePublishVolumeResponse, error) {
 
+	ephemeralVolume := req.GetVolumeContext()["csi.storage.k8s.io/ephemeral"] == "true"
 	device, ok := req.PublishContext["device"]
 	if !ok {
-		if s.config.DisableAttach {
+		if ephemeralVolume || s.config.DisableAttach {
 			device = "mock device"
 		} else {
 			return nil, status.Error(
@@ -154,8 +155,11 @@ func (s *service) NodePublishVolume(
 	defer s.volsRWL.Unlock()
 
 	i, v := s.findVolNoLock("id", req.VolumeId)
-	if i < 0 {
+	if i < 0 && !ephemeralVolume {
 		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+	if i >= 0 && ephemeralVolume {
+		return nil, status.Error(codes.AlreadyExists, req.VolumeId)
 	}
 
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
@@ -175,19 +179,25 @@ func (s *service) NodePublishVolume(
 	}
 
 	// Publish the volume.
-	if req.GetStagingTargetPath() != "" {
-		exists, err := checkTargetExists(req.GetStagingTargetPath())
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+	if ephemeralVolume {
+		MockVolumes[req.VolumeId] = Volume{
+			ISEphemeral: true,
 		}
-		if !exists {
-			status.Errorf(codes.Internal, "staging target path %s does not exist", req.GetStagingTargetPath())
-		}
-		v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
 	} else {
-		v.VolumeContext[nodeMntPathKey] = device
+		if req.GetStagingTargetPath() != "" {
+			exists, err := checkTargetExists(req.GetStagingTargetPath())
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			if !exists {
+				status.Errorf(codes.Internal, "staging target path %s does not exist", req.GetStagingTargetPath())
+			}
+			v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
+		} else {
+			v.VolumeContext[nodeMntPathKey] = device
+		}
+		s.vols[i] = v
 	}
-	s.vols[i] = v
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
@@ -207,23 +217,28 @@ func (s *service) NodeUnpublishVolume(
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
+	ephemeralVolume := MockVolumes[req.VolumeId].ISEphemeral
 	i, v := s.findVolNoLock("id", req.VolumeId)
-	if i < 0 {
+	if i < 0 && !ephemeralVolume {
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
-	// nodeMntPathKey is the key in the volume's attributes that is set to a
-	// mock mount path if the volume has been published by the node
-	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
+	if ephemeralVolume {
+		delete(MockVolumes, req.VolumeId)
+	} else {
+		// nodeMntPathKey is the key in the volume's attributes that is set to a
+		// mock mount path if the volume has been published by the node
+		nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
-	// Check to see if the volume has already been unpublished.
-	if v.VolumeContext[nodeMntPathKey] == "" {
-		return &csi.NodeUnpublishVolumeResponse{}, nil
+		// Check to see if the volume has already been unpublished.
+		if v.VolumeContext[nodeMntPathKey] == "" {
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+
+		// Unpublish the volume.
+		delete(v.VolumeContext, nodeMntPathKey)
+		s.vols[i] = v
 	}
-
-	// Unpublish the volume.
-	delete(v.VolumeContext, nodeMntPathKey)
-	s.vols[i] = v
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
