@@ -41,8 +41,12 @@ func (s *service) NodeStageVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	if err := checkTargetExists(req.StagingTargetPath); err != nil {
+	exists, err := checkTargetExists(req.StagingTargetPath)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !exists {
+		status.Errorf(codes.Internal, "staging target path %s does not exist", req.StagingTargetPath)
 	}
 
 	s.volsRWL.Lock()
@@ -136,8 +140,14 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	if err := checkTargetNotExists(req.TargetPath); err != nil {
+	// May happen with old (or, at this time, even the current) Kubernetes
+	// although it shouldn't (https://github.com/kubernetes/kubernetes/issues/75535).
+	exists, err := checkTargetExists(req.TargetPath)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !s.config.PermissiveTargetPath && exists {
+		status.Errorf(codes.Internal, "target path %s does exist", req.TargetPath)
 	}
 
 	s.volsRWL.Lock()
@@ -166,8 +176,12 @@ func (s *service) NodePublishVolume(
 
 	// Publish the volume.
 	if req.GetStagingTargetPath() != "" {
-		if err := checkTargetExists(req.GetStagingTargetPath()); err != nil {
+		exists, err := checkTargetExists(req.GetStagingTargetPath())
+		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if !exists {
+			status.Errorf(codes.Internal, "staging target path %s does not exist", req.GetStagingTargetPath())
 		}
 		v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
 	} else {
@@ -349,28 +363,15 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 	}, nil
 }
 
-// checkTargetExists checks if a given path exists and returns error if the path
-// does not exists.
-func checkTargetExists(targetPath string) error {
+// checkTargetExists checks if a given path exists.
+func checkTargetExists(targetPath string) (bool, error) {
 	_, err := os.Stat(targetPath)
-	if err == nil {
-		return nil
+	switch {
+	case err == nil:
+		return true, nil
+	case os.IsNotExist(err):
+		return false, nil
+	default:
+		return false, err
 	}
-	if os.IsNotExist(err) {
-		return status.Errorf(codes.Internal, "target path %s does not exists", targetPath)
-	}
-	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
-}
-
-// checkTargetNotExists checks if a given path does not exist and returns error if the path
-// does exist.
-func checkTargetNotExists(targetPath string) error {
-	_, err := os.Stat(targetPath)
-	if err == nil {
-		return status.Errorf(codes.Internal, "target path %s does exist", targetPath)
-	}
-	if os.IsNotExist(err) {
-		return nil
-	}
-	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
 }
