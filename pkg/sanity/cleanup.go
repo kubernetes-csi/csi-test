@@ -88,7 +88,7 @@ func (cl *Cleanup) DeleteVolumes() {
 			ctx,
 			&csi.NodeUnpublishVolumeRequest{
 				VolumeId:   info.VolumeID,
-				TargetPath: cl.Context.TargetPath,
+				TargetPath: cl.Context.TargetPath + "/target",
 			},
 		); err != nil {
 			logger.Printf("warning: NodeUnpublishVolume: %s", err)
