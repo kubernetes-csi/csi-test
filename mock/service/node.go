@@ -41,8 +41,12 @@ func (s *service) NodeStageVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	if err := checkTargetExists(req.StagingTargetPath); err != nil {
+	exists, err := checkTargetExists(req.StagingTargetPath)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !exists {
+		status.Errorf(codes.Internal, "staging target path %s does not exist", req.StagingTargetPath)
 	}
 
 	s.volsRWL.Lock()
@@ -113,9 +117,10 @@ func (s *service) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest) (
 	*csi.NodePublishVolumeResponse, error) {
 
+	ephemeralVolume := req.GetVolumeContext()["csi.storage.k8s.io/ephemeral"] == "true"
 	device, ok := req.PublishContext["device"]
 	if !ok {
-		if s.config.DisableAttach {
+		if ephemeralVolume || s.config.DisableAttach {
 			device = "mock device"
 		} else {
 			return nil, status.Error(
@@ -136,16 +141,25 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	if err := checkTargetNotExists(req.TargetPath); err != nil {
+	// May happen with old (or, at this time, even the current) Kubernetes
+	// although it shouldn't (https://github.com/kubernetes/kubernetes/issues/75535).
+	exists, err := checkTargetExists(req.TargetPath)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !s.config.PermissiveTargetPath && exists {
+		status.Errorf(codes.Internal, "target path %s does exist", req.TargetPath)
 	}
 
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
 	i, v := s.findVolNoLock("id", req.VolumeId)
-	if i < 0 {
+	if i < 0 && !ephemeralVolume {
 		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+	if i >= 0 && ephemeralVolume {
+		return nil, status.Error(codes.AlreadyExists, req.VolumeId)
 	}
 
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
@@ -165,15 +179,25 @@ func (s *service) NodePublishVolume(
 	}
 
 	// Publish the volume.
-	if req.GetStagingTargetPath() != "" {
-		if err := checkTargetExists(req.GetStagingTargetPath()); err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+	if ephemeralVolume {
+		MockVolumes[req.VolumeId] = Volume{
+			ISEphemeral: true,
 		}
-		v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
 	} else {
-		v.VolumeContext[nodeMntPathKey] = device
+		if req.GetStagingTargetPath() != "" {
+			exists, err := checkTargetExists(req.GetStagingTargetPath())
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			if !exists {
+				status.Errorf(codes.Internal, "staging target path %s does not exist", req.GetStagingTargetPath())
+			}
+			v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
+		} else {
+			v.VolumeContext[nodeMntPathKey] = device
+		}
+		s.vols[i] = v
 	}
-	s.vols[i] = v
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
@@ -193,23 +217,28 @@ func (s *service) NodeUnpublishVolume(
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
+	ephemeralVolume := MockVolumes[req.VolumeId].ISEphemeral
 	i, v := s.findVolNoLock("id", req.VolumeId)
-	if i < 0 {
+	if i < 0 && !ephemeralVolume {
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
-	// nodeMntPathKey is the key in the volume's attributes that is set to a
-	// mock mount path if the volume has been published by the node
-	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
+	if ephemeralVolume {
+		delete(MockVolumes, req.VolumeId)
+	} else {
+		// nodeMntPathKey is the key in the volume's attributes that is set to a
+		// mock mount path if the volume has been published by the node
+		nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
-	// Check to see if the volume has already been unpublished.
-	if v.VolumeContext[nodeMntPathKey] == "" {
-		return &csi.NodeUnpublishVolumeResponse{}, nil
+		// Check to see if the volume has already been unpublished.
+		if v.VolumeContext[nodeMntPathKey] == "" {
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+
+		// Unpublish the volume.
+		delete(v.VolumeContext, nodeMntPathKey)
+		s.vols[i] = v
 	}
-
-	// Unpublish the volume.
-	delete(v.VolumeContext, nodeMntPathKey)
-	s.vols[i] = v
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
@@ -349,28 +378,15 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 	}, nil
 }
 
-// checkTargetExists checks if a given path exists and returns error if the path
-// does not exists.
-func checkTargetExists(targetPath string) error {
+// checkTargetExists checks if a given path exists.
+func checkTargetExists(targetPath string) (bool, error) {
 	_, err := os.Stat(targetPath)
-	if err == nil {
-		return nil
+	switch {
+	case err == nil:
+		return true, nil
+	case os.IsNotExist(err):
+		return false, nil
+	default:
+		return false, err
 	}
-	if os.IsNotExist(err) {
-		return status.Errorf(codes.Internal, "target path %s does not exists", targetPath)
-	}
-	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
-}
-
-// checkTargetNotExists checks if a given path does not exist and returns error if the path
-// does exist.
-func checkTargetNotExists(targetPath string) error {
-	_, err := os.Stat(targetPath)
-	if err == nil {
-		return status.Errorf(codes.Internal, "target path %s does exist", targetPath)
-	}
-	if os.IsNotExist(err) {
-		return nil
-	}
-	return status.Errorf(codes.Internal, "stat target path %s: %s", targetPath, err)
 }
