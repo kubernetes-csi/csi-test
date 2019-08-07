@@ -825,7 +825,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			volReq.VolumeContentSource = &csi.VolumeContentSource{
 				Type: &csi.VolumeContentSource_Volume{
 					Volume: &csi.VolumeContentSource_VolumeSource{
-						VolumeId: "non-existing-volume-id",
+						VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					},
 				},
 			}
@@ -864,7 +864,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			_, err := c.DeleteVolume(
 				context.Background(),
 				&csi.DeleteVolumeRequest{
-					VolumeId: "reallyfakevolumeid",
+					VolumeId: sc.Config.IDGen.GenerateInvalidVolumeID(),
 					Secrets:  sc.Secrets.DeleteVolumeSecret,
 				},
 			)
@@ -1061,7 +1061,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			_, err := c.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId: "some-vol-id",
+					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					VolumeCapabilities: []*csi.VolumeCapability{
 						{
 							AccessType: &csi.VolumeCapability_Mount{
@@ -1110,7 +1110,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			_, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: "id",
+					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
@@ -1126,8 +1126,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			_, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: "id",
-					NodeId:   "fakenode",
+					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
 					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
@@ -1287,8 +1287,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 			conpubvol, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: "some-vol-id",
-					NodeId:   "some-node-id",
+					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
@@ -1346,7 +1346,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   "some-fake-node-id",
+					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
@@ -1711,7 +1711,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 
 		snapshots, err := c.ListSnapshots(
 			context.Background(),
-			&csi.ListSnapshotsRequest{SourceVolumeId: "none-exist-volume-id"})
+			&csi.ListSnapshotsRequest{SourceVolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID()})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snapshots).NotTo(BeNil())
 		Expect(snapshots.GetEntries()).To(BeEmpty())
