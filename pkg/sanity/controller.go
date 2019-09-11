@@ -2097,6 +2097,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContex
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: TestVolumeExpandSize(sc),
 			},
+			Secrets: sc.Secrets.ControllerExpandVolumeSecret,
 		}
 		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).To(HaveOccurred())
@@ -2110,6 +2111,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContex
 	It("should fail if no capacity range is given", func() {
 		expReq := &csi.ControllerExpandVolumeRequest{
 			VolumeId: "",
+			Secrets:  sc.Secrets.ControllerExpandVolumeSecret,
 		}
 		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).To(HaveOccurred())
@@ -2156,6 +2158,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContex
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: TestVolumeExpandSize(sc),
 			},
+			Secrets: sc.Secrets.ControllerExpandVolumeSecret,
 		}
 		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).NotTo(HaveOccurred())
