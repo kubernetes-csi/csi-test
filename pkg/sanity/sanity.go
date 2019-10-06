@@ -291,8 +291,13 @@ func (sc *TestContext) Setup() {
 // allocated by Setup.
 func (sc *TestContext) Teardown() {
 	// Delete the created paths if any.
-	removeMountTargetLocation(sc.TargetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
-	removeMountTargetLocation(sc.StagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
+	err1 := removeMountTargetLocation(sc.TargetPath, sc.Config.RemoveTargetPathCmd, sc.Config.RemoveTargetPath, sc.Config.RemovePathCmdTimeout)
+	err2 := removeMountTargetLocation(sc.StagingPath, sc.Config.RemoveStagingPathCmd, sc.Config.RemoveStagingPath, sc.Config.RemovePathCmdTimeout)
+	failures := InterceptGomegaFailures(func() {
+		Expect(err1).NotTo(HaveOccurred(), "failed to delete target directory %s", sc.TargetPath)
+		Expect(err2).NotTo(HaveOccurred(), "failed to delete staging directory %s", sc.StagingPath)
+	})
+	Expect(failures).To(BeEmpty())
 
 	// We intentionally do not close the connection to the CSI
 	// driver here because the large amount of connection attempts
