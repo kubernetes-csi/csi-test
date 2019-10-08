@@ -903,7 +903,7 @@ EOF
                      -csi.junitfile "${ARTIFACTS}/junit_sanity.xml" \
                      -csi.endpoint "dns:///$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' csi-prow-control-plane):$(kubectl get "services/${CSI_PROW_SANITY_SERVICE}" -o "jsonpath={..nodePort}")" \
                      -csi.stagingdir "/tmp/staging" \
-                     -csi.mountdir "/tmp/mount" \
+                     -csi.mountdir "/mnt/mount" \
                      -csi.createstagingpathcmd "${CSI_PROW_WORK}/mkdir_in_pod.sh" \
                      -csi.createmountpathcmd "${CSI_PROW_WORK}/mkdir_in_pod.sh" \
                      -csi.removestagingpathcmd "${CSI_PROW_WORK}/rmdir_in_pod.sh" \

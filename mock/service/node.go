@@ -149,6 +149,11 @@ func (s *service) NodePublishVolume(
 	}
 	if !s.config.PermissiveTargetPath && exists {
 		status.Errorf(codes.Internal, "target path %s does exist", req.TargetPath)
+	} else {
+		err1 := os.Mkdir(req.TargetPath, 0755)
+		if err1 != nil {
+			return nil, status.Errorf(codes.Internal, "fail to create target path %s", req.TargetPath)
+		}
 	}
 
 	s.volsRWL.Lock()
@@ -238,6 +243,17 @@ func (s *service) NodeUnpublishVolume(
 		// Unpublish the volume.
 		delete(v.VolumeContext, nodeMntPathKey)
 		s.vols[i] = v
+	}
+
+	// Deleting the target directory
+	exists, err := checkTargetExists(req.TargetPath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !s.config.PermissiveTargetPath && exists {
+		if err := os.Remove(req.TargetPath); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
