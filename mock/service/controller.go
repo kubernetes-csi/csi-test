@@ -73,7 +73,7 @@ func (s *service) CreateVolume(
 		case *csi.VolumeContentSource_Volume:
 			vid := req.GetVolumeContentSource().GetVolume().GetVolumeId()
 			// Check if the source volume exists.
-			if volID, _ := s.findVolNoLock("id", vid); volID > 0 {
+			if volID, _ := s.findVolNoLock("id", vid); volID >= 0 {
 				v = s.newVolumeFromVolume(req.Name, capacity, volID)
 			} else {
 				return nil, status.Errorf(codes.NotFound, "Requested source volume %s not found", vid)
