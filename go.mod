@@ -3,7 +3,7 @@ module github.com/kubernetes-csi/csi-test
 go 1.12
 
 require (
-	github.com/container-storage-interface/spec v1.1.0
+	github.com/container-storage-interface/spec v1.2.0
 	github.com/golang/mock v1.2.0
 	github.com/golang/protobuf v1.3.1
 	github.com/google/uuid v1.1.1
