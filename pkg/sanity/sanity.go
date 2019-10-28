@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubernetes-csi/csi-test/utils"
+	"github.com/kubernetes-csi/csi-test/v2/utils"
 	yaml "gopkg.in/yaml.v2"
 
 	"google.golang.org/grpc"

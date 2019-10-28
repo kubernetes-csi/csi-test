@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-csi/csi-test/mock/cache"
+	"github.com/kubernetes-csi/csi-test/v2/mock/cache"
 	"golang.org/x/net/context"
 
 	"github.com/golang/protobuf/ptypes"

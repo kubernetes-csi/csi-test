@@ -24,8 +24,8 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
-	mock_driver "github.com/kubernetes-csi/csi-test/driver"
-	mock_utils "github.com/kubernetes-csi/csi-test/utils"
+	mock_driver "github.com/kubernetes-csi/csi-test/v2/driver"
+	mock_utils "github.com/kubernetes-csi/csi-test/v2/utils"
 )
 
 func TestPluginInfoResponse(t *testing.T) {
