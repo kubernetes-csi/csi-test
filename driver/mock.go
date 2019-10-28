@@ -19,7 +19,7 @@ package driver
 import (
 	"net"
 
-	"github.com/kubernetes-csi/csi-test/v2/utils"
+	"github.com/kubernetes-csi/csi-test/v3/utils"
 	"google.golang.org/grpc"
 )
 
