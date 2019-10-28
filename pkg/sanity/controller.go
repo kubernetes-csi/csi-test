@@ -139,6 +139,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 				case csi.ControllerServiceCapability_RPC_PUBLISH_READONLY:
 				case csi.ControllerServiceCapability_RPC_CLONE_VOLUME:
 				case csi.ControllerServiceCapability_RPC_EXPAND_VOLUME:
+				case csi.ControllerServiceCapability_RPC_LIST_VOLUMES_PUBLISHED_NODES:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
