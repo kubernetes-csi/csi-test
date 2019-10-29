@@ -24,28 +24,27 @@ func TestMyDriverWithCustomTargetPaths(t *testing.T) {
 	// are created. For k8s, it could be /var/lib/kubelet/pods under which the
 	// mount directories could be created.
 	tmpPath := path.Join(os.TempDir(), "csi")
-	config := &sanity.Config{
-		TargetPath:  "foo/target/mount",
-		StagingPath: "foo/staging/mount",
-		Address:     "/tmp/e2e-csi-sanity.sock",
-		CreateTargetDir: func(targetPath string) (string, error) {
-			createTargetDirCalls++
-			targetPath = path.Join(tmpPath, targetPath)
-			return targetPath, createTargetDir(targetPath)
-		},
-		CreateStagingDir: func(targetPath string) (string, error) {
-			createStagingDirCalls++
-			targetPath = path.Join(tmpPath, targetPath)
-			return targetPath, createTargetDir(targetPath)
-		},
-		RemoveTargetPath: func(targetPath string) error {
-			removeTargetDirCalls++
-			return os.RemoveAll(targetPath)
-		},
-		RemoveStagingPath: func(targetPath string) error {
-			removeStagingDirCalls++
-			return os.RemoveAll(targetPath)
-		},
+	config := sanity.NewTestConfig()
+	config.TargetPath = "foo/target/mount"
+	config.StagingPath = "foo/staging/mount"
+	config.Address = "/tmp/e2e-csi-sanity.sock"
+	config.CreateTargetDir = func(targetPath string) (string, error) {
+		createTargetDirCalls++
+		targetPath = path.Join(tmpPath, targetPath)
+		return targetPath, createTargetDir(targetPath)
+	}
+	config.CreateStagingDir = func(targetPath string) (string, error) {
+		createStagingDirCalls++
+		targetPath = path.Join(tmpPath, targetPath)
+		return targetPath, createTargetDir(targetPath)
+	}
+	config.RemoveTargetPath = func(targetPath string) error {
+		removeTargetDirCalls++
+		return os.RemoveAll(targetPath)
+	}
+	config.RemoveStagingPath = func(targetPath string) error {
+		removeStagingDirCalls++
+		return os.RemoveAll(targetPath)
 	}
 
 	sanity.Test(t, config)

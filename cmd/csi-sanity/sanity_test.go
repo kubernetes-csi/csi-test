@@ -30,39 +30,59 @@ const (
 
 var (
 	VERSION = "(dev)"
-	version bool
-	config  sanity.Config
+	config  = sanity.NewTestConfig()
 )
 
-func init() {
-	flag.StringVar(&config.Address, prefix+"endpoint", "", "CSI endpoint")
-	flag.StringVar(&config.ControllerAddress, prefix+"controllerendpoint", "", "CSI controller endpoint")
-	flag.BoolVar(&version, prefix+"version", false, "Version of this program")
-	flag.StringVar(&config.TargetPath, prefix+"mountdir", os.TempDir()+"/csi-mount", "Mount point for NodePublish")
-	flag.StringVar(&config.StagingPath, prefix+"stagingdir", os.TempDir()+"/csi-staging", "Mount point for NodeStage if staging is supported")
-	flag.StringVar(&config.CreateTargetPathCmd, prefix+"createmountpathcmd", "", "Command to run for target path creation")
-	flag.StringVar(&config.CreateStagingPathCmd, prefix+"createstagingpathcmd", "", "Command to run for staging path creation")
-	flag.IntVar(&config.CreatePathCmdTimeout, prefix+"createpathcmdtimeout", 10, "Timeout for the commands to create target and staging paths, in seconds")
-	flag.StringVar(&config.RemoveTargetPathCmd, prefix+"removemountpathcmd", "", "Command to run for target path removal")
-	flag.StringVar(&config.RemoveStagingPathCmd, prefix+"removestagingpathcmd", "", "Command to run for staging path removal")
-	flag.IntVar(&config.RemovePathCmdTimeout, prefix+"removepathcmdtimeout", 10, "Timeout for the commands to remove target and staging paths, in seconds")
-	flag.StringVar(&config.SecretsFile, prefix+"secrets", "", "CSI secrets file")
-	flag.Int64Var(&config.TestVolumeSize, prefix+"testvolumesize", sanity.DefTestVolumeSize, "Base volume size used for provisioned volumes")
-	flag.Int64Var(&config.TestVolumeExpandSize, prefix+"testvolumeexpandsize", 0, "Target size for expanded volumes")
-	flag.StringVar(&config.TestVolumeParametersFile, prefix+"testvolumeparameters", "", "YAML file of volume parameters for provisioned volumes")
-	flag.StringVar(&config.TestSnapshotParametersFile, prefix+"testsnapshotparameters", "", "YAML file of snapshot parameters for provisioned snapshots")
-	flag.BoolVar(&config.TestNodeVolumeAttachLimit, prefix+"testnodevolumeattachlimit", false, "Test node volume attach limit")
-	flag.StringVar(&config.JUnitFile, prefix+"junitfile", "", "JUnit XML output file where test results will be written")
+func stringVar(p *string, name string, usage string) {
+	flag.StringVar(p, prefix+name, *p, usage)
+}
+
+func boolVar(p *bool, name string, usage string) {
+	flag.BoolVar(p, prefix+name, *p, usage)
+}
+
+func intVar(p *int, name string, usage string) {
+	flag.IntVar(p, prefix+name, *p, usage)
+}
+
+func int64Var(p *int64, name string, usage string) {
+	flag.Int64Var(p, prefix+name, *p, usage)
+}
+
+func TestMain(m *testing.M) {
+	version := flag.Bool("version", false, "print version of this program")
+
+	// Support overriding the default configuration via flags.
+	stringVar(&config.Address, "endpoint", "CSI endpoint")
+	stringVar(&config.ControllerAddress, "controllerendpoint", "CSI controller endpoint")
+	stringVar(&config.TargetPath, "mountdir", "Mount point for NodePublish")
+	stringVar(&config.StagingPath, "stagingdir", "Mount point for NodeStage if staging is supported")
+	stringVar(&config.CreateTargetPathCmd, "createmountpathcmd", "Command to run for target path creation")
+	stringVar(&config.CreateStagingPathCmd, "createstagingpathcmd", "Command to run for staging path creation")
+	intVar(&config.CreatePathCmdTimeout, "createpathcmdtimeout", "Timeout for the commands to create target and staging paths, in seconds")
+	stringVar(&config.RemoveTargetPathCmd, "removemountpathcmd", "Command to run for target path removal")
+	stringVar(&config.RemoveStagingPathCmd, "removestagingpathcmd", "Command to run for staging path removal")
+	intVar(&config.RemovePathCmdTimeout, "removepathcmdtimeout", "Timeout for the commands to remove target and staging paths, in seconds")
+	stringVar(&config.SecretsFile, "secrets", "CSI secrets file")
+	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")
+	int64Var(&config.TestVolumeExpandSize, "testvolumeexpandsize", "Target size for expanded volumes")
+	stringVar(&config.TestVolumeParametersFile, "testvolumeparameters", "YAML file of volume parameters for provisioned volumes")
+	stringVar(&config.TestSnapshotParametersFile, "testsnapshotparameters", "YAML file of snapshot parameters for provisioned snapshots")
+	boolVar(&config.TestNodeVolumeAttachLimit, "testnodevolumeattachlimit", "Test node volume attach limit")
+	stringVar(&config.JUnitFile, "junitfile", "JUnit XML output file where test results will be written")
+
 	flag.Parse()
+	if *version {
+		fmt.Printf("Version = %s\n", VERSION)
+		os.Exit(0)
+	}
+	if config.Address == "" {
+		fmt.Printf("--%sendpoint must be provided with an CSI endpoint\n", prefix)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }
 
 func TestSanity(t *testing.T) {
-	if version {
-		fmt.Printf("Version = %s\n", VERSION)
-		return
-	}
-	if len(config.Address) == 0 {
-		t.Fatalf("--%sendpoint must be provided with an CSI endpoint", prefix)
-	}
-	sanity.Test(t, &config)
+	sanity.Test(t, config)
 }
