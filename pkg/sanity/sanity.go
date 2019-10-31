@@ -76,6 +76,10 @@ type Config struct {
 
 	JUnitFile string
 
+	// TestSnapshotParametersFile for setting CreateVolumeRequest.Parameters.
+	TestSnapshotParametersFile string
+	TestSnapshotParameters     map[string]string
+
 	// Callback functions to customize the creation of target and staging
 	// directories. Returns the new paths for mount and staging.
 	// If not defined, directories are created in the default way at TargetPath
@@ -163,17 +167,10 @@ func newContext(reqConfig *Config) *SanityContext {
 // Test will test the CSI driver at the specified address by
 // setting up a Ginkgo suite and running it.
 func Test(t *testing.T, reqConfig *Config) {
-	path := reqConfig.TestVolumeParametersFile
-	if len(path) != 0 {
-		yamlFile, err := ioutil.ReadFile(path)
-		if err != nil {
-			panic(fmt.Sprintf("failed to read file %q: %v", path, err))
-		}
-		err = yaml.Unmarshal(yamlFile, &reqConfig.TestVolumeParameters)
-		if err != nil {
-			panic(fmt.Sprintf("error unmarshaling yaml: %v", err))
-		}
-	}
+	// Get StorageClass parameters from TestVolumeParametersFile
+	loadFromFile(reqConfig.TestVolumeParametersFile, &reqConfig.TestVolumeParameters)
+	// Get VolumeSnapshotClass parameters from TestSnapshotParametersFile
+	loadFromFile(reqConfig.TestSnapshotParametersFile, &reqConfig.TestSnapshotParameters)
 
 	sc := newContext(reqConfig)
 	registerTestsInGinkgo(sc)
@@ -355,6 +352,20 @@ func loadSecrets(path string) (*CSISecrets, error) {
 	}
 
 	return &creds, nil
+}
+
+// loadFromFile reads struct from given file path.
+func loadFromFile(from string, to interface{}) {
+	if len(from) != 0 {
+		yamlFile, err := ioutil.ReadFile(from)
+		if err != nil {
+			panic(fmt.Sprintf("failed to read file %q: %v", from, err))
+		}
+		err = yaml.Unmarshal(yamlFile, to)
+		if err != nil {
+			panic(fmt.Sprintf("error unmarshaling yaml: %v", err))
+		}
+	}
 }
 
 var uniqueSuffix = "-" + PseudoUUID()
