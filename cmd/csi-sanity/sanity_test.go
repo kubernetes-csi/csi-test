@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kubernetes-csi/csi-test/pkg/sanity"
+	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
 )
 
 const (

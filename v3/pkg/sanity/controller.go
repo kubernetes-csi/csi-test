@@ -1,0 +1,1 @@
+../../../pkg/sanity/controller.go

@@ -24,8 +24,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/kubernetes-csi/csi-test/driver"
-	"github.com/kubernetes-csi/csi-test/mock/service"
+	"github.com/kubernetes-csi/csi-test/v3/driver"
+	"github.com/kubernetes-csi/csi-test/v3/mock/service"
 )
 
 func main() {
