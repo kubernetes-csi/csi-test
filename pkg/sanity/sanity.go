@@ -134,14 +134,14 @@ type TestConfig struct {
 	CreateTargetPathCmd  string
 	CreateStagingPathCmd string
 	// Timeout for the executed commands for path creation.
-	CreatePathCmdTimeout int
+	CreatePathCmdTimeout time.Duration
 
 	// Commands to be executed for customized removal of the target and staging
 	// paths. Thie command must be available on the host where sanity runs.
 	RemoveTargetPathCmd  string
 	RemoveStagingPathCmd string
 	// Timeout for the executed commands for path removal.
-	RemovePathCmdTimeout int
+	RemovePathCmdTimeout time.Duration
 
 	// IDGen is an interface for callers to provide a
 	// generator for valid Volume and Node IDs. Defaults to
@@ -171,8 +171,8 @@ func NewTestConfig() TestConfig {
 	return TestConfig{
 		TargetPath:           os.TempDir() + "/csi-mount",
 		StagingPath:          os.TempDir() + "/csi-staging",
-		CreatePathCmdTimeout: 10,
-		RemovePathCmdTimeout: 10,
+		CreatePathCmdTimeout: 10 * time.Second,
+		RemovePathCmdTimeout: 10 * time.Second,
 		TestVolumeSize:       10 * 1024 * 1024 * 1024, // 10 GiB
 		IDGen:                &DefaultIDGenerator{},
 	}
@@ -307,7 +307,7 @@ func (sc *TestContext) Finalize() {
 // createMountTargetLocation takes a target path parameter and creates the
 // target path using a custom command, custom function or falls back to the
 // default using mkdir and returns the new target path.
-func createMountTargetLocation(targetPath string, createPathCmd string, customCreateDir func(string) (string, error), timeout int) (string, error) {
+func createMountTargetLocation(targetPath string, createPathCmd string, customCreateDir func(string) (string, error), timeout time.Duration) (string, error) {
 
 	// Return the target path if empty.
 	if targetPath == "" {
@@ -318,7 +318,7 @@ func createMountTargetLocation(targetPath string, createPathCmd string, customCr
 
 	if createPathCmd != "" {
 		// Create the target path using the create path command.
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
 		cmd := exec.CommandContext(ctx, createPathCmd, targetPath)
@@ -352,13 +352,13 @@ func createMountTargetLocation(targetPath string, createPathCmd string, customCr
 // removeMountTargetLocation takes a target path parameter and removes the path
 // using a custom command, custom function or falls back to the default removal
 // by deleting the path on the host.
-func removeMountTargetLocation(targetPath string, removePathCmd string, customRemovePath func(string) error, timeout int) error {
+func removeMountTargetLocation(targetPath string, removePathCmd string, customRemovePath func(string) error, timeout time.Duration) error {
 	if targetPath == "" {
 		return nil
 	}
 
 	if removePathCmd != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
 		cmd := exec.CommandContext(ctx, removePathCmd, targetPath)

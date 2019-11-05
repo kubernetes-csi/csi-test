@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
 )
@@ -49,6 +50,10 @@ func int64Var(p *int64, name string, usage string) {
 	flag.Int64Var(p, prefix+name, *p, usage)
 }
 
+func durationVar(p *time.Duration, name string, usage string) {
+	flag.DurationVar(p, prefix+name, *p, usage)
+}
+
 func TestMain(m *testing.M) {
 	version := flag.Bool("version", false, "print version of this program")
 
@@ -59,10 +64,10 @@ func TestMain(m *testing.M) {
 	stringVar(&config.StagingPath, "stagingdir", "Mount point for NodeStage if staging is supported")
 	stringVar(&config.CreateTargetPathCmd, "createmountpathcmd", "Command to run for target path creation")
 	stringVar(&config.CreateStagingPathCmd, "createstagingpathcmd", "Command to run for staging path creation")
-	intVar(&config.CreatePathCmdTimeout, "createpathcmdtimeout", "Timeout for the commands to create target and staging paths, in seconds")
+	durationVar(&config.CreatePathCmdTimeout, "createpathcmdtimeout", "Timeout for the commands to create target and staging paths, in seconds")
 	stringVar(&config.RemoveTargetPathCmd, "removemountpathcmd", "Command to run for target path removal")
 	stringVar(&config.RemoveStagingPathCmd, "removestagingpathcmd", "Command to run for staging path removal")
-	intVar(&config.RemovePathCmdTimeout, "removepathcmdtimeout", "Timeout for the commands to remove target and staging paths, in seconds")
+	durationVar(&config.RemovePathCmdTimeout, "removepathcmdtimeout", "Timeout for the commands to remove target and staging paths, in seconds")
 	stringVar(&config.SecretsFile, "secrets", "CSI secrets file")
 	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")
 	int64Var(&config.TestVolumeExpandSize, "testvolumeexpandsize", "Target size for expanded volumes")
