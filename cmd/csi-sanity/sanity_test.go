@@ -50,6 +50,7 @@ func init() {
 	flag.Int64Var(&config.TestVolumeSize, prefix+"testvolumesize", sanity.DefTestVolumeSize, "Base volume size used for provisioned volumes")
 	flag.Int64Var(&config.TestVolumeExpandSize, prefix+"testvolumeexpandsize", 0, "Target size for expanded volumes")
 	flag.StringVar(&config.TestVolumeParametersFile, prefix+"testvolumeparameters", "", "YAML file of volume parameters for provisioned volumes")
+	flag.StringVar(&config.TestSnapshotParametersFile, prefix+"testsnapshotparameters", "", "YAML file of snapshot parameters for provisioned snapshots")
 	flag.BoolVar(&config.TestNodeVolumeAttachLimit, prefix+"testnodevolumeattachlimit", false, "Test node volume attach limit")
 	flag.StringVar(&config.JUnitFile, prefix+"junitfile", "", "JUnit XML output file where test results will be written")
 	flag.Parse()

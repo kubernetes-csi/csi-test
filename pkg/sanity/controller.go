@@ -732,7 +732,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 
 			By("creating a snapshot")
 			snapName := UniqueString("sanity-controller-snap-from-vol")
-			snapReq := MakeCreateSnapshotReq(sc, snapName, volume1.GetVolume().GetVolumeId(), nil)
+			snapReq := MakeCreateSnapshotReq(sc, snapName, volume1.GetVolume().GetVolumeId())
 			snap, err := c.CreateSnapshot(context.Background(), snapReq)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(snap).NotTo(BeNil())
@@ -1650,7 +1650,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating a snapshot")
-		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-1", volume.GetVolume().GetVolumeId(), nil)
+		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-1", volume.GetVolume().GetVolumeId())
 		snapshot, err := c.CreateSnapshot(context.Background(), snapshotReq)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1692,7 +1692,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating a snapshot")
-		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-2", volume.GetVolume().GetVolumeId(), nil)
+		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-2", volume.GetVolume().GetVolumeId())
 		snapshot, err := c.CreateSnapshot(context.Background(), snapshotReq)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1743,7 +1743,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating a snapshot")
-		snapReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-3", volume.GetVolume().GetVolumeId(), nil)
+		snapReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-3", volume.GetVolume().GetVolumeId())
 		snapshot, err := c.CreateSnapshot(context.Background(), snapReq)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snapshot).NotTo(BeNil())
@@ -1811,7 +1811,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 				Expect(volume).NotTo(BeNil())
 				createVols = append(createVols, volume.GetVolume())
 
-				snapReq := MakeCreateSnapshotReq(sc, "snapshot"+strconv.Itoa(i), volume.GetVolume().GetVolumeId(), nil)
+				snapReq := MakeCreateSnapshotReq(sc, "snapshot"+strconv.Itoa(i), volume.GetVolume().GetVolumeId())
 				snapshot, err := c.CreateSnapshot(context.Background(), snapReq)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(snapshot).NotTo(BeNil())
@@ -1915,7 +1915,7 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *SanityCont
 
 		// Create Snapshot First
 		By("creating a snapshot")
-		snapshotReq := MakeCreateSnapshotReq(sc, "DeleteSnapshot-snapshot-1", volume.GetVolume().GetVolumeId(), nil)
+		snapshotReq := MakeCreateSnapshotReq(sc, "DeleteSnapshot-snapshot-1", volume.GetVolume().GetVolumeId())
 		snapshot, err := c.CreateSnapshot(context.Background(), snapshotReq)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snapshot).NotTo(BeNil())
@@ -1988,7 +1988,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating a snapshot")
-		snapReq1 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-1", volume.GetVolume().GetVolumeId(), nil)
+		snapReq1 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-1", volume.GetVolume().GetVolumeId())
 		snap1, err := c.CreateSnapshot(context.Background(), snapReq1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snap1).NotTo(BeNil())
@@ -2017,7 +2017,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		Expect(err).ToNot(HaveOccurred())
 
 		By("creating a snapshot with the created volume source id")
-		req1 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", volume.GetVolume().GetVolumeId(), nil)
+		req1 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", volume.GetVolume().GetVolumeId())
 		snap1, err := c.CreateSnapshot(context.Background(), req1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snap1).NotTo(BeNil())
@@ -2027,7 +2027,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		Expect(err).ToNot(HaveOccurred())
 
 		By("creating a snapshot with the same name but different volume source id")
-		req2 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", volume2.GetVolume().GetVolumeId(), nil)
+		req2 := MakeCreateSnapshotReq(sc, "CreateSnapshot-snapshot-2", volume2.GetVolume().GetVolumeId())
 		_, err = c.CreateSnapshot(context.Background(), req2)
 		Expect(err).To(HaveOccurred())
 		serverError, ok := status.FromError(err)
@@ -2059,7 +2059,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 		name := string(nameBytes)
 
 		By("creating a snapshot")
-		snapReq1 := MakeCreateSnapshotReq(sc, name, volume.GetVolume().GetVolumeId(), nil)
+		snapReq1 := MakeCreateSnapshotReq(sc, name, volume.GetVolume().GetVolumeId())
 		snap1, err := c.CreateSnapshot(context.Background(), snapReq1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snap1).NotTo(BeNil())
@@ -2217,11 +2217,11 @@ func MakeCreateVolumeReq(sc *SanityContext, name string) *csi.CreateVolumeReques
 	return req
 }
 
-func MakeCreateSnapshotReq(sc *SanityContext, name, sourceVolumeId string, parameters map[string]string) *csi.CreateSnapshotRequest {
+func MakeCreateSnapshotReq(sc *SanityContext, name, sourceVolumeId string) *csi.CreateSnapshotRequest {
 	req := &csi.CreateSnapshotRequest{
 		Name:           name,
 		SourceVolumeId: sourceVolumeId,
-		Parameters:     parameters,
+		Parameters:     sc.Config.TestSnapshotParameters,
 	}
 
 	if sc.Secrets != nil {
