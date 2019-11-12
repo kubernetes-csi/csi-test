@@ -75,7 +75,7 @@ func (m *MockCSIDriver) Nexus() (*grpc.ClientConn, error) {
 	}
 
 	// Create a client connection
-	m.conn, err = utils.Connect(m.Address())
+	m.conn, err = utils.Connect(m.Address(), grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

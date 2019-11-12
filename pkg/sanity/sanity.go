@@ -71,9 +71,18 @@ type TestConfig struct {
 	// is empty, it must provide both the controller and node service.
 	Address string
 
+	// DialOptions specifies the options that are to be used
+	// when connecting to Address. The default is grpc.WithInsecure().
+	// A dialer will be added for Unix Domain Sockets.
+	DialOptions []grpc.DialOption
+
 	// ControllerAddress optionally provides the gRPC endpoint of
 	// the controller service.
 	ControllerAddress string
+
+	// ControllerDialOptions specifies the options that are to be used
+	// for ControllerAddress.
+	ControllerDialOptions []grpc.DialOption
 
 	// SecretsFile is the filename of a .yaml file which is used
 	// to populate CSISecrets which are then used for calls to the
@@ -175,6 +184,9 @@ func NewTestConfig() TestConfig {
 		RemovePathCmdTimeout: 10 * time.Second,
 		TestVolumeSize:       10 * 1024 * 1024 * 1024, // 10 GiB
 		IDGen:                &DefaultIDGenerator{},
+
+		DialOptions:           []grpc.DialOption{grpc.WithInsecure()},
+		ControllerDialOptions: []grpc.DialOption{grpc.WithInsecure()},
 	}
 }
 
@@ -240,7 +252,7 @@ func (sc *TestContext) Setup() {
 			sc.Conn.Close()
 		}
 		By("connecting to CSI driver")
-		sc.Conn, err = utils.Connect(sc.Config.Address)
+		sc.Conn, err = utils.Connect(sc.Config.Address, sc.Config.DialOptions...)
 		Expect(err).NotTo(HaveOccurred())
 		sc.connAddress = sc.Config.Address
 	} else {
@@ -253,7 +265,7 @@ func (sc *TestContext) Setup() {
 			sc.ControllerConn = sc.Conn
 			sc.controllerConnAddress = sc.Config.Address
 		} else {
-			sc.ControllerConn, err = utils.Connect(sc.Config.ControllerAddress)
+			sc.ControllerConn, err = utils.Connect(sc.Config.ControllerAddress, sc.Config.ControllerDialOptions...)
 			Expect(err).NotTo(HaveOccurred())
 			sc.controllerConnAddress = sc.Config.ControllerAddress
 		}
