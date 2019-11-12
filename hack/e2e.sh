@@ -4,6 +4,10 @@ TESTARGS=$@
 UDS="/tmp/e2e-csi-sanity.sock"
 UDS_NODE="/tmp/e2e-csi-sanity-node.sock"
 UDS_CONTROLLER="/tmp/e2e-csi-sanity-ctrl.sock"
+# Protocol specified as for net.Listen...
+TCP_SERVER="tcp://localhost:7654"
+# ... and slightly differently for gRPC.
+TCP_CLIENT="dns:///localhost:7654"
 CSI_ENDPOINTS="$CSI_ENDPOINTS ${UDS}"
 CSI_MOCK_VERSION="master"
 
@@ -108,6 +112,7 @@ cd cmd/csi-sanity
   make clean install || exit 1
 cd ../..
 
+runTest "${TCP_SERVER}" "${TCP_CLIENT}" &&
 runTest "${UDS}" "${UDS}" &&
 runTestWithCreds "${UDS}" "${UDS}" &&
 runTestAPI "${UDS}" &&
