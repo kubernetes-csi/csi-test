@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = DescribeSanity("Identity Service", func(sc *SanityContext) {
+var _ = DescribeSanity("Identity Service", func(sc *TestContext) {
 	var (
 		c csi.IdentityClient
 	)

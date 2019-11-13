@@ -1,13 +1,14 @@
 package embedded
 
 import (
-	"os"
 	"testing"
 
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+var context *sanity.TestContext
 
 func TestMyDriverGinkgo(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -21,24 +22,24 @@ func TestMyDriverGinkgo(t *testing.T) {
 // in hack/e2e.sh if a PR adds back such functions in the sanity test
 // code.
 var _ = BeforeSuite(func() {})
-var _ = AfterSuite(func() {})
+var _ = AfterSuite(func() {
+	if context != nil {
+		context.Finalize()
+	}
+})
 
 var _ = Describe("MyCSIDriver", func() {
 	Context("Config A", func() {
-		config := &sanity.Config{
-			TargetPath:                os.TempDir() + "/csi-target",
-			StagingPath:               os.TempDir() + "/csi-staging",
-			Address:                   "/tmp/e2e-csi-sanity.sock",
-			TestNodeVolumeAttachLimit: true,
-			IDGen:                     &sanity.DefaultIDGenerator{},
-		}
+		config := sanity.NewTestConfig()
+		config.Address = "/tmp/e2e-csi-sanity.sock"
+		config.TestNodeVolumeAttachLimit = true
 
 		BeforeEach(func() {})
 
 		AfterEach(func() {})
 
 		Describe("CSI Driver Test Suite", func() {
-			sanity.GinkgoTest(config)
+			context = sanity.GinkgoTest(&config)
 		})
 	})
 })

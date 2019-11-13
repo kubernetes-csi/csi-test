@@ -22,7 +22,7 @@ import (
 
 type test struct {
 	text string
-	body func(*SanityContext)
+	body func(*TestContext)
 }
 
 var tests []test
@@ -32,14 +32,14 @@ var tests []test
 // will be called multiple times with the right context (when
 // setting up a Ginkgo suite or a testing.T test, with the right
 // configuration).
-func DescribeSanity(text string, body func(*SanityContext)) bool {
+func DescribeSanity(text string, body func(*TestContext)) bool {
 	tests = append(tests, test{text, body})
 	return true
 }
 
 // registerTestsInGinkgo invokes the actual Gingko Describe
 // for the tests registered earlier with DescribeSanity.
-func registerTestsInGinkgo(sc *SanityContext) {
+func registerTestsInGinkgo(sc *TestContext) {
 	for _, test := range tests {
 		Describe(test.text, func() {
 			BeforeEach(func() {

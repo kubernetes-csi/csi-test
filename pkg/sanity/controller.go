@@ -31,11 +31,6 @@ import (
 )
 
 const (
-	// DefTestVolumeSize defines the base size of dynamically
-	// provisioned volumes. 10GB by default, can be overridden by
-	// setting Config.TestVolumeSize.
-	DefTestVolumeSize int64 = 10 * 1024 * 1024 * 1024
-
 	// DefTestVolumeExpand defines the size increment for volume
 	// expansion. It can be overriden by setting an
 	// Config.TestVolumeExpandSize, which will be taken as absolute
@@ -45,14 +40,11 @@ const (
 	MaxNameLength int = 128
 )
 
-func TestVolumeSize(sc *SanityContext) int64 {
-	if sc.Config.TestVolumeSize > 0 {
-		return sc.Config.TestVolumeSize
-	}
-	return DefTestVolumeSize
+func TestVolumeSize(sc *TestContext) int64 {
+	return sc.Config.TestVolumeSize
 }
 
-func TestVolumeExpandSize(sc *SanityContext) int64 {
+func TestVolumeExpandSize(sc *TestContext) int64 {
 	if sc.Config.TestVolumeExpandSize > 0 {
 		return sc.Config.TestVolumeExpandSize
 	}
@@ -92,7 +84,7 @@ func isControllerCapabilitySupported(
 	return false
 }
 
-var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *SanityContext) {
+var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestContext) {
 	var (
 		c csi.ControllerClient
 		n csi.NodeClient
@@ -1617,7 +1609,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *Sanity
 	})
 })
 
-var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityContext) {
+var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *TestContext) {
 	var (
 		c csi.ControllerClient
 	)
@@ -1870,7 +1862,7 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *SanityConte
 
 })
 
-var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *SanityContext) {
+var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *TestContext) {
 	var (
 		c csi.ControllerClient
 	)
@@ -1933,7 +1925,7 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *SanityCont
 	})
 })
 
-var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityContext) {
+var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContext) {
 	var (
 		c csi.ControllerClient
 	)
@@ -2082,7 +2074,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *SanityCont
 	})
 })
 
-var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContext) {
+var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext) {
 	var (
 		c  csi.ControllerClient
 		cl *Cleanup
@@ -2188,7 +2180,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *SanityContex
 	})
 })
 
-func MakeCreateVolumeReq(sc *SanityContext, name string) *csi.CreateVolumeRequest {
+func MakeCreateVolumeReq(sc *TestContext, name string) *csi.CreateVolumeRequest {
 	size1 := TestVolumeSize(sc)
 
 	req := &csi.CreateVolumeRequest{
@@ -2217,7 +2209,7 @@ func MakeCreateVolumeReq(sc *SanityContext, name string) *csi.CreateVolumeReques
 	return req
 }
 
-func MakeCreateSnapshotReq(sc *SanityContext, name, sourceVolumeId string) *csi.CreateSnapshotRequest {
+func MakeCreateSnapshotReq(sc *TestContext, name, sourceVolumeId string) *csi.CreateSnapshotRequest {
 	req := &csi.CreateSnapshotRequest{
 		Name:           name,
 		SourceVolumeId: sourceVolumeId,
@@ -2231,7 +2223,7 @@ func MakeCreateSnapshotReq(sc *SanityContext, name, sourceVolumeId string) *csi.
 	return req
 }
 
-func MakeDeleteSnapshotReq(sc *SanityContext, id string) *csi.DeleteSnapshotRequest {
+func MakeDeleteSnapshotReq(sc *TestContext, id string) *csi.DeleteSnapshotRequest {
 	delSnapReq := &csi.DeleteSnapshotRequest{
 		SnapshotId: id,
 	}
@@ -2243,7 +2235,7 @@ func MakeDeleteSnapshotReq(sc *SanityContext, id string) *csi.DeleteSnapshotRequ
 	return delSnapReq
 }
 
-func MakeDeleteVolumeReq(sc *SanityContext, id string) *csi.DeleteVolumeRequest {
+func MakeDeleteVolumeReq(sc *TestContext, id string) *csi.DeleteVolumeRequest {
 	delVolReq := &csi.DeleteVolumeRequest{
 		VolumeId: id,
 	}
@@ -2256,7 +2248,7 @@ func MakeDeleteVolumeReq(sc *SanityContext, id string) *csi.DeleteVolumeRequest 
 }
 
 // MakeControllerPublishVolumeReq creates and returns a ControllerPublishVolumeRequest.
-func MakeControllerPublishVolumeReq(sc *SanityContext, volID, nodeID string) *csi.ControllerPublishVolumeRequest {
+func MakeControllerPublishVolumeReq(sc *TestContext, volID, nodeID string) *csi.ControllerPublishVolumeRequest {
 	return &csi.ControllerPublishVolumeRequest{
 		VolumeId: volID,
 		NodeId:   nodeID,
@@ -2274,7 +2266,7 @@ func MakeControllerPublishVolumeReq(sc *SanityContext, volID, nodeID string) *cs
 }
 
 // MakeControllerUnpublishVolumeReq creates and returns a ControllerUnpublishVolumeRequest.
-func MakeControllerUnpublishVolumeReq(sc *SanityContext, volID, nodeID string) *csi.ControllerUnpublishVolumeRequest {
+func MakeControllerUnpublishVolumeReq(sc *TestContext, volID, nodeID string) *csi.ControllerUnpublishVolumeRequest {
 	return &csi.ControllerUnpublishVolumeRequest{
 		VolumeId: volID,
 		NodeId:   nodeID,
@@ -2283,7 +2275,7 @@ func MakeControllerUnpublishVolumeReq(sc *SanityContext, volID, nodeID string) *
 }
 
 // CreateAndControllerPublishVolume creates and controller publishes a volume given a volume name and node ID.
-func CreateAndControllerPublishVolume(sc *SanityContext, c csi.ControllerClient, volName, nodeID string) (volID string, err error) {
+func CreateAndControllerPublishVolume(sc *TestContext, c csi.ControllerClient, volName, nodeID string) (volID string, err error) {
 	vol, err := c.CreateVolume(context.Background(), MakeCreateVolumeReq(sc, volName))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(vol).NotTo(BeNil())
@@ -2298,7 +2290,7 @@ func CreateAndControllerPublishVolume(sc *SanityContext, c csi.ControllerClient,
 }
 
 // ControllerUnpublishAndDeleteVolume controller unpublishes and deletes a volume, given volume ID and node ID.
-func ControllerUnpublishAndDeleteVolume(sc *SanityContext, c csi.ControllerClient, volID, nodeID string) error {
+func ControllerUnpublishAndDeleteVolume(sc *TestContext, c csi.ControllerClient, volID, nodeID string) error {
 	_, err := c.ControllerUnpublishVolume(
 		context.Background(),
 		MakeControllerUnpublishVolumeReq(sc, volID, nodeID),

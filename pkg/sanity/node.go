@@ -66,7 +66,7 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 	return false
 }
 
-var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
+var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 	var (
 		cl *Cleanup
 		c  csi.NodeClient

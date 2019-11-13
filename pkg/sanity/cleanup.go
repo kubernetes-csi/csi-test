@@ -39,7 +39,7 @@ type VolumeInfo struct {
 // Cleanup keeps track of resources, in particular volumes, which need
 // to be freed when testing is done. All methods can be called concurrently.
 type Cleanup struct {
-	Context                    *SanityContext
+	Context                    *TestContext
 	ControllerClient           csi.ControllerClient
 	NodeClient                 csi.NodeClient
 	ControllerPublishSupported bool
