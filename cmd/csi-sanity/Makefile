@@ -22,8 +22,9 @@ PACKAGE :=$(DIR)/dist/$(APP_NAME)-$(RELEASEVER).$(GOOS).$(ARCH).tar.gz
 
 all: $(APP_NAME)
 
-$(APP_NAME): Makefile sanity_test.go
-	go test $(LDFLAGS) -c -o $(APP_NAME)
+.PHONY: $(APP_NAME)
+$(APP_NAME): Makefile
+	go build $(LDFLAGS) -o $(APP_NAME)
 
 install: $(APP_NAME)
 	cp $(APP_NAME) $(GOPATH)/bin

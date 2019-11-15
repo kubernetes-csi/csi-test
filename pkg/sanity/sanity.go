@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/kubernetes-csi/csi-test/v3/utils"
@@ -189,7 +188,7 @@ func newTestContext(config *TestConfig) *TestContext {
 
 // Test will test the CSI driver at the specified address by
 // setting up a Ginkgo suite and running it.
-func Test(t *testing.T, config TestConfig) {
+func Test(t GinkgoTestingT, config TestConfig) {
 	sc := GinkgoTest(&config)
 	RegisterFailHandler(Fail)
 

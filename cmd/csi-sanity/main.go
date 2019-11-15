@@ -13,13 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package sanity
+package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
-	"testing"
 	"time"
 
 	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
@@ -31,7 +30,6 @@ const (
 
 var (
 	VERSION = "(dev)"
-	config  = sanity.NewTestConfig()
 )
 
 func stringVar(p *string, name string, usage string) {
@@ -54,8 +52,19 @@ func durationVar(p *time.Duration, name string, usage string) {
 	flag.DurationVar(p, prefix+name, *p, usage)
 }
 
-func TestMain(m *testing.M) {
+type testing struct {
+	result int
+}
+
+func (t *testing) Fail() {
+	t.result = 1
+}
+
+func main() {
 	version := flag.Bool("version", false, "print version of this program")
+
+	// Get configuration with defaults.
+	config := sanity.NewTestConfig()
 
 	// Support overriding the default configuration via flags.
 	stringVar(&config.Address, "endpoint", "CSI endpoint")
@@ -85,9 +94,8 @@ func TestMain(m *testing.M) {
 		fmt.Printf("--%sendpoint must be provided with an CSI endpoint\n", prefix)
 		os.Exit(1)
 	}
-	os.Exit(m.Run())
-}
 
-func TestSanity(t *testing.T) {
-	sanity.Test(t, config)
+	t := testing{}
+	sanity.Test(&t, config)
+	os.Exit(t.result)
 }
