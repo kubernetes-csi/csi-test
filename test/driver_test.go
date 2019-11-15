@@ -106,7 +106,7 @@ func TestSimpleDriver(t *testing.T) {
 	defer s.Stop()
 
 	// Setup a connection to the driver
-	conn, err := utils.Connect(s.Address())
+	conn, err := utils.Connect(s.Address(), grpc.WithInsecure())
 	if err != nil {
 		t.Errorf("Error: %s", err.Error())
 	}

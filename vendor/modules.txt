@@ -97,7 +97,6 @@ google.golang.org/grpc/codes
 google.golang.org/grpc/reflection
 google.golang.org/grpc/status
 google.golang.org/grpc/connectivity
-google.golang.org/grpc/keepalive
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/credentials
@@ -112,6 +111,7 @@ google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/transport
+google.golang.org/grpc/keepalive
 google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
