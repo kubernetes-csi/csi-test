@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,6 +43,22 @@ const (
 
 func TestVolumeSize(sc *TestContext) int64 {
 	return sc.Config.TestVolumeSize
+}
+
+func TestVolumeCapabilityWithAccessType(sc *TestContext, m csi.VolumeCapability_AccessMode_Mode) *csi.VolumeCapability {
+	vc := &csi.VolumeCapability{
+		AccessMode: &csi.VolumeCapability_AccessMode{Mode: m},
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{},
+		},
+	}
+	if at := strings.TrimSpace(strings.ToLower(sc.Config.TestVolumeAccessType)); at == "block" {
+		vc.AccessType = &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		}
+	}
+
+	return vc
 }
 
 func TestVolumeExpandSize(sc *TestContext) int64 {
@@ -207,14 +224,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			req := &csi.CreateVolumeRequest{
 				Name: name,
 				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
+					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
 				Secrets: sc.Secrets.CreateVolumeSecret,
 			}
@@ -291,14 +301,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					req := &csi.CreateVolumeRequest{
 						Name: name,
 						VolumeCapabilities: []*csi.VolumeCapability{
-							{
-								AccessType: &csi.VolumeCapability_Mount{
-									Mount: &csi.VolumeCapability_MountVolume{},
-								},
-								AccessMode: &csi.VolumeCapability_AccessMode{
-									Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-								},
-							},
+							TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 						},
 						Secrets: sc.Secrets.CreateVolumeSecret,
 					}
@@ -343,14 +346,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			req := &csi.CreateVolumeRequest{
 				Name: "new-addition",
 				VolumeCapabilities: []*csi.VolumeCapability{
-					{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
+					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
 				Secrets: sc.Secrets.CreateVolumeSecret,
 			}
@@ -430,14 +426,10 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: TestVolumeSize(sc),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -472,14 +464,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
@@ -522,14 +507,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
@@ -550,14 +528,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
@@ -596,14 +567,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size1,
@@ -625,14 +589,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size2,
@@ -675,14 +632,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
@@ -884,14 +834,10 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: TestVolumeSize(sc),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -944,14 +890,10 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: TestVolumeSize(sc),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -966,8 +908,9 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			_, err = c.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					Secrets:  sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+					VolumeId:           vol.GetVolume().GetVolumeId(),
+					VolumeCapabilities: nil,
+					Secrets:            sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
 			Expect(err).To(HaveOccurred())
 
@@ -999,14 +942,10 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: TestVolumeSize(sc),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -1025,14 +964,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
@@ -1065,14 +997,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				},
@@ -1169,14 +1094,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets:                   sc.Secrets.CreateVolumeSecret,
 					Parameters:                sc.Config.TestVolumeParameters,
@@ -1195,18 +1113,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			conpubvol, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   ni.GetNodeId(),
-					VolumeCapability: &csi.VolumeCapability{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
-					Readonly: false,
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					VolumeId:         vol.GetVolume().GetVolumeId(),
+					NodeId:           ni.GetNodeId(),
+					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					Readonly:         false,
+					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1289,18 +1200,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			conpubvol, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
-					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
-					VolumeCapability: &csi.VolumeCapability{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
-					Readonly: false,
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					VolumeId:         sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					NodeId:           sc.Config.IDGen.GenerateUniqueValidNodeID(),
+					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					Readonly:         false,
+					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -1322,14 +1226,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -1347,18 +1244,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			conpubvol, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
-					VolumeCapability: &csi.VolumeCapability{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
-					Readonly: false,
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					VolumeId:         vol.GetVolume().GetVolumeId(),
+					NodeId:           sc.Config.IDGen.GenerateUniqueValidNodeID(),
+					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					Readonly:         false,
+					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -1395,14 +1285,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
@@ -1426,18 +1309,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			By("calling controllerpublish on that volume")
 
 			pubReq := &csi.ControllerPublishVolumeRequest{
-				VolumeId: vol.GetVolume().GetVolumeId(),
-				NodeId:   nid.GetNodeId(),
-				VolumeCapability: &csi.VolumeCapability{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
-					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
-				},
-				Readonly: false,
-				Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+				VolumeId:         vol.GetVolume().GetVolumeId(),
+				NodeId:           nid.GetNodeId(),
+				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+				Readonly:         false,
+				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 			}
 
 			conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -1535,14 +1411,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
-						{
-							AccessType: &csi.VolumeCapability_Mount{
-								Mount: &csi.VolumeCapability_MountVolume{},
-							},
-							AccessMode: &csi.VolumeCapability_AccessMode{
-								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-							},
-						},
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
 					Secrets:                   sc.Secrets.CreateVolumeSecret,
 					Parameters:                sc.Config.TestVolumeParameters,
@@ -1561,18 +1430,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			conpubvol, err := c.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   ni.GetNodeId(),
-					VolumeCapability: &csi.VolumeCapability{
-						AccessType: &csi.VolumeCapability_Mount{
-							Mount: &csi.VolumeCapability_MountVolume{},
-						},
-						AccessMode: &csi.VolumeCapability_AccessMode{
-							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-						},
-					},
-					Readonly: false,
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					VolumeId:         vol.GetVolume().GetVolumeId(),
+					NodeId:           ni.GetNodeId(),
+					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					Readonly:         false,
+					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -2133,14 +1995,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 		req := &csi.CreateVolumeRequest{
 			Name: name,
 			VolumeCapabilities: []*csi.VolumeCapability{
-				{
-					AccessType: &csi.VolumeCapability_Mount{
-						Mount: &csi.VolumeCapability_MountVolume{},
-					},
-					AccessMode: &csi.VolumeCapability_AccessMode{
-						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					},
-				},
+				TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 			},
 			Secrets: sc.Secrets.CreateVolumeSecret,
 			CapacityRange: &csi.CapacityRange{
@@ -2250,18 +2105,11 @@ func MakeDeleteVolumeReq(sc *TestContext, id string) *csi.DeleteVolumeRequest {
 // MakeControllerPublishVolumeReq creates and returns a ControllerPublishVolumeRequest.
 func MakeControllerPublishVolumeReq(sc *TestContext, volID, nodeID string) *csi.ControllerPublishVolumeRequest {
 	return &csi.ControllerPublishVolumeRequest{
-		VolumeId: volID,
-		NodeId:   nodeID,
-		VolumeCapability: &csi.VolumeCapability{
-			AccessType: &csi.VolumeCapability_Mount{
-				Mount: &csi.VolumeCapability_MountVolume{},
-			},
-			AccessMode: &csi.VolumeCapability_AccessMode{
-				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-			},
-		},
-		Readonly: false,
-		Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+		VolumeId:         volID,
+		NodeId:           nodeID,
+		VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+		Readonly:         false,
+		Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 	}
 }
 

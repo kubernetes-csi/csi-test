@@ -95,6 +95,7 @@ type TestConfig struct {
 	TestVolumeParametersFile  string
 	TestVolumeParameters      map[string]string
 	TestNodeVolumeAttachLimit bool
+	TestVolumeAccessType      string
 
 	// JUnitFile is used by Test to store test results in JUnit
 	// format. When using GinkgoTest, the caller is responsible
@@ -182,6 +183,7 @@ func NewTestConfig() TestConfig {
 		CreatePathCmdTimeout: 10 * time.Second,
 		RemovePathCmdTimeout: 10 * time.Second,
 		TestVolumeSize:       10 * 1024 * 1024 * 1024, // 10 GiB
+		TestVolumeAccessType: "mount",
 		IDGen:                &DefaultIDGenerator{},
 
 		DialOptions:           []grpc.DialOption{grpc.WithInsecure()},
