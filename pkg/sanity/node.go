@@ -241,6 +241,21 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
+
+		It("should fail when the volume is missing", func() {
+
+			_, err := c.NodeUnpublishVolume(
+				context.Background(),
+				&csi.NodeUnpublishVolumeRequest{
+					VolumeId:   sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					TargetPath: sc.StagingPath,
+				})
+			Expect(err).To(HaveOccurred())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
+		})
 	})
 
 	Describe("NodeStageVolume", func() {
