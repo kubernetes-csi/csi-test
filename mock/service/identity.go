@@ -40,22 +40,35 @@ func (s *service) GetPluginCapabilities(
 		volExpType = csi.PluginCapability_VolumeExpansion_OFFLINE
 	}
 
-	return &csi.GetPluginCapabilitiesResponse{
-		Capabilities: []*csi.PluginCapability{
-			{
-				Type: &csi.PluginCapability_Service_{
-					Service: &csi.PluginCapability_Service{
-						Type: csi.PluginCapability_Service_CONTROLLER_SERVICE,
-					},
-				},
-			},
-			{
-				Type: &csi.PluginCapability_VolumeExpansion_{
-					VolumeExpansion: &csi.PluginCapability_VolumeExpansion{
-						Type: volExpType,
-					},
+	capabilities := []*csi.PluginCapability{
+		{
+			Type: &csi.PluginCapability_Service_{
+				Service: &csi.PluginCapability_Service{
+					Type: csi.PluginCapability_Service_CONTROLLER_SERVICE,
 				},
 			},
 		},
+		{
+			Type: &csi.PluginCapability_VolumeExpansion_{
+				VolumeExpansion: &csi.PluginCapability_VolumeExpansion{
+					Type: volExpType,
+				},
+			},
+		},
+	}
+
+	if s.config.EnableTopology {
+		capabilities = append(capabilities,
+			&csi.PluginCapability{
+				Type: &csi.PluginCapability_Service_{
+					Service: &csi.PluginCapability_Service{
+						Type: csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS,
+					},
+				},
+			})
+	}
+
+	return &csi.GetPluginCapabilitiesResponse{
+		Capabilities: capabilities,
 	}, nil
 }
