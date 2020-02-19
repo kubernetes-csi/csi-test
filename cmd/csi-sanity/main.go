@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
@@ -78,6 +79,7 @@ func main() {
 	stringVar(&config.RemoveStagingPathCmd, "removestagingpathcmd", "Command to run for staging path removal")
 	durationVar(&config.RemovePathCmdTimeout, "removepathcmdtimeout", "Timeout for the commands to remove target and staging paths, in seconds")
 	stringVar(&config.SecretsFile, "secrets", "CSI secrets file")
+	stringVar(&config.TestVolumeAccessType, "testvolumeaccesstype", "Volume capability access type, valid values are mount or block")
 	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")
 	int64Var(&config.TestVolumeExpandSize, "testvolumeexpandsize", "Target size for expanded volumes")
 	stringVar(&config.TestVolumeParametersFile, "testvolumeparameters", "YAML file of volume parameters for provisioned volumes")
@@ -92,6 +94,10 @@ func main() {
 	}
 	if config.Address == "" {
 		fmt.Printf("--%sendpoint must be provided with an CSI endpoint\n", prefix)
+		os.Exit(1)
+	}
+	if at := strings.TrimSpace(strings.ToLower(config.TestVolumeAccessType)); !(at == "mount" || at == "block") {
+		fmt.Printf("--%stestvolumeaccesstype valid values are mount or block\n", prefix)
 		os.Exit(1)
 	}
 
