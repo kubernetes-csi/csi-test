@@ -31,7 +31,9 @@ func (s *service) CreateVolume(
 	if req.VolumeCapabilities == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities cannot be empty")
 	}
-
+	if hookVal, hookMsg := s.execHook("CreateVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	// Check to see if the volume already exists.
 	if i, v := s.findVolByName(ctx, req.Name); i >= 0 {
 		// Requested volume name already exists, need to check if the existing volume's
@@ -96,6 +98,10 @@ func (s *service) CreateVolume(
 		TargetPath:      "",
 	}
 
+	if hookVal, hookMsg := s.execHook("CreateVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.CreateVolumeResponse{Volume: &v}, nil
 }
 
@@ -112,6 +118,10 @@ func (s *service) DeleteVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
 	}
 
+	if hookVal, hookMsg := s.execHook("DeleteVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	// If the volume does not exist then return an idempotent response.
 	i, _ := s.findVolNoLock("id", req.VolumeId)
 	if i < 0 {
@@ -125,6 +135,10 @@ func (s *service) DeleteVolume(
 	s.vols[len(s.vols)-1] = csi.Volume{}
 	s.vols = s.vols[:len(s.vols)-1]
 	log.WithField("volumeID", req.VolumeId).Debug("mock delete volume")
+
+	if hookVal, hookMsg := s.execHook("DeleteVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -149,6 +163,10 @@ func (s *service) ControllerPublishVolume(
 
 	if req.NodeId != s.nodeID {
 		return nil, status.Errorf(codes.NotFound, "Not matching Node ID %s to Mock Node ID %s", req.NodeId, s.nodeID)
+	}
+
+	if hookVal, hookMsg := s.execHook("ControllerPublishVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	s.volsRWL.Lock()
@@ -209,6 +227,10 @@ func (s *service) ControllerPublishVolume(
 	v.VolumeContext[ReadOnlyKey] = roVal
 	s.vols[i] = v
 
+	if hookVal, hookMsg := s.execHook("ControllerPublishVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.ControllerPublishVolumeResponse{
 		PublishContext: map[string]string{
 			"device":   device,
@@ -239,6 +261,10 @@ func (s *service) ControllerUnpublishVolume(
 		return nil, status.Errorf(codes.NotFound, "Node ID %s does not match to expected Node ID %s", req.NodeId, s.nodeID)
 	}
 
+	if hookVal, hookMsg := s.execHook("ControllerUnpublishVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
@@ -262,6 +288,10 @@ func (s *service) ControllerUnpublishVolume(
 	delete(v.VolumeContext, ReadOnlyKey)
 	s.vols[i] = v
 
+	if hookVal, hookMsg := s.execHook("ControllerUnpublishVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
@@ -281,6 +311,10 @@ func (s *service) ValidateVolumeCapabilities(
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
+	if hookVal, hookMsg := s.execHook("ValidateVolumeCapabilities"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
 			VolumeContext:      req.GetVolumeContext(),
@@ -294,6 +328,10 @@ func (s *service) ListVolumes(
 	ctx context.Context,
 	req *csi.ListVolumesRequest) (
 	*csi.ListVolumesResponse, error) {
+
+	if hookVal, hookMsg := s.execHook("ListVolumesStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	// Copy the mock volumes into a new slice in order to avoid
 	// locking the service's volume slice for the duration of the
@@ -359,6 +397,10 @@ func (s *service) ListVolumes(
 		nextToken = fmt.Sprintf("%d", n)
 	}
 
+	if hookVal, hookMsg := s.execHook("ListVolumesEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.ListVolumesResponse{
 		Entries:   entries,
 		NextToken: nextToken,
@@ -370,6 +412,10 @@ func (s *service) GetCapacity(
 	req *csi.GetCapacityRequest) (
 	*csi.GetCapacityResponse, error) {
 
+	if hookVal, hookMsg := s.execHook("GetCapacity"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.GetCapacityResponse{
 		AvailableCapacity: MaxStorageCapacity,
 	}, nil
@@ -379,6 +425,10 @@ func (s *service) ControllerGetCapabilities(
 	ctx context.Context,
 	req *csi.ControllerGetCapabilitiesRequest) (
 	*csi.ControllerGetCapabilitiesResponse, error) {
+
+	if hookVal, hookMsg := s.execHook("ControllerGetCapabilitiesStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	caps := []*csi.ControllerServiceCapability{
 		{
@@ -452,6 +502,10 @@ func (s *service) ControllerGetCapabilities(
 		})
 	}
 
+	if hookVal, hookMsg := s.execHook("ControllerGetCapabilitiesEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.ControllerGetCapabilitiesResponse{
 		Capabilities: caps,
 	}, nil
@@ -465,6 +519,10 @@ func (s *service) CreateSnapshot(ctx context.Context,
 	}
 	if len(req.GetSourceVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Snapshot SourceVolumeId cannot be empty")
+	}
+
+	if hookVal, hookMsg := s.execHook("CreateSnapshotStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	// Check to see if the snapshot already exists.
@@ -481,6 +539,10 @@ func (s *service) CreateSnapshot(ctx context.Context,
 	snapshot := s.newSnapshot(req.GetName(), req.GetSourceVolumeId(), req.GetParameters())
 	s.snapshots.Add(snapshot)
 
+	if hookVal, hookMsg := s.execHook("CreateSnapshotEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.CreateSnapshotResponse{Snapshot: &snapshot.SnapshotCSI}, nil
 }
 
@@ -490,6 +552,10 @@ func (s *service) DeleteSnapshot(ctx context.Context,
 	//  If the snapshot is not specified, return error
 	if len(req.SnapshotId) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Snapshot ID cannot be empty")
+	}
+
+	if hookVal, hookMsg := s.execHook("DeleteSnapshotStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	// If the snapshot does not exist then return an idempotent response.
@@ -503,11 +569,20 @@ func (s *service) DeleteSnapshot(ctx context.Context,
 	// themselves have fields that are.
 	s.snapshots.Delete(i)
 	log.WithField("SnapshotId", req.SnapshotId).Debug("mock delete snapshot")
+
+	if hookVal, hookMsg := s.execHook("DeleteSnapshotEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.DeleteSnapshotResponse{}, nil
 }
 
 func (s *service) ListSnapshots(ctx context.Context,
 	req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+
+	if hookVal, hookMsg := s.execHook("ListSnapshots"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	// case 1: SnapshotId is not empty, return snapshots that match the snapshot id.
 	if len(req.GetSnapshotId()) != 0 {
@@ -532,6 +607,10 @@ func (s *service) ControllerExpandVolume(
 
 	if req.CapacityRange == nil {
 		return nil, status.Error(codes.InvalidArgument, "Request capacity cannot be empty")
+	}
+
+	if hookVal, hookMsg := s.execHook("ControllerExpandVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	s.volsRWL.Lock()
@@ -566,6 +645,10 @@ func (s *service) ControllerExpandVolume(
 	// Update volume's capacity to the requested size.
 	v.CapacityBytes = requestBytes
 	s.vols[i] = v
+
+	if hookVal, hookMsg := s.execHook("ControllerExpandVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	return resp, nil
 }

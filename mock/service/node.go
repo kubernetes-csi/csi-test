@@ -18,6 +18,10 @@ func (s *service) NodeStageVolume(
 	req *csi.NodeStageVolumeRequest) (
 	*csi.NodeStageVolumeResponse, error) {
 
+	if hookVal, hookMsg := s.execHook("NodeStageVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	device, ok := req.PublishContext["device"]
 	if !ok {
 		if s.config.DisableAttach {
@@ -72,6 +76,10 @@ func (s *service) NodeStageVolume(
 	v.VolumeContext[nodeStgPathKey] = device
 	s.vols[i] = v
 
+	if hookVal, hookMsg := s.execHook("NodeStageVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
@@ -86,6 +94,10 @@ func (s *service) NodeUnstageVolume(
 
 	if len(req.GetStagingTargetPath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Staging Target Path cannot be empty")
+	}
+
+	if hookVal, hookMsg := s.execHook("NodeUnstageVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	s.volsRWL.Lock()
@@ -109,6 +121,9 @@ func (s *service) NodeUnstageVolume(
 	delete(v.VolumeContext, nodeStgPathKey)
 	s.vols[i] = v
 
+	if hookVal, hookMsg := s.execHook("NodeUnstageVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
@@ -117,6 +132,9 @@ func (s *service) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest) (
 	*csi.NodePublishVolumeResponse, error) {
 
+	if hookVal, hookMsg := s.execHook("NodePublishVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	ephemeralVolume := req.GetVolumeContext()["csi.storage.k8s.io/ephemeral"] == "true"
 	device, ok := req.PublishContext["device"]
 	if !ok {
@@ -198,6 +216,9 @@ func (s *service) NodePublishVolume(
 		}
 		s.vols[i] = v
 	}
+	if hookVal, hookMsg := s.execHook("NodePublishVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
@@ -212,6 +233,9 @@ func (s *service) NodeUnpublishVolume(
 	}
 	if len(req.GetTargetPath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Target Path cannot be empty")
+	}
+	if hookVal, hookMsg := s.execHook("NodeUnpublishVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	s.volsRWL.Lock()
@@ -239,6 +263,9 @@ func (s *service) NodeUnpublishVolume(
 		delete(v.VolumeContext, nodeMntPathKey)
 		s.vols[i] = v
 	}
+	if hookVal, hookMsg := s.execHook("NodeUnpublishVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
@@ -252,6 +279,9 @@ func (s *service) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	}
 	if req.GetCapacityRange() == nil {
 		return nil, status.Error(codes.InvalidArgument, "Request capacity cannot be empty")
+	}
+	if hookVal, hookMsg := s.execHook("NodeExpandVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	s.volsRWL.Lock()
@@ -287,6 +317,9 @@ func (s *service) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	// Update volume's fs capacity to requested size.
 	v.VolumeContext[fsCapacityKey] = strconv.FormatInt(requestCapacity, 10)
 	s.vols[i] = v
+	if hookVal, hookMsg := s.execHook("NodeExpandVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 
 	return resp, nil
 }
@@ -296,6 +329,9 @@ func (s *service) NodeGetCapabilities(
 	req *csi.NodeGetCapabilitiesRequest) (
 	*csi.NodeGetCapabilitiesResponse, error) {
 
+	if hookVal, hookMsg := s.execHook("NodeGetCapabilities"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	capabilities := []*csi.NodeServiceCapability{
 		{
 			Type: &csi.NodeServiceCapability_Rpc{
@@ -336,6 +372,9 @@ func (s *service) NodeGetCapabilities(
 
 func (s *service) NodeGetInfo(ctx context.Context,
 	req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	if hookVal, hookMsg := s.execHook("NodeGetInfo"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	csiNodeResponse := &csi.NodeGetInfoResponse{
 		NodeId: s.nodeID,
 	}
@@ -348,6 +387,9 @@ func (s *service) NodeGetInfo(ctx context.Context,
 func (s *service) NodeGetVolumeStats(ctx context.Context,
 	req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
 
+	if hookVal, hookMsg := s.execHook("NodeGetVolumeStatsStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
 	}
@@ -366,6 +408,9 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 	_, exists := v.VolumeContext[nodeMntPathKey]
 	if !exists {
 		return nil, status.Errorf(codes.NotFound, "volume %q doest not exist on the specified path %q", req.VolumeId, req.VolumeId)
+	}
+	if hookVal, hookMsg := s.execHook("NodeGetVolumeStatsEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
 	return &csi.NodeGetVolumeStatsResponse{
