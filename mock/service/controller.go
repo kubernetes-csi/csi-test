@@ -244,7 +244,9 @@ func (s *service) ControllerUnpublishVolume(
 
 	i, v := s.findVolNoLock("id", req.VolumeId)
 	if i < 0 {
-		return nil, status.Error(codes.NotFound, req.VolumeId)
+		// Not an error: a non-existent volume is not published.
+		// See also https://github.com/kubernetes-csi/external-attacher/pull/165
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
 	// devPathKey is the key in the volume's attributes that is set to a
