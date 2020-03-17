@@ -156,6 +156,14 @@ type TestConfig struct {
 	// generator for valid Volume and Node IDs. Defaults to
 	// DefaultIDGenerator.
 	IDGen IDGenerator
+
+	// Repeat count for Volume operations to test idempotency requirements.
+	// some tests can optionally run repeated variants for those Volume operations
+	// that are required to be idempotent, based on this count value.
+	// <= 0: skip idempotency tests
+	// n > 0: repeat each call n times
+	// NewTestConfig() by default enables idempotency testing.
+	IdempotentCount int
 }
 
 // TestContext gets initialized by the sanity package before each test
@@ -185,6 +193,7 @@ func NewTestConfig() TestConfig {
 		TestVolumeSize:       10 * 1024 * 1024 * 1024, // 10 GiB
 		TestVolumeAccessType: "mount",
 		IDGen:                &DefaultIDGenerator{},
+		IdempotentCount:      10,
 
 		DialOptions:           []grpc.DialOption{grpc.WithInsecure()},
 		ControllerDialOptions: []grpc.DialOption{grpc.WithInsecure()},

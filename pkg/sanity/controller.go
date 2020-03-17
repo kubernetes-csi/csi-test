@@ -1065,92 +1065,6 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
-		// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
-		// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
-		It("should return appropriate values (no optional values added)", func() {
-
-			By("getting node information")
-			ni, err := n.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ni).NotTo(BeNil())
-			Expect(ni.GetNodeId()).NotTo(BeEmpty())
-
-			var accReqs *csi.TopologyRequirement
-			if ni.AccessibleTopology != nil {
-				// Topology requirements are honored if provided by the driver
-				accReqs = &csi.TopologyRequirement{
-					Requisite: []*csi.Topology{ni.AccessibleTopology},
-				}
-			}
-
-			// Create Volume First
-			By("creating a single node writer volume")
-			name := UniqueString("sanity-controller-publish")
-
-			vol, err := c.CreateVolume(
-				context.Background(),
-				&csi.CreateVolumeRequest{
-					Name: name,
-					VolumeCapabilities: []*csi.VolumeCapability{
-						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
-					},
-					Secrets:                   sc.Secrets.CreateVolumeSecret,
-					Parameters:                sc.Config.TestVolumeParameters,
-					AccessibilityRequirements: accReqs,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vol).NotTo(BeNil())
-			Expect(vol.GetVolume()).NotTo(BeNil())
-			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
-
-			// ControllerPublishVolume
-			By("calling controllerpublish on that volume")
-
-			conpubvol, err := c.ControllerPublishVolume(
-				context.Background(),
-				&csi.ControllerPublishVolumeRequest{
-					VolumeId:         vol.GetVolume().GetVolumeId(),
-					NodeId:           ni.GetNodeId(),
-					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
-					Readonly:         false,
-					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
-			Expect(conpubvol).NotTo(BeNil())
-
-			By("cleaning up unpublishing the volume")
-
-			conunpubvol, err := c.ControllerUnpublishVolume(
-				context.Background(),
-				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					// NodeID is optional in ControllerUnpublishVolume
-					NodeId:  ni.GetNodeId(),
-					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(conunpubvol).NotTo(BeNil())
-
-			By("cleaning up deleting the volume")
-
-			_, err = c.DeleteVolume(
-				context.Background(),
-				&csi.DeleteVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.UnregisterVolume(name)
-		})
-
 		It("should fail when publishing more volumes than the node max attach limit", func() {
 			if !sc.Config.TestNodeVolumeAttachLimit {
 				Skip("testnodevolumeattachlimit not enabled")
@@ -1360,6 +1274,22 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 		})
 	})
 
+	Describe("volume lifecycle", func() {
+		BeforeEach(func() {
+			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME) {
+				Skip("Controller Publish, UnpublishVolume not supported")
+			}
+		})
+
+		It("should work", func() {
+			VolumeLifecycle(n, c, sc, cl, 1)
+		})
+
+		It("should be idempotent", func() {
+			VolumeLifecycle(n, c, sc, cl, sc.Config.IdempotentCount)
+		})
+	})
+
 	Describe("ControllerUnpublishVolume", func() {
 		BeforeEach(func() {
 			if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME) {
@@ -1380,93 +1310,6 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
-		})
-
-		// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
-		// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
-		It("should return appropriate values (no optional values added)", func() {
-
-			// Create Volume First
-			By("creating a single node writer volume")
-			name := UniqueString("sanity-controller-unpublish")
-
-			By("getting node information")
-			ni, err := n.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ni).NotTo(BeNil())
-			Expect(ni.GetNodeId()).NotTo(BeEmpty())
-
-			var accReqs *csi.TopologyRequirement
-			if ni.AccessibleTopology != nil {
-				// Topology requirements are honored if provided by the driver
-				accReqs = &csi.TopologyRequirement{
-					Requisite: []*csi.Topology{ni.AccessibleTopology},
-				}
-			}
-
-			vol, err := c.CreateVolume(
-				context.Background(),
-				&csi.CreateVolumeRequest{
-					Name: name,
-					VolumeCapabilities: []*csi.VolumeCapability{
-						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
-					},
-					Secrets:                   sc.Secrets.CreateVolumeSecret,
-					Parameters:                sc.Config.TestVolumeParameters,
-					AccessibilityRequirements: accReqs,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vol).NotTo(BeNil())
-			Expect(vol.GetVolume()).NotTo(BeNil())
-			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
-
-			// ControllerPublishVolume
-			By("calling controllerpublish on that volume")
-
-			conpubvol, err := c.ControllerPublishVolume(
-				context.Background(),
-				&csi.ControllerPublishVolumeRequest{
-					VolumeId:         vol.GetVolume().GetVolumeId(),
-					NodeId:           ni.GetNodeId(),
-					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
-					Readonly:         false,
-					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
-			Expect(conpubvol).NotTo(BeNil())
-
-			// ControllerUnpublishVolume
-			By("calling controllerunpublish on that volume")
-
-			conunpubvol, err := c.ControllerUnpublishVolume(
-				context.Background(),
-				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					// NodeID is optional in ControllerUnpublishVolume
-					NodeId:  ni.GetNodeId(),
-					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(conunpubvol).NotTo(BeNil())
-
-			By("cleaning up deleting the volume")
-
-			_, err = c.DeleteVolume(
-				context.Background(),
-				&csi.DeleteVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.UnregisterVolume(name)
 		})
 	})
 })
@@ -2151,4 +1994,93 @@ func ControllerUnpublishAndDeleteVolume(sc *TestContext, c csi.ControllerClient,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	return err
+}
+
+// VolumeLifecycle performs Create-Publish-Unpublish-Delete, with optional repeat count to test idempotency.
+func VolumeLifecycle(n csi.NodeClient, c csi.ControllerClient, sc *TestContext, cl *Cleanup, count int) {
+	// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
+	// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
+	By("getting node information")
+	ni, err := n.NodeGetInfo(
+		context.Background(),
+		&csi.NodeGetInfoRequest{})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(ni).NotTo(BeNil())
+	Expect(ni.GetNodeId()).NotTo(BeEmpty())
+
+	var accReqs *csi.TopologyRequirement
+	if ni.AccessibleTopology != nil {
+		// Topology requirements are honored if provided by the driver
+		accReqs = &csi.TopologyRequirement{
+			Requisite: []*csi.Topology{ni.AccessibleTopology},
+		}
+	}
+
+	// Create Volume First
+	By("creating a single node writer volume")
+	name := UniqueString("sanity-controller-publish")
+
+	vol, err := c.CreateVolume(
+		context.Background(),
+		&csi.CreateVolumeRequest{
+			Name: name,
+			VolumeCapabilities: []*csi.VolumeCapability{
+				TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+			},
+			Secrets:                   sc.Secrets.CreateVolumeSecret,
+			Parameters:                sc.Config.TestVolumeParameters,
+			AccessibilityRequirements: accReqs,
+		},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(vol).NotTo(BeNil())
+	Expect(vol.GetVolume()).NotTo(BeNil())
+	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+	cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
+
+	// ControllerPublishVolume
+	for i := 0; i < count; i++ {
+		By("calling controllerpublish on that volume")
+		conpubvol, err := c.ControllerPublishVolume(
+			context.Background(),
+			&csi.ControllerPublishVolumeRequest{
+				VolumeId:         vol.GetVolume().GetVolumeId(),
+				NodeId:           ni.GetNodeId(),
+				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+				Readonly:         false,
+				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conpubvol).NotTo(BeNil())
+	}
+	cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
+
+	for i := 0; i < count; i++ {
+		By("cleaning up unpublishing the volume")
+		conunpubvol, err := c.ControllerUnpublishVolume(
+			context.Background(),
+			&csi.ControllerUnpublishVolumeRequest{
+				VolumeId: vol.GetVolume().GetVolumeId(),
+				// NodeID is optional in ControllerUnpublishVolume
+				NodeId:  ni.GetNodeId(),
+				Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(conunpubvol).NotTo(BeNil())
+	}
+
+	for i := 0; i < count; i++ {
+		By("cleaning up deleting the volume")
+		_, err = c.DeleteVolume(
+			context.Background(),
+			&csi.DeleteVolumeRequest{
+				VolumeId: vol.GetVolume().GetVolumeId(),
+				Secrets:  sc.Secrets.DeleteVolumeSecret,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+	}
+	cl.UnregisterVolume(name)
 }
