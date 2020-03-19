@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -26,10 +27,12 @@ import (
 
 	"github.com/kubernetes-csi/csi-test/v3/driver"
 	"github.com/kubernetes-csi/csi-test/v3/mock/service"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
 	var config service.Config
+	var hooksFile string = ""
 	flag.BoolVar(&config.DisableAttach, "disable-attach", false, "Disables RPC_PUBLISH_UNPUBLISH_VOLUME capability.")
 	flag.StringVar(&config.DriverName, "name", service.Name, "CSI driver name.")
 	flag.Int64Var(&config.AttachLimit, "attach-limit", 2, "number of attachable volumes on a node")
@@ -37,6 +40,7 @@ func main() {
 	flag.BoolVar(&config.DisableControllerExpansion, "disable-controller-expansion", false, "Disables ControllerServiceCapability_RPC_EXPAND_VOLUME capability.")
 	flag.BoolVar(&config.DisableOnlineExpansion, "disable-online-expansion", false, "Disables online volume expansion capability.")
 	flag.BoolVar(&config.PermissiveTargetPath, "permissive-target-path", false, "Allows the CO to create PublishVolumeRequest.TargetPath, which violates the CSI spec.")
+	flag.StringVar(&hooksFile, "hooks-file", "", "YAML file with hook scripts.")
 	flag.Parse()
 
 	endpoint := os.Getenv("CSI_ENDPOINT")
@@ -44,6 +48,15 @@ func main() {
 	if len(controllerEndpoint) == 0 {
 		// If empty, set to the common endpoint.
 		controllerEndpoint = endpoint
+	}
+
+	if hooksFile != "" {
+		execHooks, err := parseHooksFile(hooksFile)
+		if err == nil {
+			config.ExecHooks = execHooks
+		} else {
+			fmt.Printf("Failed to load hooks file %s: %v", hooksFile, err)
+		}
 	}
 
 	// Create mock driver
@@ -197,4 +210,21 @@ func listen(endpoint string) (net.Listener, func(), error) {
 
 	l, err := net.Listen(proto, addr)
 	return l, cleanup, err
+}
+
+func parseHooksFile(file string) (*service.Hooks, error) {
+	var hooks service.Hooks
+
+	fr, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer fr.Close()
+	bytes, _ := ioutil.ReadAll(fr)
+	err = yaml.UnmarshalStrict([]byte(bytes), &hooks)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("Hooks file %s loaded\n", file)
+	return &hooks, err
 }

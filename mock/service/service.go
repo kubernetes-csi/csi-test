@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -9,8 +11,11 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v3/mock/cache"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
 
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/robertkrimen/otto"
 )
 
 const (
@@ -26,6 +31,46 @@ var Manifest = map[string]string{
 	"url": "https://github.com/kubernetes-csi/csi-test/mock",
 }
 
+// JavaScript hooks to be run to perform various tests
+type Hooks struct {
+	Globals                        string `yaml:"globals"` // will be executed once before all other scripts
+	CreateVolumeStart              string `yaml:"createVolumeStart"`
+	CreateVolumeEnd                string `yaml:"createVolumeEnd"`
+	DeleteVolumeStart              string `yaml:"deleteVolumeStart"`
+	DeleteVolumeEnd                string `yaml:"deleteVolumeEnd"`
+	ControllerPublishVolumeStart   string `yaml:"controllerPublishVolumeStart"`
+	ControllerPublishVolumeEnd     string `yaml:"controllerPublishVolumeEnd"`
+	ControllerUnpublishVolumeStart string `yaml:"controllerUnpublishVolumeStart"`
+	ControllerUnpublishVolumeEnd   string `yaml:"controllerUnpublishVolumeEnd"`
+	ValidateVolumeCapabilities     string `yaml:"validateVolumeCapabilities"`
+	ListVolumesStart               string `yaml:"listVolumesStart"`
+	ListVolumesEnd                 string `yaml:"listVolumesEnd"`
+	GetCapacity                    string `yaml:"getCapacity"`
+	ControllerGetCapabilitiesStart string `yaml:"controllerGetCapabilitiesStart"`
+	ControllerGetCapabilitiesEnd   string `yaml:"controllerGetCapabilitiesEnd"`
+	CreateSnapshotStart            string `yaml:"createSnapshotStart"`
+	CreateSnapshotEnd              string `yaml:"createSnapshotEnd"`
+	DeleteSnapshotStart            string `yaml:"deleteSnapshotStart"`
+	DeleteSnapshotEnd              string `yaml:"deleteSnapshotEnd"`
+	ListSnapshots                  string `yaml:"listSnapshots"`
+	ControllerExpandVolumeStart    string `yaml:"controllerExpandVolumeStart"`
+	ControllerExpandVolumeEnd      string `yaml:"controllerExpandVolumeEnd"`
+	NodeStageVolumeStart           string `yaml:"nodeStageVolumeStart"`
+	NodeStageVolumeEnd             string `yaml:"nodeStageVolumeEnd"`
+	NodeUnstageVolumeStart         string `yaml:"nodeUnstageVolumeStart"`
+	NodeUnstageVolumeEnd           string `yaml:"nodeUnstageVolumeEnd"`
+	NodePublishVolumeStart         string `yaml:"nodePublishVolumeStart"`
+	NodePublishVolumeEnd           string `yaml:"nodePublishVolumeEnd"`
+	NodeUnpublishVolumeStart       string `yaml:"nodeUnpublishVolumeStart"`
+	NodeUnpublishVolumeEnd         string `yaml:"nodeUnpublishVolumeEnd"`
+	NodeExpandVolumeStart          string `yaml:"nodeExpandVolumeStart"`
+	NodeExpandVolumeEnd            string `yaml:"nodeExpandVolumeEnd"`
+	NodeGetCapabilities            string `yaml:"nodeGetCapabilities"`
+	NodeGetInfo                    string `yaml:"nodeGetInfo"`
+	NodeGetVolumeStatsStart        string `yaml:"nodeGetVolumeStatsStart"`
+	NodeGetVolumeStatsEnd          string `yaml:"nodeGetVolumeStatsEnd"`
+}
+
 type Config struct {
 	DisableAttach              bool
 	DriverName                 string
@@ -34,6 +79,7 @@ type Config struct {
 	DisableControllerExpansion bool
 	DisableOnlineExpansion     bool
 	PermissiveTargetPath       bool
+	ExecHooks                  *Hooks
 }
 
 // Service is the CSI Mock service provider.
@@ -52,6 +98,7 @@ type service struct {
 	snapshots    cache.SnapshotCache
 	snapshotsNID uint64
 	config       Config
+	hooksVm      *otto.Otto
 }
 
 type Volume struct {
@@ -72,6 +119,15 @@ func New(config Config) Service {
 	s := &service{
 		nodeID: config.DriverName,
 		config: config,
+	}
+	if config.ExecHooks != nil {
+		s.hooksVm = otto.New()
+		s.hooksVm.Run(grpcJSCodes) // set global variables with gRPC error codes
+		_, err := s.hooksVm.Run(s.config.ExecHooks.Globals)
+		if err != nil {
+			fmt.Printf("Error encountered in the global exec hook: %v. Exiting\n", err)
+			os.Exit(1)
+		}
 	}
 	s.snapshots = cache.NewSnapshotCache()
 	s.vols = []csi.Volume{
@@ -184,4 +240,26 @@ func (s *service) getAttachCount(devPathKey string) int64 {
 		}
 	}
 	return count
+}
+
+func (s *service) execHook(hookName string) (codes.Code, string) {
+	if s.hooksVm != nil {
+		script := reflect.ValueOf(*s.config.ExecHooks).FieldByName(hookName).String()
+		if len(script) > 0 {
+			result, err := s.hooksVm.Run(script)
+			if err != nil {
+				fmt.Printf("Exec hook %s error: %v; exiting\n", hookName, err)
+				os.Exit(1)
+			}
+			rv, err := result.ToInteger()
+			if err == nil {
+				// Function returned an integer, use it
+				return codes.Code(rv), fmt.Sprintf("Exec hook %s returned non-OK code", hookName)
+			} else {
+				// Function returned non-integer data type, discard it
+				return codes.OK, ""
+			}
+		}
+	}
+	return codes.OK, ""
 }

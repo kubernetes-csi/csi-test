@@ -20,6 +20,8 @@ It follows the same release cycle as other containers, so the latest release is 
 You will need to setup the environment variable `CSI_ENDPOINT` for the mock driver to know where to create the unix
 domain socket.
 
+For more complicated test-cases see [how to use JavaScript hooks from the driver](hooks-howto.md).
+
 ## For CSI Driver Tests
 
 To test drivers please take a look at [pkg/sanity](https://github.com/kubernetes-csi/csi-test/tree/master/pkg/sanity).
