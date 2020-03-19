@@ -231,6 +231,10 @@ func Test(t GinkgoTestingT, config TestConfig) {
 // GinkgoTest for use when the tests run. Therefore its content can
 // still be modified in a BeforeEach. The sanity package itself treats
 // it as read-only.
+//
+// Only tests defined with DescribeSanity after the last invocation with
+// GinkgoTest (if there has be one) will be added, i.e. each test only
+// gets added at most once.
 func GinkgoTest(config *TestConfig) *TestContext {
 	sc := newTestContext(config)
 	registerTestsInGinkgo(sc)

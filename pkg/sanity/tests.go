@@ -53,4 +53,8 @@ func registerTestsInGinkgo(sc *TestContext) {
 			})
 		})
 	}
+	// Don't register tests more than once! More tests might
+	// be added later in a different context, followed by
+	// another registerTestsInGinkgo call.
+	tests = nil
 }
