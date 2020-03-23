@@ -200,10 +200,10 @@ func NewTestConfig() TestConfig {
 	}
 }
 
-// newContext sets up sanity testing with a config supplied by the
+// NewContext sets up sanity testing with a config supplied by the
 // user of the sanity package. Ownership of that config is shared
 // between the sanity package and the caller.
-func newTestContext(config *TestConfig) *TestContext {
+func NewTestContext(config *TestConfig) *TestContext {
 	return &TestContext{
 		Config: config,
 	}
@@ -231,12 +231,8 @@ func Test(t GinkgoTestingT, config TestConfig) {
 // GinkgoTest for use when the tests run. Therefore its content can
 // still be modified in a BeforeEach. The sanity package itself treats
 // it as read-only.
-//
-// Only tests defined with DescribeSanity after the last invocation with
-// GinkgoTest (if there has be one) will be added, i.e. each test only
-// gets added at most once.
 func GinkgoTest(config *TestConfig) *TestContext {
-	sc := newTestContext(config)
+	sc := NewTestContext(config)
 	registerTestsInGinkgo(sc)
 	return sc
 }
