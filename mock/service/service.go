@@ -24,6 +24,12 @@ const (
 
 	// VendorVersion is the version returned by GetPluginInfo.
 	VendorVersion = "0.3.0"
+
+	// TopologyKey simulates a per-node topology.
+	TopologyKey = Name + "/node"
+
+	// TopologyValue is the one, fixed node on which the driver runs.
+	TopologyValue = "some-mock-node"
 )
 
 // Manifest is the SP's manifest.
@@ -79,6 +85,7 @@ type Config struct {
 	DisableControllerExpansion bool
 	DisableOnlineExpansion     bool
 	PermissiveTargetPath       bool
+	EnableTopology             bool
 	ExecHooks                  *Hooks
 }
 
@@ -154,11 +161,13 @@ const (
 )
 
 func (s *service) newVolume(name string, capcity int64) csi.Volume {
-	return csi.Volume{
+	vol := csi.Volume{
 		VolumeId:      fmt.Sprintf("%d", atomic.AddUint64(&s.volsNID, 1)),
 		VolumeContext: map[string]string{"name": name},
 		CapacityBytes: capcity,
 	}
+	s.setTopology(&vol)
+	return vol
 }
 
 func (s *service) newVolumeFromSnapshot(name string, capacity int64, snapshotID int) csi.Volume {
@@ -170,6 +179,7 @@ func (s *service) newVolumeFromSnapshot(name string, capacity int64, snapshotID 
 			},
 		},
 	}
+	s.setTopology(&vol)
 	return vol
 }
 
@@ -182,7 +192,20 @@ func (s *service) newVolumeFromVolume(name string, capacity int64, volumeID int)
 			},
 		},
 	}
+	s.setTopology(&vol)
 	return vol
+}
+
+func (s *service) setTopology(vol *csi.Volume) {
+	if s.config.EnableTopology {
+		vol.AccessibleTopology = []*csi.Topology{
+			&csi.Topology{
+				Segments: map[string]string{
+					TopologyKey: TopologyValue,
+				},
+			},
+		}
+	}
 }
 
 func (s *service) findVol(k, v string) (volIdx int, volInfo csi.Volume) {

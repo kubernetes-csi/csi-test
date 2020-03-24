@@ -381,6 +381,13 @@ func (s *service) NodeGetInfo(ctx context.Context,
 	if s.config.AttachLimit > 0 {
 		csiNodeResponse.MaxVolumesPerNode = s.config.AttachLimit
 	}
+	if s.config.EnableTopology {
+		csiNodeResponse.AccessibleTopology = &csi.Topology{
+			Segments: map[string]string{
+				TopologyKey: TopologyValue,
+			},
+		}
+	}
 	return csiNodeResponse, nil
 }
 

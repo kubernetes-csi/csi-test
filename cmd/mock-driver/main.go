@@ -37,6 +37,7 @@ func main() {
 	flag.StringVar(&config.DriverName, "name", service.Name, "CSI driver name.")
 	flag.Int64Var(&config.AttachLimit, "attach-limit", 2, "number of attachable volumes on a node")
 	flag.BoolVar(&config.NodeExpansionRequired, "node-expand-required", false, "Enables NodeServiceCapability_RPC_EXPAND_VOLUME capacity.")
+	flag.BoolVar(&config.EnableTopology, "enable-topology", false, "Enables PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS capability.")
 	flag.BoolVar(&config.DisableControllerExpansion, "disable-controller-expansion", false, "Disables ControllerServiceCapability_RPC_EXPAND_VOLUME capability.")
 	flag.BoolVar(&config.DisableOnlineExpansion, "disable-online-expansion", false, "Disables online volume expansion capability.")
 	flag.BoolVar(&config.PermissiveTargetPath, "permissive-target-path", false, "Allows the CO to create PublishVolumeRequest.TargetPath, which violates the CSI spec.")
