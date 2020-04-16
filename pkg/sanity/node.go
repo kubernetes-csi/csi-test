@@ -428,11 +428,11 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 					VolumeId:   sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					TargetPath: sc.StagingPath,
 				})
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(HaveOccurred(), "failed to unpublish volume from node")
 
 			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(ok).To(BeTrue(), "error from NodeUnpublishVolume is not a gRPC error")
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error code")
 		})
 	})
 
