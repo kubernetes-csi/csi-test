@@ -1340,35 +1340,71 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *TestContext
 	})
 
 	It("should return snapshots that match the specified snapshot id", func() {
+		// The test creates three snapshots: one that we intend to find by
+		// snapshot ID, and two unrelated ones that must not be returned by
+		// ListSnapshots.
 
-		By("creating a volume")
-		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-1")
-		volume, err := c.CreateVolume(context.Background(), volReq)
+		By("creating first unrelated snapshot")
+		// Create volume source and afterwards the first unrelated snapshot.
+		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-unrelated1")
+		volumeUnrelated1, err := c.CreateVolume(context.Background(), volReq)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("creating a snapshot")
-		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-1", volume.GetVolume().GetVolumeId())
-		snapshot, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-unrelated1", volumeUnrelated1.GetVolume().GetVolumeId())
+		snapshotUnrelated1, err := c.CreateSnapshot(context.Background(), snapshotReq)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("creating target snapshot")
+		// Create volume source and afterwards the target snapshot.
+		volReq = MakeCreateVolumeReq(sc, "listSnapshots-volume-target")
+		volumeTarget, err := c.CreateVolume(context.Background(), volReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		snapshotReq = MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-target", volumeTarget.GetVolume().GetVolumeId())
+		snapshotTarget, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating second unrelated snapshot")
+		// Create volume source and afterwards the second unrelated snapshot.
+		volReq = MakeCreateVolumeReq(sc, "listSnapshots-volume-unrelated2")
+		volumeUnrelated2, err := c.CreateVolume(context.Background(), volReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		snapshotReq = MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-unrelated2", volumeUnrelated2.GetVolume().GetVolumeId())
+		snapshotUnrelated2, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("listing snapshots")
 		snapshots, err := c.ListSnapshots(
 			context.Background(),
-			&csi.ListSnapshotsRequest{SnapshotId: snapshot.GetSnapshot().GetSnapshotId()})
+			&csi.ListSnapshotsRequest{SnapshotId: snapshotTarget.GetSnapshot().GetSnapshotId()})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snapshots).NotTo(BeNil())
 		Expect(len(snapshots.GetEntries())).To(BeNumerically("==", 1))
 		verifySnapshotInfo(snapshots.GetEntries()[0].GetSnapshot())
-		Expect(snapshots.GetEntries()[0].GetSnapshot().GetSnapshotId()).To(Equal(snapshot.GetSnapshot().GetSnapshotId()))
+		Expect(snapshots.GetEntries()[0].GetSnapshot().GetSnapshotId()).To(Equal(snapshotTarget.GetSnapshot().GetSnapshotId()))
 
-		By("cleaning up deleting the snapshot")
-		delSnapReq := MakeDeleteSnapshotReq(sc, snapshot.GetSnapshot().GetSnapshotId())
-		_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
-		Expect(err).NotTo(HaveOccurred())
+		By("deleting snapshots")
+		for _, snapshot := range []*csi.CreateSnapshotResponse{
+			snapshotUnrelated1,
+			snapshotTarget,
+			snapshotUnrelated2,
+		} {
+			delSnapReq := MakeDeleteSnapshotReq(sc, snapshot.GetSnapshot().GetSnapshotId())
+			_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
-		By("cleaning up deleting the volume")
-		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetVolumeId())
-		_, err = c.DeleteVolume(context.Background(), delVolReq)
-		Expect(err).NotTo(HaveOccurred())
+		By("deleting volumes")
+		for _, volume := range []*csi.CreateVolumeResponse{
+			volumeUnrelated1,
+			volumeTarget,
+			volumeUnrelated2,
+		} {
+			delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVolReq)
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 
 	It("should return empty when the specified snapshot id does not exist", func() {
@@ -1381,37 +1417,74 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *TestContext
 		Expect(snapshots.GetEntries()).To(BeEmpty())
 	})
 
-	It("should return snapshots that match the specified source volume id)", func() {
+	It("should return snapshots that match the specified source volume id", func() {
 
-		By("creating a volume")
-		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-2")
-		volume, err := c.CreateVolume(context.Background(), volReq)
+		// The test creates three snapshots: one that we intend to find by
+		// source volume ID, and two unrelated ones that must not be returned by
+		// ListSnapshots.
+
+		By("creating first unrelated snapshot")
+		// Create volume source and afterwards the first unrelated snapshot.
+		volReq := MakeCreateVolumeReq(sc, "listSnapshots-volume-unrelated1")
+		volumeUnrelated1, err := c.CreateVolume(context.Background(), volReq)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("creating a snapshot")
-		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-2", volume.GetVolume().GetVolumeId())
-		snapshot, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		snapshotReq := MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-unrelated1", volumeUnrelated1.GetVolume().GetVolumeId())
+		snapshotUnrelated1, err := c.CreateSnapshot(context.Background(), snapshotReq)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("creating target snapshot")
+		// Create volume source and afterwards the target snapshot.
+		volReq = MakeCreateVolumeReq(sc, "listSnapshots-volume-target")
+		volumeTarget, err := c.CreateVolume(context.Background(), volReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		snapshotReq = MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-target", volumeTarget.GetVolume().GetVolumeId())
+		snapshotTarget, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating second unrelated snapshot")
+		// Create volume source and afterwards the second unrelated snapshot.
+		volReq = MakeCreateVolumeReq(sc, "listSnapshots-volume-unrelated2")
+		volumeUnrelated2, err := c.CreateVolume(context.Background(), volReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		snapshotReq = MakeCreateSnapshotReq(sc, "listSnapshots-snapshot-unrelated2", volumeUnrelated2.GetVolume().GetVolumeId())
+		snapshotUnrelated2, err := c.CreateSnapshot(context.Background(), snapshotReq)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("listing snapshots")
 		snapshots, err := c.ListSnapshots(
 			context.Background(),
-			&csi.ListSnapshotsRequest{SourceVolumeId: snapshot.GetSnapshot().GetSourceVolumeId()})
+			&csi.ListSnapshotsRequest{SourceVolumeId: snapshotTarget.GetSnapshot().GetSourceVolumeId()})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(snapshots).NotTo(BeNil())
-		for _, snap := range snapshots.GetEntries() {
-			verifySnapshotInfo(snap.GetSnapshot())
-			Expect(snap.GetSnapshot().GetSourceVolumeId()).To(Equal(snapshot.GetSnapshot().GetSourceVolumeId()))
+		Expect(snapshots.GetEntries()).To(HaveLen(1))
+		snapshot := snapshots.GetEntries()[0].GetSnapshot()
+		verifySnapshotInfo(snapshot)
+		Expect(snapshot.GetSourceVolumeId()).To(Equal(snapshotTarget.GetSnapshot().GetSourceVolumeId()))
+
+		By("deleting snapshots")
+		for _, snapshot := range []*csi.CreateSnapshotResponse{
+			snapshotUnrelated1,
+			snapshotTarget,
+			snapshotUnrelated2,
+		} {
+			delSnapReq := MakeDeleteSnapshotReq(sc, snapshot.GetSnapshot().GetSnapshotId())
+			_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("cleaning up deleting the snapshot")
-		delSnapReq := MakeDeleteSnapshotReq(sc, snapshot.GetSnapshot().GetSnapshotId())
-		_, err = c.DeleteSnapshot(context.Background(), delSnapReq)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("cleaning up deleting the volume")
-		delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetVolumeId())
-		_, err = c.DeleteVolume(context.Background(), delVolReq)
-		Expect(err).NotTo(HaveOccurred())
+		By("deleting volumes")
+		for _, volume := range []*csi.CreateVolumeResponse{
+			volumeUnrelated1,
+			volumeTarget,
+			volumeUnrelated2,
+		} {
+			delVolReq := MakeDeleteVolumeReq(sc, volume.GetVolume().GetVolumeId())
+			_, err = c.DeleteVolume(context.Background(), delVolReq)
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 
 	It("should return empty when the specified source volume id does not exist", func() {
