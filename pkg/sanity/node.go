@@ -66,7 +66,7 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 	return false
 }
 
-func runControllerTest(sc *TestContext, c csi.NodeClient, s csi.ControllerClient, cl *Cleanup, controllerPublishSupported bool, nodeStageSupported bool, nodeVolumeStatsSupported bool, count int) {
+func runControllerTest(sc *TestContext, c *Cleanup, controllerPublishSupported bool, nodeStageSupported bool, nodeVolumeStatsSupported bool, count int) {
 
 	name := UniqueString("sanity-node-full")
 
@@ -88,7 +88,7 @@ func runControllerTest(sc *TestContext, c csi.NodeClient, s csi.ControllerClient
 
 	// Create Volume First
 	By("creating a single node writer volume")
-	vol, err := s.CreateVolume(
+	vol := c.MustCreateVolume(
 		context.Background(),
 		&csi.CreateVolumeRequest{
 			Name: name,
@@ -103,17 +103,12 @@ func runControllerTest(sc *TestContext, c csi.NodeClient, s csi.ControllerClient
 			AccessibilityRequirements: accReqs,
 		},
 	)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(vol).NotTo(BeNil())
-	Expect(vol.GetVolume()).NotTo(BeNil())
-	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-	cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 
 	var conpubvol *csi.ControllerPublishVolumeResponse
 	if controllerPublishSupported {
 		By("controller publishing volume")
 
-		conpubvol, err = s.ControllerPublishVolume(
+		conpubvol, err = c.ControllerPublishVolume(
 			context.Background(),
 			&csi.ControllerPublishVolumeRequest{
 				VolumeId:         vol.GetVolume().GetVolumeId(),
@@ -125,7 +120,6 @@ func runControllerTest(sc *TestContext, c csi.NodeClient, s csi.ControllerClient
 			},
 		)
 		Expect(err).NotTo(HaveOccurred())
-		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: ni.GetNodeId()})
 		Expect(conpubvol).NotTo(BeNil())
 	}
 	// NodeStageVolume
@@ -183,71 +177,11 @@ func runControllerTest(sc *TestContext, c csi.NodeClient, s csi.ControllerClient
 		Expect(err).ToNot(HaveOccurred())
 		Expect(statsResp.GetUsage()).ToNot(BeNil())
 	}
-
-	// NodeUnpublishVolume
-	for i := 0; i < count; i++ {
-		By("cleaning up calling nodeunpublish")
-		nodeunpubvol, err := c.NodeUnpublishVolume(
-			context.Background(),
-			&csi.NodeUnpublishVolumeRequest{
-				VolumeId:   vol.GetVolume().GetVolumeId(),
-				TargetPath: sc.TargetPath + "/target",
-			})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(nodeunpubvol).NotTo(BeNil())
-	}
-
-	if nodeStageSupported {
-		for i := 0; i < count; i++ {
-			By("cleaning up calling nodeunstage")
-			nodeunstagevol, err := c.NodeUnstageVolume(
-				context.Background(),
-				&csi.NodeUnstageVolumeRequest{
-					VolumeId:          vol.GetVolume().GetVolumeId(),
-					StagingTargetPath: sc.StagingPath,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nodeunstagevol).NotTo(BeNil())
-		}
-	}
-
-	if controllerPublishSupported {
-		for i := 0; i < count; i++ {
-			By("cleaning up calling controllerunpublishing")
-
-			controllerunpubvol, err := s.ControllerUnpublishVolume(
-				context.Background(),
-				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   ni.GetNodeId(),
-					Secrets:  sc.Secrets.ControllerUnpublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(controllerunpubvol).NotTo(BeNil())
-		}
-	}
-
-	for i := 0; i < count; i++ {
-		By("cleaning up deleting the volume")
-
-		_, err = s.DeleteVolume(
-			context.Background(),
-			&csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetVolumeId(),
-				Secrets:  sc.Secrets.DeleteVolumeSecret,
-			},
-		)
-		Expect(err).NotTo(HaveOccurred())
-	}
 }
 
 var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 	var (
-		cl *Cleanup
-		c  csi.NodeClient
-		s  csi.ControllerClient
+		c *Cleanup
 
 		providesControllerService    bool
 		controllerPublishSupported   bool
@@ -259,7 +193,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 	createVolume := func(volumeName string) *csi.CreateVolumeResponse {
 		By("creating a single node writer volume for expansion")
-		vol, err := s.CreateVolume(
+		return c.MustCreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
 				Name: volumeName,
@@ -273,21 +207,14 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				Parameters: sc.Config.TestVolumeParameters,
 			},
 		)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(vol).NotTo(BeNil())
-		Expect(vol.GetVolume()).NotTo(BeNil())
-		Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-		cl.RegisterVolume(volumeName, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
-		return vol
 	}
 
 	controllerPublishVolume := func(volumeName string, vol *csi.CreateVolumeResponse, nid *csi.NodeGetInfoResponse) *csi.ControllerPublishVolumeResponse {
 		var conpubvol *csi.ControllerPublishVolumeResponse
-		var err error
 		if controllerPublishSupported {
 			By("controller publishing volume")
 
-			conpubvol, err = s.ControllerPublishVolume(
+			conpubvol = c.MustControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId:         vol.GetVolume().GetVolumeId(),
@@ -298,9 +225,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(volumeName, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: nid.GetNodeId()})
-			Expect(conpubvol).NotTo(BeNil())
 		}
 		return conpubvol
 	}
@@ -359,8 +283,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 	}
 
 	BeforeEach(func() {
-		c = csi.NewNodeClient(sc.Conn)
-		s = csi.NewControllerClient(sc.ControllerConn)
+		cl := csi.NewControllerClient(sc.ControllerConn)
+		n := csi.NewNodeClient(sc.Conn)
 
 		i := csi.NewIdentityClient(sc.Conn)
 		req := &csi.GetPluginCapabilitiesRequest{}
@@ -378,24 +302,24 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		}
 		if providesControllerService {
 			controllerPublishSupported = isControllerCapabilitySupported(
-				s,
+				cl,
 				csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
 		}
-		nodeStageSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
-		nodeVolumeStatsSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
-		nodeExpansionSupported = isNodeCapabilitySupported(c, csi.NodeServiceCapability_RPC_EXPAND_VOLUME)
-		controllerExpansionSupported = isControllerCapabilitySupported(s, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME)
-		cl = &Cleanup{
+		nodeStageSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
+		nodeVolumeStatsSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
+		nodeExpansionSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_EXPAND_VOLUME)
+		controllerExpansionSupported = isControllerCapabilitySupported(cl, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME)
+		c = &Cleanup{
 			Context:                    sc,
-			NodeClient:                 c,
-			ControllerClient:           s,
+			ControllerClient:           cl,
+			NodeClient:                 n,
 			ControllerPublishSupported: controllerPublishSupported,
 			NodeStageSupported:         nodeStageSupported,
 		}
 	})
 
 	AfterEach(func() {
-		cl.DeleteVolumes()
+		c.Cleanup()
 	})
 
 	Describe("NodeGetCapabilities", func() {
@@ -584,7 +508,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			By("creating a single node writer volume")
 			name := UniqueString("sanity-node-stage-nocaps")
 
-			vol, err := s.CreateVolume(
+			vol := c.MustCreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name: name,
@@ -602,13 +526,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vol).NotTo(BeNil())
-			Expect(vol.GetVolume()).NotTo(BeNil())
-			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 
-			_, err = c.NodeStageVolume(
+			_, err := c.NodeStageVolume(
 				context.Background(),
 				&csi.NodeStageVolumeRequest{
 					VolumeId:          vol.GetVolume().GetVolumeId(),
@@ -624,18 +543,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
-
-			By("cleaning up deleting the volume")
-
-			_, err = s.DeleteVolume(
-				context.Background(),
-				&csi.DeleteVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			cl.UnregisterVolume(name)
 		})
 	})
 
@@ -836,7 +743,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 					},
 					Secrets: sc.Secrets.ControllerExpandVolumeSecret,
 				}
-				rsp, err := s.ControllerExpandVolume(context.Background(), expReq)
+				rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rsp).NotTo(BeNil())
 				Expect(rsp.GetCapacityBytes()).To(Equal(TestVolumeExpandSize(sc)))
@@ -880,7 +787,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Skip("Controller Service not provided: CreateVolume not supported")
 		}
 		By("runControllerTest")
-		runControllerTest(sc, c, s, cl, controllerPublishSupported, nodeStageSupported, nodeVolumeStatsSupported, 1)
+		runControllerTest(sc, c, controllerPublishSupported, nodeStageSupported, nodeVolumeStatsSupported, 1)
 	})
 	It("should be idempotent", func() {
 		if !providesControllerService {
@@ -891,6 +798,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		}
 		count := sc.Config.IdempotentCount
 		By("runControllerTest with Idempotent count")
-		runControllerTest(sc, c, s, cl, controllerPublishSupported, nodeStageSupported, nodeVolumeStatsSupported, count)
+		runControllerTest(sc, c, controllerPublishSupported, nodeStageSupported, nodeVolumeStatsSupported, count)
 	})
 })
