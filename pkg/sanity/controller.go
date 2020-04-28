@@ -582,6 +582,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol1.GetVolume().GetVolumeId()})
+
+			if vol1.GetVolume().GetCapacityBytes() == 0 {
+				Skip("Reported volume capacity is 0, no conflict expected")
+			}
+
 			size2 := 2 * TestVolumeSize(sc)
 
 			_, err = c.CreateVolume(
