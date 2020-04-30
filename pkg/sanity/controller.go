@@ -482,7 +482,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
-			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize(sc)))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", TestVolumeSize(sc)), BeZero()))
 
 			By("cleaning up deleting the volume")
 
@@ -521,7 +521,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol1.GetVolume()).NotTo(BeNil())
 			Expect(vol1.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol1.GetVolume().GetVolumeId()})
-			Expect(vol1.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
+			Expect(vol1.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", size), BeZero()))
 
 			vol2, err := c.CreateVolume(
 				context.Background(),
@@ -541,7 +541,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol2).NotTo(BeNil())
 			Expect(vol2.GetVolume()).NotTo(BeNil())
 			Expect(vol2.GetVolume().GetVolumeId()).NotTo(BeEmpty())
-			Expect(vol2.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
+			Expect(vol2.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", size), BeZero()))
 			Expect(vol1.GetVolume().GetVolumeId()).To(Equal(vol2.GetVolume().GetVolumeId()))
 
 			By("cleaning up deleting the volume")
@@ -646,7 +646,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
 			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
-			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", size))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", size), BeZero()))
 
 			By("cleaning up deleting the volume")
 
