@@ -109,13 +109,14 @@ type service struct {
 }
 
 type Volume struct {
-	VolumeCSI       csi.Volume
-	NodeID          string
-	ISStaged        bool
-	ISPublished     bool
-	ISEphemeral     bool
-	StageTargetPath string
-	TargetPath      string
+	VolumeCSI             csi.Volume
+	NodeID                string
+	ISStaged              bool
+	ISPublished           bool
+	ISEphemeral           bool
+	ISControllerPublished bool
+	StageTargetPath       string
+	TargetPath            string
 }
 
 var MockVolumes map[string]Volume
