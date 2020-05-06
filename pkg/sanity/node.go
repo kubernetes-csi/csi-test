@@ -391,6 +391,28 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
+
+		It("should fail when the volume is missing", func() {
+			stagingPath := ""
+			if nodeStageSupported {
+				stagingPath = sc.StagingPath
+			}
+
+			_, err := c.NodePublishVolume(
+				context.Background(),
+				&csi.NodePublishVolumeRequest{
+					VolumeId:          sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					VolumeCapability:  TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					StagingTargetPath: stagingPath,
+					TargetPath:        sc.TargetPath + "/target",
+					Secrets:           sc.Secrets.NodePublishVolumeSecret,
+				})
+			Expect(err).To(HaveOccurred())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
+		})
 	})
 
 	Describe("NodeUnpublishVolume", func() {

@@ -135,17 +135,6 @@ func (s *service) NodePublishVolume(
 	if hookVal, hookMsg := s.execHook("NodePublishVolumeStart"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
-	ephemeralVolume := req.GetVolumeContext()["csi.storage.k8s.io/ephemeral"] == "true"
-	device, ok := req.PublishContext["device"]
-	if !ok {
-		if ephemeralVolume || s.config.DisableAttach {
-			device = "mock device"
-		} else {
-			return nil, status.Error(
-				codes.InvalidArgument,
-				"stage volume info 'device' key required")
-		}
-	}
 
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
@@ -159,15 +148,7 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability cannot be empty")
 	}
 
-	// May happen with old (or, at this time, even the current) Kubernetes
-	// although it shouldn't (https://github.com/kubernetes/kubernetes/issues/75535).
-	exists, err := checkTargetExists(req.TargetPath)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if !s.config.PermissiveTargetPath && exists {
-		status.Errorf(codes.Internal, "target path %s does exist", req.TargetPath)
-	}
+	ephemeralVolume := req.GetVolumeContext()["csi.storage.k8s.io/ephemeral"] == "true"
 
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
@@ -178,6 +159,27 @@ func (s *service) NodePublishVolume(
 	}
 	if i >= 0 && ephemeralVolume {
 		return nil, status.Error(codes.AlreadyExists, req.VolumeId)
+	}
+
+	device, ok := req.PublishContext["device"]
+	if !ok {
+		if ephemeralVolume || s.config.DisableAttach {
+			device = "mock device"
+		} else {
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"stage volume info 'device' key required")
+		}
+	}
+
+	// May happen with old (or, at this time, even the current) Kubernetes
+	// although it shouldn't (https://github.com/kubernetes/kubernetes/issues/75535).
+	exists, err := checkTargetExists(req.TargetPath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !s.config.PermissiveTargetPath && exists {
+		status.Errorf(codes.Internal, "target path %s does exist", req.TargetPath)
 	}
 
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
