@@ -487,6 +487,25 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
+		It("should fail when the volume is missing", func() {
+			_, err := c.NodeStageVolume(
+				context.Background(),
+				&csi.NodeStageVolumeRequest{
+					VolumeId:         sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					PublishContext: map[string]string{
+						"device": device,
+					},
+					StagingTargetPath: sc.StagingPath,
+				})
+			Expect(err).To(HaveOccurred())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
+
+		})
+
 		It("should fail when no volume capability is provided", func() {
 
 			// Create Volume First
@@ -581,6 +600,20 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("should fail when the volume is missing", func() {
+			_, err := c.NodeUnstageVolume(
+				context.Background(),
+				&csi.NodeUnstageVolumeRequest{
+					VolumeId:          sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					StagingTargetPath: sc.StagingPath,
+				})
+			Expect(err).To(HaveOccurred())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.NotFound))
 		})
 	})
 
