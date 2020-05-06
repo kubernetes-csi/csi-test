@@ -227,6 +227,11 @@ func (s *service) ControllerPublishVolume(
 	v.VolumeContext[ReadOnlyKey] = roVal
 	s.vols[i] = v
 
+	if volInfo, ok := MockVolumes[req.VolumeId]; ok {
+		volInfo.ISPublished = true
+		MockVolumes[req.VolumeId] = volInfo
+	}
+
 	if hookVal, hookMsg := s.execHook("ControllerPublishVolumeEnd"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}

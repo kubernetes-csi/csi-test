@@ -109,7 +109,6 @@ type service struct {
 }
 
 type Volume struct {
-	sync.Mutex
 	VolumeCSI       csi.Volume
 	NodeID          string
 	ISStaged        bool
