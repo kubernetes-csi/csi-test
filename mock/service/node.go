@@ -140,6 +140,10 @@ func (s *service) NodePublishVolume(
 		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
 	}
 
+	if len(req.GetStagingTargetPath()) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "StagingTarget Path cannot be empty")
+	}
+
 	if len(req.GetTargetPath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Target Path cannot be empty")
 	}

@@ -15,10 +15,10 @@ func TestMyDriverWithCustomTargetPaths(t *testing.T) {
 	var createTargetDirCalls, createStagingDirCalls,
 		removeTargetDirCalls, removeStagingDirCalls int
 
-	wantCreateTargetCalls := 4
-	wantCreateStagingCalls := 4
-	wantRemoveTargetCalls := 4
-	wantRemoveStagingCalls := 4
+	wantCreateTargetCalls := 5
+	wantCreateStagingCalls := 5
+	wantRemoveTargetCalls := 5
+	wantRemoveStagingCalls := 5
 
 	// tmpPath could be a CO specific directory under which all the target dirs
 	// are created. For k8s, it could be /var/lib/kubelet/pods under which the

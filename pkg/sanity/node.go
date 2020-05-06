@@ -392,6 +392,21 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
+		It("should fail when no staging target path is provided", func() {
+			if !nodeStageSupported {
+				Skip("STAGE_UNSTAGE_VOLUME not supported")
+			}
+
+			req.StagingTargetPath = ""
+
+			_, err := c.NodePublishVolume(context.Background(), req)
+			Expect(err).To(HaveOccurred())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code()).To(Equal(codes.FailedPrecondition))
+		})
+
 		It("should fail when no volume capability is provided", func() {
 			req.VolumeCapability = nil
 
