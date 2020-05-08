@@ -100,10 +100,10 @@ func (cl *Cleanup) DeleteSnapshot(ctx context.Context, in *csi.DeleteSnapshotReq
 // successfully created.
 func (cl *Cleanup) MustCreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) *csi.CreateVolumeResponse {
 	vol, err := cl.createVolume(ctx, req)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(vol).NotTo(BeNil())
-	Expect(vol.GetVolume()).NotTo(BeNil())
-	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+	Expect(err).NotTo(HaveOccurred(), "volume create failed")
+	Expect(vol).NotTo(BeNil(), "volume response is nil")
+	Expect(vol.GetVolume()).NotTo(BeNil(), "volume in response is nil")
+	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty(), "volume ID in response is missing")
 	return vol
 }
 
@@ -127,8 +127,8 @@ func (cl *Cleanup) deleteVolume(ctx context.Context, req *csi.DeleteVolumeReques
 // the volume was successfully controller-published.
 func (cl *Cleanup) MustControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) *csi.ControllerPublishVolumeResponse {
 	conpubvol, err := cl.controllerPublishVolume(ctx, req)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(conpubvol).NotTo(BeNil())
+	Expect(err).NotTo(HaveOccurred(), "controller publish volume failed")
+	Expect(conpubvol).NotTo(BeNil(), "controller publish volume response is nil")
 	return conpubvol
 }
 
@@ -142,8 +142,8 @@ func (cl *Cleanup) controllerPublishVolume(ctx context.Context, req *csi.Control
 
 // registerVolume adds or updates an entry for given volume.
 func (cl *Cleanup) registerVolume(info VolumeInfo) {
-	Expect(info).NotTo(BeNil())
-	Expect(info.VolumeID).NotTo(BeEmpty())
+	Expect(info).NotTo(BeNil(), "volume info is nil")
+	Expect(info.VolumeID).NotTo(BeEmpty(), "volume ID in volume info is empty")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	if cl.volumes == nil {
@@ -161,7 +161,7 @@ func (cl *Cleanup) unregisterVolume(id string) {
 }
 
 func (cl *Cleanup) unregisterVolumeNoLock(id string) {
-	Expect(id).NotTo(BeEmpty())
+	Expect(id).NotTo(BeEmpty(), "ID for unregister volume is missing")
 	if cl.volumes != nil {
 		delete(cl.volumes, id)
 	}
@@ -171,8 +171,8 @@ func (cl *Cleanup) unregisterVolumeNoLock(id string) {
 // successfully created.
 func (cl *Cleanup) MustCreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) *csi.CreateSnapshotResponse {
 	snap, err := cl.createSnapshot(ctx, req)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(snap).NotTo(BeNil())
+	Expect(err).NotTo(HaveOccurred(), "create snapshot failed")
+	Expect(snap).NotTo(BeNil(), "create snasphot response is nil")
 	verifySnapshotInfo(snap.GetSnapshot())
 	return snap
 }
@@ -209,7 +209,7 @@ func (cl *Cleanup) registerSnapshot(id string) {
 }
 
 func (cl *Cleanup) registerSnapshotNoLock(id string) {
-	Expect(id).NotTo(BeEmpty())
+	Expect(id).NotTo(BeEmpty(), "ID for register snapshot is missing")
 	if cl.snapshots == nil {
 		cl.snapshots = make(map[string]bool)
 	}
@@ -223,7 +223,7 @@ func (cl *Cleanup) unregisterSnapshot(id string) {
 }
 
 func (cl *Cleanup) unregisterSnapshotNoLock(id string) {
-	Expect(id).NotTo(BeEmpty())
+	Expect(id).NotTo(BeEmpty(), "ID for unregister snapshot is missing")
 	if cl.snapshots != nil {
 		delete(cl.snapshots, id)
 	}
