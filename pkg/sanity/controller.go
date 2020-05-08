@@ -74,10 +74,14 @@ func verifyVolumeInfo(v *csi.Volume) {
 }
 
 func verifySnapshotInfo(snapshot *csi.Snapshot) {
-	Expect(snapshot).NotTo(BeNil())
-	Expect(snapshot.GetSnapshotId()).NotTo(BeEmpty())
-	Expect(snapshot.GetSourceVolumeId()).NotTo(BeEmpty())
-	Expect(snapshot.GetCreationTime()).NotTo(BeZero())
+	verifySnapshotInfoWithOffset(2, snapshot)
+}
+
+func verifySnapshotInfoWithOffset(offset int, snapshot *csi.Snapshot) {
+	ExpectWithOffset(offset, snapshot).NotTo(BeNil())
+	ExpectWithOffset(offset, snapshot.GetSnapshotId()).NotTo(BeEmpty())
+	ExpectWithOffset(offset, snapshot.GetSourceVolumeId()).NotTo(BeEmpty())
+	ExpectWithOffset(offset, snapshot.GetCreationTime()).NotTo(BeZero())
 }
 
 func isControllerCapabilitySupported(

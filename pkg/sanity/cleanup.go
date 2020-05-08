@@ -69,56 +69,60 @@ type Cleanup struct {
 // CreateVolume proxies to a Controller service implementation and registers the
 // volume for cleanup.
 func (cl *Cleanup) CreateVolume(ctx context.Context, in *csi.CreateVolumeRequest, _ ...grpc.CallOption) (*csi.CreateVolumeResponse, error) {
-	return cl.createVolume(ctx, in)
+	return cl.createVolume(ctx, 2, in)
 }
 
 // DeleteVolume proxies to a Controller service implementation and unregisters
 // the volume from cleanup.
 func (cl *Cleanup) DeleteVolume(ctx context.Context, in *csi.DeleteVolumeRequest, _ ...grpc.CallOption) (*csi.DeleteVolumeResponse, error) {
-	return cl.deleteVolume(ctx, in)
+	return cl.deleteVolume(ctx, 2, in)
 }
 
 // ControllerPublishVolume proxies to a Controller service implementation and
 // adds the node ID to the corresponding volume for cleanup.
 func (cl *Cleanup) ControllerPublishVolume(ctx context.Context, in *csi.ControllerPublishVolumeRequest, _ ...grpc.CallOption) (*csi.ControllerPublishVolumeResponse, error) {
-	return cl.controllerPublishVolume(ctx, in)
+	return cl.controllerPublishVolume(ctx, 2, in)
 }
 
 // CreateSnapshot proxies to a Controller service implementation and registers
 // the snapshot for cleanup.
 func (cl *Cleanup) CreateSnapshot(ctx context.Context, in *csi.CreateSnapshotRequest, _ ...grpc.CallOption) (*csi.CreateSnapshotResponse, error) {
-	return cl.createSnapshot(ctx, in)
+	return cl.createSnapshot(ctx, 2, in)
 }
 
 // DeleteSnapshot proxies to a Controller service implementation and unregisters
 // the snapshot from cleanup.
 func (cl *Cleanup) DeleteSnapshot(ctx context.Context, in *csi.DeleteSnapshotRequest, _ ...grpc.CallOption) (*csi.DeleteSnapshotResponse, error) {
-	return cl.deleteSnapshot(ctx, in)
+	return cl.deleteSnapshot(ctx, 2, in)
 }
 
 // MustCreateVolume is like CreateVolume but asserts that the volume was
 // successfully created.
 func (cl *Cleanup) MustCreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) *csi.CreateVolumeResponse {
-	vol, err := cl.createVolume(ctx, req)
-	Expect(err).NotTo(HaveOccurred(), "volume create failed")
-	Expect(vol).NotTo(BeNil(), "volume response is nil")
-	Expect(vol.GetVolume()).NotTo(BeNil(), "volume in response is nil")
-	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty(), "volume ID in response is missing")
+	return cl.mustCreateVolumeWithOffset(ctx, 2, req)
+}
+
+func (cl *Cleanup) mustCreateVolumeWithOffset(ctx context.Context, offset int, req *csi.CreateVolumeRequest) *csi.CreateVolumeResponse {
+	vol, err := cl.createVolume(ctx, offset+1, req)
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "volume create failed")
+	ExpectWithOffset(offset, vol).NotTo(BeNil(), "volume response is nil")
+	ExpectWithOffset(offset, vol.GetVolume()).NotTo(BeNil(), "volume in response is nil")
+	ExpectWithOffset(offset, vol.GetVolume().GetVolumeId()).NotTo(BeEmpty(), "volume ID in response is missing")
 	return vol
 }
 
-func (cl *Cleanup) createVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+func (cl *Cleanup) createVolume(ctx context.Context, offset int, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	vol, err := cl.ControllerClient.CreateVolume(ctx, req)
 	if err == nil && vol != nil && vol.GetVolume().GetVolumeId() != "" {
-		cl.registerVolume(VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
+		cl.registerVolume(offset+1, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 	}
 	return vol, err
 }
 
-func (cl *Cleanup) deleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (cl *Cleanup) deleteVolume(ctx context.Context, offset int, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	vol, err := cl.ControllerClient.DeleteVolume(ctx, req)
 	if err == nil {
-		cl.unregisterVolume(req.VolumeId)
+		cl.unregisterVolume(offset+1, req.VolumeId)
 	}
 	return vol, err
 }
@@ -126,24 +130,24 @@ func (cl *Cleanup) deleteVolume(ctx context.Context, req *csi.DeleteVolumeReques
 // MustControllerPublishVolume is like ControllerPublishVolume but asserts that
 // the volume was successfully controller-published.
 func (cl *Cleanup) MustControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) *csi.ControllerPublishVolumeResponse {
-	conpubvol, err := cl.controllerPublishVolume(ctx, req)
-	Expect(err).NotTo(HaveOccurred(), "controller publish volume failed")
-	Expect(conpubvol).NotTo(BeNil(), "controller publish volume response is nil")
+	conpubvol, err := cl.controllerPublishVolume(ctx, 2, req)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "controller publish volume failed")
+	ExpectWithOffset(1, conpubvol).NotTo(BeNil(), "controller publish volume response is nil")
 	return conpubvol
 }
 
-func (cl *Cleanup) controllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+func (cl *Cleanup) controllerPublishVolume(ctx context.Context, offset int, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	conpubvol, err := cl.ControllerClient.ControllerPublishVolume(ctx, req)
 	if err == nil && req.VolumeId != "" && req.NodeId != "" {
-		cl.registerVolume(VolumeInfo{VolumeID: req.VolumeId, NodeID: req.NodeId})
+		cl.registerVolume(offset+1, VolumeInfo{VolumeID: req.VolumeId, NodeID: req.NodeId})
 	}
 	return conpubvol, err
 }
 
 // registerVolume adds or updates an entry for given volume.
-func (cl *Cleanup) registerVolume(info VolumeInfo) {
-	Expect(info).NotTo(BeNil(), "volume info is nil")
-	Expect(info.VolumeID).NotTo(BeEmpty(), "volume ID in volume info is empty")
+func (cl *Cleanup) registerVolume(offset int, info VolumeInfo) {
+	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
+	ExpectWithOffset(offset, info.VolumeID).NotTo(BeEmpty(), "volume ID in volume info is empty")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	if cl.volumes == nil {
@@ -154,14 +158,14 @@ func (cl *Cleanup) registerVolume(info VolumeInfo) {
 
 // unregisterVolume removes the entry for the volume with the
 // given ID, thus preventing all cleanup operations for it.
-func (cl *Cleanup) unregisterVolume(id string) {
+func (cl *Cleanup) unregisterVolume(offset int, id string) {
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.unregisterVolumeNoLock(id)
+	cl.unregisterVolumeNoLock(offset+1, id)
 }
 
-func (cl *Cleanup) unregisterVolumeNoLock(id string) {
-	Expect(id).NotTo(BeEmpty(), "ID for unregister volume is missing")
+func (cl *Cleanup) unregisterVolumeNoLock(offset int, id string) {
+	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister volume is missing")
 	if cl.volumes != nil {
 		delete(cl.volumes, id)
 	}
@@ -170,10 +174,14 @@ func (cl *Cleanup) unregisterVolumeNoLock(id string) {
 // MustCreateSnapshot is like CreateSnapshot but asserts that the snapshot was
 // successfully created.
 func (cl *Cleanup) MustCreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) *csi.CreateSnapshotResponse {
-	snap, err := cl.createSnapshot(ctx, req)
-	Expect(err).NotTo(HaveOccurred(), "create snapshot failed")
-	Expect(snap).NotTo(BeNil(), "create snasphot response is nil")
-	verifySnapshotInfo(snap.GetSnapshot())
+	return cl.mustCreateSnapshotWithOffset(ctx, 2, req)
+}
+
+func (cl *Cleanup) mustCreateSnapshotWithOffset(ctx context.Context, offset int, req *csi.CreateSnapshotRequest) *csi.CreateSnapshotResponse {
+	snap, err := cl.createSnapshot(ctx, offset+1, req)
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "create snapshot failed")
+	ExpectWithOffset(offset, snap).NotTo(BeNil(), "create snasphot response is nil")
+	verifySnapshotInfoWithOffset(offset+1, snap.GetSnapshot())
 	return snap
 }
 
@@ -181,49 +189,49 @@ func (cl *Cleanup) MustCreateSnapshot(ctx context.Context, req *csi.CreateSnapsh
 // CreateVolumeRequest and a snapshot subsequently. It registers the volume and
 // snapshot and asserts that both were created successfully.
 func (cl *Cleanup) MustCreateSnapshotFromVolumeRequest(ctx context.Context, req *csi.CreateVolumeRequest, snapshotName string) (*csi.CreateSnapshotResponse, *csi.CreateVolumeResponse) {
-	vol := cl.MustCreateVolume(ctx, req)
-	snap := cl.MustCreateSnapshot(ctx, MakeCreateSnapshotReq(cl.Context, snapshotName, vol.Volume.VolumeId))
+	vol := cl.mustCreateVolumeWithOffset(ctx, 2, req)
+	snap := cl.mustCreateSnapshotWithOffset(ctx, 2, MakeCreateSnapshotReq(cl.Context, snapshotName, vol.Volume.VolumeId))
 	return snap, vol
 }
 
-func (cl *Cleanup) createSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+func (cl *Cleanup) createSnapshot(ctx context.Context, offset int, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	snap, err := cl.ControllerClient.CreateSnapshot(ctx, req)
 	if err == nil && snap.GetSnapshot().GetSnapshotId() != "" {
-		cl.registerSnapshot(snap.Snapshot.SnapshotId)
+		cl.registerSnapshot(offset+1, snap.Snapshot.SnapshotId)
 	}
 	return snap, err
 }
 
-func (cl *Cleanup) deleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+func (cl *Cleanup) deleteSnapshot(ctx context.Context, offset int, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	snap, err := cl.ControllerClient.DeleteSnapshot(ctx, req)
 	if err == nil && req.SnapshotId != "" {
-		cl.unregisterSnapshot(req.SnapshotId)
+		cl.unregisterSnapshot(offset+1, req.SnapshotId)
 	}
 	return snap, err
 }
 
-func (cl *Cleanup) registerSnapshot(id string) {
+func (cl *Cleanup) registerSnapshot(offset int, id string) {
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.registerSnapshotNoLock(id)
+	cl.registerSnapshotNoLock(offset+1, id)
 }
 
-func (cl *Cleanup) registerSnapshotNoLock(id string) {
-	Expect(id).NotTo(BeEmpty(), "ID for register snapshot is missing")
+func (cl *Cleanup) registerSnapshotNoLock(offset int, id string) {
+	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
 	if cl.snapshots == nil {
 		cl.snapshots = make(map[string]bool)
 	}
 	cl.snapshots[id] = true
 }
 
-func (cl *Cleanup) unregisterSnapshot(id string) {
+func (cl *Cleanup) unregisterSnapshot(offset int, id string) {
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.unregisterSnapshotNoLock(id)
+	cl.unregisterSnapshotNoLock(offset+1, id)
 }
 
-func (cl *Cleanup) unregisterSnapshotNoLock(id string) {
-	Expect(id).NotTo(BeEmpty(), "ID for unregister snapshot is missing")
+func (cl *Cleanup) unregisterSnapshotNoLock(offset int, id string) {
+	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister snapshot is missing")
 	if cl.snapshots != nil {
 		delete(cl.snapshots, id)
 	}
@@ -236,13 +244,13 @@ func (cl *Cleanup) Cleanup() {
 	defer cl.mutex.Unlock()
 	ctx := context.Background()
 
-	cl.deleteVolumes(ctx)
-	cl.deleteSnapshots(ctx)
+	cl.deleteVolumes(ctx, 2)
+	cl.deleteSnapshots(ctx, 2)
 }
 
-func (cl *Cleanup) deleteVolumes(ctx context.Context) {
+func (cl *Cleanup) deleteVolumes(ctx context.Context, offset int) {
 	logger := newLogger("cleanup volumes:")
-	defer logger.Assert()
+	defer logger.Assert(offset + 1)
 
 	for volumeID, info := range cl.volumes {
 		logger.Infof("deleting %s", volumeID)
@@ -292,13 +300,13 @@ func (cl *Cleanup) deleteVolumes(ctx context.Context) {
 			logger.Errorf(err, "DeleteVolume failed: %s", err)
 		}
 
-		cl.unregisterVolumeNoLock(volumeID)
+		cl.unregisterVolumeNoLock(offset+1, volumeID)
 	}
 }
 
-func (cl *Cleanup) deleteSnapshots(ctx context.Context) {
+func (cl *Cleanup) deleteSnapshots(ctx context.Context, offset int) {
 	logger := newLogger("cleanup snapshots:")
-	defer logger.Assert()
+	defer logger.Assert(offset + 1)
 
 	for id := range cl.snapshots {
 		logger.Infof("deleting %s", id)
@@ -311,6 +319,6 @@ func (cl *Cleanup) deleteSnapshots(ctx context.Context) {
 		)
 		logger.Errorf(err, "DeleteSnapshot failed: %s", err)
 
-		cl.unregisterSnapshotNoLock(id)
+		cl.unregisterSnapshotNoLock(offset+1, id)
 	}
 }

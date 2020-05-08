@@ -54,6 +54,6 @@ func (l *logger) Errorf(err error, format string, v ...interface{}) {
 }
 
 // Assert fails the spec if any error was logged.
-func (l *logger) Assert() {
-	Expect(l.failed).To(BeFalse())
+func (l *logger) Assert(offset int) {
+	ExpectWithOffset(offset+1, l.failed).To(BeFalse())
 }
