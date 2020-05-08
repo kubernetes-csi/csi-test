@@ -18,8 +18,6 @@ package sanity
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -28,7 +26,6 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
@@ -244,10 +241,11 @@ func (cl *Cleanup) Cleanup() {
 }
 
 func (cl *Cleanup) deleteVolumes(ctx context.Context) {
-	logger := log.New(GinkgoWriter, "cleanup volumes: ", 0)
+	logger := newLogger("cleanup volumes:")
+	defer logger.Assert()
 
 	for volumeID, info := range cl.volumes {
-		logger.Printf("deleting %s", volumeID)
+		logger.Infof("deleting %s", volumeID)
 		if cl.NodeClient != nil {
 			if _, err := cl.NodeUnpublishVolume(
 				ctx,
@@ -255,10 +253,8 @@ func (cl *Cleanup) deleteVolumes(ctx context.Context) {
 					VolumeId:   volumeID,
 					TargetPath: cl.Context.TargetPath + "/target",
 				},
-			); err != nil {
-				if status.Code(err) != codes.NotFound {
-					Fail(fmt.Sprintf("NodeUnpublishVolume failed: %s", err))
-				}
+			); err != nil && status.Code(err) != codes.NotFound {
+				logger.Errorf(err, "NodeUnpublishVolume failed: %s", err)
 			}
 
 			if cl.NodeStageSupported {
@@ -268,25 +264,22 @@ func (cl *Cleanup) deleteVolumes(ctx context.Context) {
 						VolumeId:          volumeID,
 						StagingTargetPath: cl.Context.StagingPath,
 					},
-				); err != nil {
-					if status.Code(err) != codes.NotFound {
-						Fail(fmt.Sprintf("NodeUnstageVolume failed: %s", err))
-					}
+				); err != nil && status.Code(err) != codes.NotFound {
+					logger.Errorf(err, "NodeUnstageVolume failed: %s", err)
 				}
 			}
 		}
 
 		if cl.ControllerPublishSupported && info.NodeID != "" {
-			if _, err := cl.ControllerClient.ControllerUnpublishVolume(
+			_, err := cl.ControllerClient.ControllerUnpublishVolume(
 				ctx,
 				&csi.ControllerUnpublishVolumeRequest{
 					VolumeId: volumeID,
 					NodeId:   info.NodeID,
 					Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
 				},
-			); err != nil {
-				Fail(fmt.Sprintf("ControllerUnpublishVolume failed: %s", err))
-			}
+			)
+			logger.Errorf(err, "ControllerUnpublishVolume failed: %s", err)
 		}
 
 		if _, err := cl.ControllerClient.DeleteVolume(
@@ -295,10 +288,8 @@ func (cl *Cleanup) deleteVolumes(ctx context.Context) {
 				VolumeId: volumeID,
 				Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
 			},
-		); err != nil {
-			if status.Code(err) != codes.NotFound {
-				Fail(fmt.Sprintf("DeleteVolume failed: %s", err))
-			}
+		); err != nil && status.Code(err) != codes.NotFound {
+			logger.Errorf(err, "DeleteVolume failed: %s", err)
 		}
 
 		cl.unregisterVolumeNoLock(volumeID)
@@ -306,10 +297,11 @@ func (cl *Cleanup) deleteVolumes(ctx context.Context) {
 }
 
 func (cl *Cleanup) deleteSnapshots(ctx context.Context) {
-	logger := log.New(GinkgoWriter, "cleanup snapshots: ", 0)
+	logger := newLogger("cleanup snapshots:")
+	defer logger.Assert()
 
 	for id := range cl.snapshots {
-		logger.Printf("deleting %s", id)
+		logger.Infof("deleting %s", id)
 		_, err := cl.ControllerClient.DeleteSnapshot(
 			ctx,
 			&csi.DeleteSnapshotRequest{
@@ -317,9 +309,8 @@ func (cl *Cleanup) deleteSnapshots(ctx context.Context) {
 				Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
 			},
 		)
-		if err != nil {
-			Fail(fmt.Sprintf("DeleteSnapshot failed: %s", err))
-		}
+		logger.Errorf(err, "DeleteSnapshot failed: %s", err)
+
 		cl.unregisterSnapshotNoLock(id)
 	}
 }
