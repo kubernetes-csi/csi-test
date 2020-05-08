@@ -47,9 +47,13 @@ type VolumeInfo struct {
 // All methods can be called concurrently.
 type Cleanup struct {
 	Context *TestContext
-	// ControllerClient is meant for struct-internal use only
+	// ControllerClient is meant for struct-internal usage. It should only be
+	// invoked directly if automatic cleanup is not desired and cannot be
+	// avoided otherwise.
 	csi.ControllerClient
-	// NodeClient is meant for struct-internal use only
+	// NodeClient is meant for struct-internal usage. It should only be invoked
+	// directly if automatic cleanup is not desired and cannot be avoided
+	// otherwise.
 	csi.NodeClient
 	ControllerPublishSupported bool
 	NodeStageSupported         bool
