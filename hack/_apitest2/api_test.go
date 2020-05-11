@@ -6,7 +6,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
+	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 )
 
 // TestMyDriverWithCustomTargetPaths verifies that CreateTargetDir and

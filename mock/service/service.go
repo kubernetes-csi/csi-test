@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-csi/csi-test/v3/mock/cache"
+	"github.com/kubernetes-csi/csi-test/v4/mock/cache"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 

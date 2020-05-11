@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubernetes-csi/csi-test/v3/pkg/sanity"
+	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 )
 
 const (
