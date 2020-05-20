@@ -17,6 +17,7 @@ limitations under the License.
 package sanity
 
 import (
+	"fmt"
 	"log"
 
 	. "github.com/onsi/ginkgo"
@@ -24,8 +25,8 @@ import (
 )
 
 type logger struct {
-	l      *log.Logger
-	failed bool
+	l         *log.Logger
+	numFailed int
 }
 
 func newLogger(prefix string) *logger {
@@ -49,11 +50,13 @@ func (l *logger) Errorf(err error, format string, v ...interface{}) {
 	if err == nil {
 		return
 	}
-	l.failed = true
+	l.numFailed++
 	l.l.Printf(format, v...)
 }
 
 // Assert fails the spec if any error was logged.
 func (l *logger) Assert(offset int) {
-	ExpectWithOffset(offset+1, l.failed).To(BeFalse())
+	if l.numFailed > 0 {
+		Fail(fmt.Sprintf("recorded %d failure(s)", l.numFailed), offset+1)
+	}
 }
