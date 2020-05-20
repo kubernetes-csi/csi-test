@@ -21,7 +21,6 @@ import (
 	"log"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 type logger struct {
@@ -54,8 +53,8 @@ func (l *logger) Errorf(err error, format string, v ...interface{}) {
 	l.l.Printf(format, v...)
 }
 
-// Assert fails the spec if any error was logged.
-func (l *logger) Assert(offset int) {
+// ExpectNoErrors fails the spec if any error was logged.
+func (l *logger) ExpectNoErrors(offset int) {
 	if l.numFailed > 0 {
 		Fail(fmt.Sprintf("recorded %d failure(s)", l.numFailed), offset+1)
 	}

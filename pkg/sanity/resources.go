@@ -254,7 +254,7 @@ func (cl *Resources) Cleanup() {
 
 func (cl *Resources) deleteVolumes(ctx context.Context, offset int) {
 	logger := newLogger("cleanup volumes:")
-	defer logger.Assert(offset + 1)
+	defer logger.ExpectNoErrors(offset + 1)
 
 	for volumeID, info := range cl.volumes {
 		logger.Infof("deleting %s", volumeID)
@@ -310,7 +310,7 @@ func (cl *Resources) deleteVolumes(ctx context.Context, offset int) {
 
 func (cl *Resources) deleteSnapshots(ctx context.Context, offset int) {
 	logger := newLogger("cleanup snapshots:")
-	defer logger.Assert(offset + 1)
+	defer logger.ExpectNoErrors(offset + 1)
 
 	for id := range cl.snapshots {
 		logger.Infof("deleting %s", id)
