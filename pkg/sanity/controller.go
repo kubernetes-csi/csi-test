@@ -416,7 +416,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
 		})
 
-		It("should return appropriate values SingleNodeWriter NoCapacity Type:Mount", func() {
+		// TODO: whether CreateVolume request with no capacity should fail or not depends on driver implementation
+		It("should return appropriate values SingleNodeWriter NoCapacity", func() {
 
 			By("creating a volume")
 			name := UniqueString("sanity-controller-create-single-no-capacity")
@@ -454,7 +455,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			cl.UnregisterVolume(name)
 		})
 
-		It("should return appropriate values SingleNodeWriter WithCapacity 1Gi Type:Mount", func() {
+		It("should return appropriate values SingleNodeWriter WithCapacity 1Gi", func() {
 
 			By("creating a volume")
 			name := UniqueString("sanity-controller-create-single-with-capacity")
@@ -1931,7 +1932,8 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: TestVolumeExpandSize(sc),
 			},
-			Secrets: sc.Secrets.ControllerExpandVolumeSecret,
+			Secrets:          sc.Secrets.ControllerExpandVolumeSecret,
+			VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 		}
 		rsp, err := c.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).NotTo(HaveOccurred())
@@ -1957,14 +1959,7 @@ func MakeCreateVolumeReq(sc *TestContext, name string) *csi.CreateVolumeRequest 
 	req := &csi.CreateVolumeRequest{
 		Name: name,
 		VolumeCapabilities: []*csi.VolumeCapability{
-			{
-				AccessType: &csi.VolumeCapability_Mount{
-					Mount: &csi.VolumeCapability_MountVolume{},
-				},
-				AccessMode: &csi.VolumeCapability_AccessMode{
-					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-				},
-			},
+			TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 		},
 		CapacityRange: &csi.CapacityRange{
 			RequiredBytes: size1,
