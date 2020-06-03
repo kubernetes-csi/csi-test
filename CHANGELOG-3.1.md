@@ -1,3 +1,18 @@
+# Changelog since v3.1.0
+
+## Bug Fixes
+
+- The tests that validate the result of a `CreateVolume` operation now accept zero as the `capacity_bytes` of the returned `Volume` object, when validating this value against the requested
+  capacity. ([#262](https://github.com/kubernetes-csi/csi-test/pull/262), [@NicolasT](https://github.com/NicolasT))
+
+## Other Notable Changes
+
+- Publishing of images on k8s.gcr.io ([#270](https://github.com/kubernetes-csi/csi-test/pull/270), [@pohly](https://github.com/pohly))
+- Remove missing volume test case for NodeUnpublishVolume ([#258](https://github.com/kubernetes-csi/csi-test/pull/258), [@timoreimann](https://github.com/timoreimann))
+- Update release-tools to 9084fec to support native building ([#267](https://github.com/kubernetes-csi/csi-test/pull/267), [@timoreimann](https://github.com/timoreimann))
+
+# Changelog since v3.0.0
+
 ## New Features
 
 - "gRPCCall" logs on standard output now include "fullError" with complete error structure. Typically, it contains "code" and "message" with gRPC error. ([#254](https://github.com/kubernetes-csi/csi-test/pull/254), [@jsafrane](https://github.com/jsafrane))
