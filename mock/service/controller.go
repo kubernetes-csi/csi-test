@@ -227,6 +227,11 @@ func (s *service) ControllerPublishVolume(
 	v.VolumeContext[ReadOnlyKey] = roVal
 	s.vols[i] = v
 
+	if volInfo, ok := MockVolumes[req.VolumeId]; ok {
+		volInfo.ISControllerPublished = true
+		MockVolumes[req.VolumeId] = volInfo
+	}
+
 	if hookVal, hookMsg := s.execHook("ControllerPublishVolumeEnd"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
@@ -623,8 +628,8 @@ func (s *service) ControllerExpandVolume(
 		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
-	if s.config.DisableOnlineExpansion && MockVolumes[v.GetVolumeId()].ISPublished {
-		return nil, status.Error(codes.Aborted, "volume is published and online volume expansion is not supported")
+	if s.config.DisableOnlineExpansion && MockVolumes[v.GetVolumeId()].ISControllerPublished {
+		return nil, status.Error(codes.FailedPrecondition, "volume is published and online volume expansion is not supported")
 	}
 
 	requestBytes := req.CapacityRange.RequiredBytes
