@@ -358,63 +358,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		return nodepubvol
 	}
 
-	nodeUnpublishVolume := func(vol *csi.CreateVolumeResponse) {
-		By("cleaning up calling nodeunpublish")
-		nodeunpubvol, err := c.NodeUnpublishVolume(
-			context.Background(),
-			&csi.NodeUnpublishVolumeRequest{
-				VolumeId:   vol.GetVolume().GetVolumeId(),
-				TargetPath: sc.TargetPath + "/target",
-			})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(nodeunpubvol).NotTo(BeNil())
-	}
-
-	nodeUnstageVolume := func(vol *csi.CreateVolumeResponse) {
-		if nodeStageSupported {
-			By("cleaning up calling nodeunstage")
-			nodeunstagevol, err := c.NodeUnstageVolume(
-				context.Background(),
-				&csi.NodeUnstageVolumeRequest{
-					VolumeId:          vol.GetVolume().GetVolumeId(),
-					StagingTargetPath: sc.StagingPath,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nodeunstagevol).NotTo(BeNil())
-		}
-	}
-
-	controllerUnpublishVolume := func(vol *csi.CreateVolumeResponse, nid *csi.NodeGetInfoResponse) {
-		if controllerPublishSupported {
-			By("cleaning up calling controllerunpublishing")
-
-			controllerunpubvol, err := s.ControllerUnpublishVolume(
-				context.Background(),
-				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetVolumeId(),
-					NodeId:   nid.GetNodeId(),
-					Secrets:  sc.Secrets.ControllerUnpublishVolumeSecret,
-				},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(controllerunpubvol).NotTo(BeNil())
-		}
-	}
-
-	deleteVolume := func(vol *csi.CreateVolumeResponse) {
-		By("cleaning up deleting the volume")
-
-		_, err := s.DeleteVolume(
-			context.Background(),
-			&csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetVolumeId(),
-				Secrets:  sc.Secrets.DeleteVolumeSecret,
-			},
-		)
-		Expect(err).NotTo(HaveOccurred())
-	}
-
 	BeforeEach(func() {
 		c = csi.NewNodeClient(sc.Conn)
 		s = csi.NewControllerClient(sc.ControllerConn)
@@ -785,7 +728,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			name := UniqueString("sanity-node-get-volume-stats")
 
 			vol := createVolume(name)
-			defer deleteVolume(vol)
 
 			By("getting a node id")
 			nid, err := c.NodeGetInfo(
@@ -796,15 +738,12 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(nid.GetNodeId()).NotTo(BeEmpty())
 
 			conpubvol := controllerPublishVolume(name, vol, nid)
-			defer controllerUnpublishVolume(vol, nid)
 
 			// NodeStageVolume
 			_ = nodeStageVolume(name, vol, conpubvol)
-			defer nodeUnstageVolume(vol)
 
 			// NodePublishVolume
 			_ = nodePublishVolume(name, vol, conpubvol)
-			defer nodeUnpublishVolume(vol)
 
 			// NodeGetVolumeStats
 			By("Get node volume stats")
@@ -848,10 +787,14 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		})
 
 		It("should fail when no volume path is provided", func() {
+			name := UniqueString("sanity-node-expand-volume-valid-id")
+
+			vol := createVolume(name)
+
 			_, err := c.NodeExpandVolume(
 				context.Background(),
 				&csi.NodeExpandVolumeRequest{
-					VolumeId:         sc.Config.IDGen.GenerateUniqueValidVolumeID(),
+					VolumeId:         vol.GetVolume().VolumeId,
 					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
 			)
@@ -880,8 +823,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		It("should work if node-expand is called after node-publish", func() {
 			name := UniqueString("sanity-node-expand-volume")
 
+			// Created volumes are automatically cleaned up via cl.DeleteVolumes
 			vol := createVolume(name)
-			defer deleteVolume(vol)
 
 			if controllerExpansionSupported {
 				By("controller expanding the volume")
@@ -907,15 +850,12 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(nid.GetNodeId()).NotTo(BeEmpty())
 
 			conpubvol := controllerPublishVolume(name, vol, nid)
-			defer controllerUnpublishVolume(vol, nid)
 
 			// NodeStageVolume
 			_ = nodeStageVolume(name, vol, conpubvol)
-			defer nodeUnstageVolume(vol)
 
 			// NodePublishVolume
 			_ = nodePublishVolume(name, vol, conpubvol)
-			defer nodeUnpublishVolume(vol)
 
 			By("expanding the volume on a node")
 			_, err = c.NodeExpandVolume(
