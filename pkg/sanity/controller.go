@@ -1913,7 +1913,8 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 			VolumeCapabilities: []*csi.VolumeCapability{
 				TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 			},
-			Secrets: sc.Secrets.CreateVolumeSecret,
+			Parameters: sc.Config.TestVolumeParameters,
+			Secrets:    sc.Secrets.CreateVolumeSecret,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: TestVolumeSize(sc),
 			},
