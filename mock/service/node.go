@@ -277,9 +277,6 @@ func (s *service) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	if len(req.GetVolumePath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume Path cannot be empty")
 	}
-	if req.GetCapacityRange() == nil {
-		return nil, status.Error(codes.InvalidArgument, "Request capacity cannot be empty")
-	}
 	if hookVal, hookMsg := s.execHook("NodeExpandVolumeStart"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
@@ -293,30 +290,20 @@ func (s *service) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolum
 	}
 
 	// TODO: NodeExpandVolume MUST be called after successful NodeStageVolume as we has STAGE_UNSTAGE_VOLUME node capacity.
-
-	requestCapacity := req.GetCapacityRange().RequiredBytes
-	resp := &csi.NodeExpandVolumeResponse{CapacityBytes: requestCapacity}
+	resp := &csi.NodeExpandVolumeResponse{}
+	var requestCapacity int64 = 0
+	if req.GetCapacityRange() != nil {
+		requestCapacity = req.CapacityRange.GetRequiredBytes()
+		resp.CapacityBytes = requestCapacity
+	}
 
 	// fsCapacityKey is the key in the volume's attributes that is set to the file system's size.
 	fsCapacityKey := path.Join(s.nodeID, req.GetVolumePath(), "size")
-	oldCapacityStr, exist := v.VolumeContext[fsCapacityKey]
-	if exist {
-		oldCapacity, err := strconv.ParseInt(oldCapacityStr, 10, 64)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		if oldCapacity > requestCapacity {
-			return nil, status.Error(codes.InvalidArgument, "cannot change file system size to a smaller size")
-		}
-		if oldCapacity == requestCapacity {
-			// File system capacity is equal to requested size, no need to expand.
-			return resp, nil
-		}
-	}
-
 	// Update volume's fs capacity to requested size.
-	v.VolumeContext[fsCapacityKey] = strconv.FormatInt(requestCapacity, 10)
-	s.vols[i] = v
+	if requestCapacity > 0 {
+		v.VolumeContext[fsCapacityKey] = strconv.FormatInt(requestCapacity, 10)
+		s.vols[i] = v
+	}
 	if hookVal, hookMsg := s.execHook("NodeExpandVolumeEnd"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
