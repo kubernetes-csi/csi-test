@@ -239,6 +239,12 @@ func (s *service) findVolByName(
 	return s.findVol("name", name)
 }
 
+func (s *service) findVolByID(
+	ctx context.Context, id string) (int, csi.Volume) {
+
+	return s.findVol("id", id)
+}
+
 func (s *service) newSnapshot(name, sourceVolumeId string, parameters map[string]string) cache.Snapshot {
 
 	ptime := ptypes.TimestampNow()
