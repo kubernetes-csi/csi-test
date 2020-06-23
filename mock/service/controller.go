@@ -331,6 +331,41 @@ func (s *service) ValidateVolumeCapabilities(
 	}, nil
 }
 
+func (s *service) ControllerGetVolume(
+	ctx context.Context,
+	req *csi.ControllerGetVolumeRequest) (
+	*csi.ControllerGetVolumeResponse, error) {
+
+	if hookVal, hookMsg := s.execHook("GetVolumeStart"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
+	resp := &csi.ControllerGetVolumeResponse{
+		Status: &csi.ControllerGetVolumeResponse_VolumeStatus{
+			VolumeCondition: &csi.VolumeCondition{},
+		},
+	}
+	i, v := s.findVolByID(ctx, req.VolumeId)
+	if i < 0 {
+		resp.Status.VolumeCondition.Abnormal = true
+		resp.Status.VolumeCondition.Message = "volume not found"
+		return resp, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	resp.Volume = &v
+	if !s.config.DisableAttach {
+		resp.Status.PublishedNodeIds = []string{
+			s.nodeID,
+		}
+	}
+
+	if hookVal, hookMsg := s.execHook("GetVolumeEnd"); hookVal != codes.OK {
+		return nil, status.Errorf(hookVal, hookMsg)
+	}
+
+	return resp, nil
+}
+
 func (s *service) ListVolumes(
 	ctx context.Context,
 	req *csi.ListVolumesRequest) (
@@ -393,8 +428,19 @@ func (s *service) ListVolumes(
 	)
 
 	for i = 0; i < len(entries); i++ {
+		volumeStatus := &csi.ListVolumesResponse_VolumeStatus{
+			VolumeCondition: &csi.VolumeCondition{},
+		}
+
+		if !s.config.DisableAttach {
+			volumeStatus.PublishedNodeIds = []string{
+				s.nodeID,
+			}
+		}
+
 		entries[i] = &csi.ListVolumesResponse_Entry{
 			Volume: &vols[j],
+			Status: volumeStatus,
 		}
 		j++
 	}
@@ -484,6 +530,20 @@ func (s *service) ControllerGetCapabilities(
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
 					Type: csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
+				},
+			},
+		},
+		{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: csi.ControllerServiceCapability_RPC_GET_VOLUME,
+				},
+			},
+		},
+		{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: csi.ControllerServiceCapability_RPC_VOLUME_CONDITION,
 				},
 			},
 		},

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strconv"
@@ -341,6 +342,13 @@ func (s *service) NodeGetCapabilities(
 				},
 			},
 		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_VOLUME_CONDITION,
+				},
+			},
+		},
 	}
 	if s.config.NodeExpansionRequired {
 		capabilities = append(capabilities, &csi.NodeServiceCapability{
@@ -384,6 +392,11 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 	if hookVal, hookMsg := s.execHook("NodeGetVolumeStatsStart"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
+
+	resp := &csi.NodeGetVolumeStatsResponse{
+		VolumeCondition: &csi.VolumeCondition{},
+	}
+
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID cannot be empty")
 	}
@@ -394,27 +407,33 @@ func (s *service) NodeGetVolumeStats(ctx context.Context,
 
 	i, v := s.findVolNoLock("id", req.VolumeId)
 	if i < 0 {
-		return nil, status.Error(codes.NotFound, req.VolumeId)
+		resp.VolumeCondition.Abnormal = true
+		resp.VolumeCondition.Message = "Volume not found"
+		return resp, status.Error(codes.NotFound, req.VolumeId)
 	}
 
 	nodeMntPathKey := path.Join(s.nodeID, req.VolumePath)
 
 	_, exists := v.VolumeContext[nodeMntPathKey]
 	if !exists {
-		return nil, status.Errorf(codes.NotFound, "volume %q doest not exist on the specified path %q", req.VolumeId, req.VolumeId)
+		msg := fmt.Sprintf("volume %q doest not exist on the specified path %q", req.VolumeId, req.VolumePath)
+		resp.VolumeCondition.Abnormal = true
+		resp.VolumeCondition.Message = msg
+		return resp, status.Errorf(codes.NotFound, msg)
 	}
+
 	if hookVal, hookMsg := s.execHook("NodeGetVolumeStatsEnd"); hookVal != codes.OK {
 		return nil, status.Errorf(hookVal, hookMsg)
 	}
 
-	return &csi.NodeGetVolumeStatsResponse{
-		Usage: []*csi.VolumeUsage{
-			{
-				Total: v.GetCapacityBytes(),
-				Unit:  csi.VolumeUsage_BYTES,
-			},
+	resp.Usage = []*csi.VolumeUsage{
+		{
+			Total: v.GetCapacityBytes(),
+			Unit:  csi.VolumeUsage_BYTES,
 		},
-	}, nil
+	}
+
+	return resp, nil
 }
 
 // checkTargetExists checks if a given path exists.
