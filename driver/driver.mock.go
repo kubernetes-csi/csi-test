@@ -241,6 +241,11 @@ func (m *MockControllerServer) ControllerGetVolume(arg0 context.Context, arg1 *c
 	return ret0, ret1
 }
 
+// ControllerGetVolume indicates an expected call of ControllerGetVolume
+func (mr *MockControllerServerMockRecorder) ControllerGetVolume(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ControllerGetVolume", reflect.TypeOf((*MockControllerServer)(nil).ControllerGetVolume), arg0, arg1)
+}
+
 // ListVolumes indicates an expected call of ListVolumes
 func (mr *MockControllerServerMockRecorder) ListVolumes(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolumes", reflect.TypeOf((*MockControllerServer)(nil).ListVolumes), arg0, arg1)
