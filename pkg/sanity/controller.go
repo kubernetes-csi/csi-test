@@ -1317,6 +1317,10 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *TestContex
 		}
 	})
 
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
 	It("should fail when no snapshot id is provided", func() {
 
 		req := &csi.DeleteSnapshotRequest{}
@@ -1367,6 +1371,10 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT) {
 			Skip("CreateSnapshot not supported")
 		}
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
 	})
 
 	It("should fail when no name is provided", func() {
