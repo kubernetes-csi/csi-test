@@ -1,0 +1,8 @@
+apiVersion: snapshot.storage.k8s.io/v1beta1
+kind: VolumeSnapshot
+metadata:
+  name: csi-mock-snapshot-test
+spec:
+  volumeSnapshotClassName: csi-mock-snapclass
+  source:
+    persistentVolumeClaimName: example-pvc
