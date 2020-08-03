@@ -22,12 +22,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
@@ -236,7 +236,7 @@ func logGRPC(method string, request, reply interface{}, err error) {
 	}
 
 	msg, _ := json.Marshal(logMessage)
-	fmt.Printf("gRPCCall: %s\n", msg)
+	klog.V(3).Infof("gRPCCall: %s\n", msg)
 }
 
 func isAuthenticated(req interface{}, creds *CSICreds) (bool, error) {

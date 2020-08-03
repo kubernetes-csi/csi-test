@@ -19,4 +19,5 @@ require (
 	google.golang.org/grpc v1.25.1
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v2 v2.2.5
+	k8s.io/klog v1.0.0
 )
