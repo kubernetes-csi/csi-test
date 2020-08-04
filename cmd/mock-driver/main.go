@@ -25,8 +25,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/kubernetes-csi/csi-test/v3/driver"
-	"github.com/kubernetes-csi/csi-test/v3/mock/service"
+	"github.com/kubernetes-csi/csi-test/v4/driver"
+	"github.com/kubernetes-csi/csi-test/v4/mock/service"
 	"gopkg.in/yaml.v2"
 )
 
