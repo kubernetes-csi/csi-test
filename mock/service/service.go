@@ -175,7 +175,7 @@ func (s *service) newVolumeFromSnapshot(name string, capacity int64, snapshotID 
 	vol.ContentSource = &csi.VolumeContentSource{
 		Type: &csi.VolumeContentSource_Snapshot{
 			Snapshot: &csi.VolumeContentSource_SnapshotSource{
-				SnapshotId: string(snapshotID),
+				SnapshotId: fmt.Sprintf("%d", snapshotID),
 			},
 		},
 	}
@@ -188,7 +188,7 @@ func (s *service) newVolumeFromVolume(name string, capacity int64, volumeID int)
 	vol.ContentSource = &csi.VolumeContentSource{
 		Type: &csi.VolumeContentSource_Volume{
 			Volume: &csi.VolumeContentSource_VolumeSource{
-				VolumeId: string(volumeID),
+				VolumeId: fmt.Sprintf("%d", volumeID),
 			},
 		},
 	}
