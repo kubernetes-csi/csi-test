@@ -28,7 +28,15 @@ import (
 	"github.com/kubernetes-csi/csi-test/v4/driver"
 	"github.com/kubernetes-csi/csi-test/v4/mock/service"
 	"gopkg.in/yaml.v2"
+	"k8s.io/klog"
 )
+
+func init() {
+	// klog verbosity guide for this package
+	// Use V(2) for one time config information
+	// Use V(3) for general debug information logging
+	klog.InitFlags(flag.CommandLine)
+}
 
 func main() {
 	var config service.Config
@@ -56,7 +64,7 @@ func main() {
 		if err == nil {
 			config.ExecHooks = execHooks
 		} else {
-			fmt.Printf("Failed to load hooks file %s: %v", hooksFile, err)
+			klog.Errorf("Failed to load hooks file %s: %v", hooksFile, err)
 		}
 	}
 
@@ -80,20 +88,18 @@ func main() {
 		// Listen
 		l, cleanup, err := listen(endpoint)
 		if err != nil {
-			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
 				endpoint,
 				err)
-			os.Exit(1)
 		}
 		defer cleanup()
 
 		// Start server
 		if err := d.Start(l); err != nil {
-			fmt.Printf("Error: Unable to start mock CSI server: %v\n",
+			klog.Exitf("Error: Unable to start mock CSI server: %v\n",
 				err)
-			os.Exit(1)
 		}
-		fmt.Println("mock driver started")
+		klog.Info("mock driver started")
 
 		// Wait for signal
 		sigc := make(chan os.Signal, 1)
@@ -107,7 +113,7 @@ func main() {
 
 		<-sigc
 		d.Stop()
-		fmt.Println("mock driver stopped")
+		klog.Info("mock driver stopped")
 	} else {
 		controllerServer := &driver.CSIDriverControllerServer{
 			Controller: s,
@@ -130,38 +136,34 @@ func main() {
 		// Listen controller.
 		l, cleanupController, err := listen(controllerEndpoint)
 		if err != nil {
-			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
 				controllerEndpoint,
 				err)
-			os.Exit(1)
 		}
 		defer cleanupController()
 
 		// Start controller server.
 		if err = dc.Start(l); err != nil {
-			fmt.Printf("Error: Unable to start mock CSI controller server: %v\n",
+			klog.Exitf("Error: Unable to start mock CSI controller server: %v\n",
 				err)
-			os.Exit(1)
 		}
-		fmt.Println("mock controller driver started")
+		klog.Infof("mock controller driver started")
 
 		// Listen node.
 		l, cleanupNode, err := listen(endpoint)
 		if err != nil {
-			fmt.Printf("Error: Unable to listen on %s socket: %v\n",
+			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
 				endpoint,
 				err)
-			os.Exit(1)
 		}
 		defer cleanupNode()
 
 		// Start node server.
 		if err = dn.Start(l); err != nil {
-			fmt.Printf("Error: Unable to start mock CSI node server: %v\n",
+			klog.Exitf("Error: Unable to start mock CSI node server: %v\n",
 				err)
-			os.Exit(1)
 		}
-		fmt.Println("mock node driver started")
+		klog.Infof("mock node driver started")
 
 		// Wait for signal
 		sigc := make(chan os.Signal, 1)
@@ -176,7 +178,7 @@ func main() {
 		<-sigc
 		dc.Stop()
 		dn.Stop()
-		fmt.Println("mock drivers stopped")
+		klog.Infof("mock drivers stopped")
 	}
 }
 
@@ -226,6 +228,6 @@ func parseHooksFile(file string) (*service.Hooks, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Hooks file %s loaded\n", file)
+	klog.V(2).Infof("Hooks file %s loaded\n", file)
 	return &hooks, err
 }

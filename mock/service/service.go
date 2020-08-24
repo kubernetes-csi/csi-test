@@ -2,11 +2,12 @@ package service
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"k8s.io/klog"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v4/mock/cache"
@@ -132,8 +133,7 @@ func New(config Config) Service {
 		s.hooksVm.Run(grpcJSCodes) // set global variables with gRPC error codes
 		_, err := s.hooksVm.Run(s.config.ExecHooks.Globals)
 		if err != nil {
-			fmt.Printf("Error encountered in the global exec hook: %v. Exiting\n", err)
-			os.Exit(1)
+			klog.Exitf("Error encountered in the global exec hook: %v. Exiting\n", err)
 		}
 	}
 	s.snapshots = cache.NewSnapshotCache()
@@ -277,8 +277,7 @@ func (s *service) execHook(hookName string) (codes.Code, string) {
 		if len(script) > 0 {
 			result, err := s.hooksVm.Run(script)
 			if err != nil {
-				fmt.Printf("Exec hook %s error: %v; exiting\n", hookName, err)
-				os.Exit(1)
+				klog.Exitf("Exec hook %s error: %v; exiting\n", hookName, err)
 			}
 			rv, err := result.ToInteger()
 			if err == nil {
