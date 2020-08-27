@@ -1,1 +1,0 @@
-../../../pkg/sanity/node.go
