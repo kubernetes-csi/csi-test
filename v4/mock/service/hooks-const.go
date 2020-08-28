@@ -1,1 +1,0 @@
-../../../mock/service/hooks-const.go
