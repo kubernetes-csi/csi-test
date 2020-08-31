@@ -248,8 +248,8 @@ func (cl *Resources) Cleanup() {
 	defer cl.mutex.Unlock()
 	ctx := context.Background()
 
-	cl.deleteVolumes(ctx, 2)
 	cl.deleteSnapshots(ctx, 2)
+	cl.deleteVolumes(ctx, 2)
 }
 
 func (cl *Resources) deleteVolumes(ctx context.Context, offset int) {
