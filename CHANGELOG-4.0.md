@@ -1,3 +1,9 @@
+# Changelog since v4.0.0
+
+### Other Notable Changes
+
+- Restore snapshots-before-volumes cleanup order ([#289](https://github.com/kubernetes-csi/csi-test/pull/289), [@timoreimann](https://github.com/timoreimann))
+
 # Changelog since v3.1.0
 
 ## New Features
