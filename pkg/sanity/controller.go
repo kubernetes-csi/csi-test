@@ -224,7 +224,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				VolumeCapabilities: []*csi.VolumeCapability{
 					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
-				Secrets: sc.Secrets.CreateVolumeSecret,
+				Secrets:    sc.Secrets.CreateVolumeSecret,
+				Parameters: sc.Config.TestVolumeParameters,
 			}
 
 			vol := r.MustCreateVolume(context.Background(), req)
@@ -297,7 +298,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 						VolumeCapabilities: []*csi.VolumeCapability{
 							TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 						},
-						Secrets: sc.Secrets.CreateVolumeSecret,
+						Secrets:    sc.Secrets.CreateVolumeSecret,
+						Parameters: sc.Config.TestVolumeParameters,
 					}
 
 					vol, err := r.CreateVolume(context.Background(), req)
@@ -340,7 +342,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				VolumeCapabilities: []*csi.VolumeCapability{
 					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
-				Secrets: sc.Secrets.CreateVolumeSecret,
+				Secrets:    sc.Secrets.CreateVolumeSecret,
+				Parameters: sc.Config.TestVolumeParameters,
 			}
 			vol := r.MustCreateVolume(context.Background(), req)
 			existing_vols[vol.Volume.VolumeId] = true
