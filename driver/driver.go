@@ -235,7 +235,10 @@ func logGRPC(method string, request, reply interface{}, err error) {
 		logMessage.Error = err.Error()
 	}
 
-	msg, _ := json.Marshal(logMessage)
+	msg, err := json.Marshal(logMessage)
+	if err != nil {
+		logMessage.Error = err.Error()
+	}
 	klog.V(3).Infof("gRPCCall: %s\n", msg)
 }
 

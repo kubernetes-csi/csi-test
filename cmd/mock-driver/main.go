@@ -223,7 +223,10 @@ func parseHooksFile(file string) (*service.Hooks, error) {
 		return nil, err
 	}
 	defer fr.Close()
-	bytes, _ := ioutil.ReadAll(fr)
+	bytes, err := ioutil.ReadAll(fr)
+	if err != nil {
+		return nil, err
+	}
 	err = yaml.UnmarshalStrict([]byte(bytes), &hooks)
 	if err != nil {
 		return nil, err
