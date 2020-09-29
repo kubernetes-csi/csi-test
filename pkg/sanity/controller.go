@@ -587,7 +587,14 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					},
 				},
 			}
-			_, err := r.CreateVolume(context.Background(), vol2Req)
+			volume2, err := r.CreateVolume(context.Background(), vol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Clean up sourced volume first to prevent plugin from returning an
+			// in-use error.
+			By("cleaning up deleting the volume created from snapshot")
+			delVol2Req := MakeDeleteVolumeReq(sc, volume2.GetVolume().GetVolumeId())
+			_, err = r.DeleteVolume(context.Background(), delVol2Req)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -633,7 +640,14 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					},
 				},
 			}
-			_, err := r.CreateVolume(context.Background(), vol2Req)
+			volume2, err := r.CreateVolume(context.Background(), vol2Req)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Clean up sourced volume first to prevent plugin from returning an
+			// in-use error.
+			By("cleaning up deleting the volume created from source volume")
+			delVol2Req := MakeDeleteVolumeReq(sc, volume2.GetVolume().GetVolumeId())
+			_, err = r.DeleteVolume(context.Background(), delVol2Req)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
