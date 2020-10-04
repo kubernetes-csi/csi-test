@@ -73,14 +73,11 @@ type resourceInfo struct {
 	data  interface{}
 }
 
-// VolumeInfo keeps track of the information needed to delete a volume.
-type VolumeInfo struct {
+// volumeInfo keeps track of the information needed to delete a volume.
+type volumeInfo struct {
 	// Node on which the volume was published, empty if none
 	// or publishing is not supported.
 	NodeID string
-
-	// Volume ID assigned by CreateVolume.
-	VolumeID string
 }
 
 // snapshotInfo keeps track of the information needed to delete a snapshot.
@@ -160,7 +157,7 @@ func (cl *Resources) mustCreateVolumeWithOffset(ctx context.Context, offset int,
 func (cl *Resources) createVolume(ctx context.Context, offset int, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	vol, err := cl.ControllerClient.CreateVolume(ctx, req)
 	if err == nil && vol != nil && vol.GetVolume().GetVolumeId() != "" {
-		cl.registerVolume(offset+1, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
+		cl.registerVolume(offset+1, vol.GetVolume().GetVolumeId(), volumeInfo{})
 	}
 	return vol, err
 }
@@ -185,21 +182,21 @@ func (cl *Resources) MustControllerPublishVolume(ctx context.Context, req *csi.C
 func (cl *Resources) controllerPublishVolume(ctx context.Context, offset int, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	conpubvol, err := cl.ControllerClient.ControllerPublishVolume(ctx, req)
 	if err == nil && req.VolumeId != "" && req.NodeId != "" {
-		cl.registerVolume(offset+1, VolumeInfo{VolumeID: req.VolumeId, NodeID: req.NodeId})
+		cl.registerVolume(offset+1, req.VolumeId, volumeInfo{NodeID: req.NodeId})
 	}
 	return conpubvol, err
 }
 
 // registerVolume adds or updates an entry for given volume.
-func (cl *Resources) registerVolume(offset int, info VolumeInfo) {
+func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
+	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "volume ID is empty")
 	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
-	ExpectWithOffset(offset, info.VolumeID).NotTo(BeEmpty(), "volume ID in volume info is empty")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	if cl.managedResourceInfos == nil {
 		cl.managedResourceInfos = make(resourceInfos)
 	}
-	cl.managedResourceInfos.addItem(info.VolumeID, info)
+	cl.managedResourceInfos.addItem(id, info)
 }
 
 // MustCreateSnapshot is like CreateSnapshot but asserts that the snapshot was
@@ -278,8 +275,8 @@ func (cl *Resources) Cleanup() {
 		resInfo := cl.managedResourceInfos.getLastInserted()
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
-		case VolumeInfo:
-			cl.cleanupVolume(ctx, 2, resType)
+		case volumeInfo:
+			cl.cleanupVolume(ctx, 2, id, resType)
 		case snapshotInfo:
 			cl.cleanupSnapshot(ctx, 2, id)
 		default:
@@ -289,11 +286,10 @@ func (cl *Resources) Cleanup() {
 	}
 }
 
-func (cl *Resources) cleanupVolume(ctx context.Context, offset int, info VolumeInfo) {
+func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) {
 	logger := newLogger("cleanup volume:")
 	defer logger.ExpectNoErrors(offset + 1)
 
-	volumeID := info.VolumeID
 	logger.Infof("deleting %s", volumeID)
 	if cl.NodeClient != nil {
 		if _, err := cl.NodeUnpublishVolume(
