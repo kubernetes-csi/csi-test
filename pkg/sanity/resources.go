@@ -18,6 +18,7 @@ package sanity
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -26,8 +27,51 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+// managedResourceInfos is a map of managed resource infos keyed by resource
+// IDs.
+type resourceInfos map[string]resourceInfo
+
+// getLastInserted returns the last inserted resourceInfo, or nil if
+// resourceInfos is empty.
+func (ris resourceInfos) getLastInserted() *resourceInfo {
+	if len(ris) == 0 {
+		return nil
+	}
+
+	var last *resourceInfo
+	for _, ri := range ris {
+		if last == nil || ri.order > last.order {
+			last = &ri
+		}
+	}
+	return last
+}
+
+// addItem adds a resourceInfo item by the given ID and with the given data.
+func (ris resourceInfos) addItem(id string, data interface{}) {
+	nextOrder := -1
+	if lastInserted := ris.getLastInserted(); lastInserted != nil {
+		nextOrder = lastInserted.order
+	}
+	nextOrder++
+
+	ris[id] = resourceInfo{
+		id:    id,
+		order: nextOrder,
+		data:  data,
+	}
+}
+
+// resourceInfo represents a resource (i.e., a volume or a snapshot).
+type resourceInfo struct {
+	id    string
+	order int
+	data  interface{}
+}
 
 // VolumeInfo keeps track of the information needed to delete a volume.
 type VolumeInfo struct {
@@ -38,6 +82,9 @@ type VolumeInfo struct {
 	// Volume ID assigned by CreateVolume.
 	VolumeID string
 }
+
+// snapshotInfo keeps track of the information needed to delete a snapshot.
+type snapshotInfo struct{}
 
 // Resources keeps track of resources, in particular volumes and snapshots, that
 // need to be freed when testing is done. It implements both ControllerClient
@@ -58,14 +105,9 @@ type Resources struct {
 	ControllerPublishSupported bool
 	NodeStageSupported         bool
 
-	// mutex protects access to the volumes and snapshots maps.
-	mutex sync.Mutex
-	// volumes maps from volume IDs to VolumeInfo structs and records if a given
-	// volume must be cleaned up.
-	volumes map[string]*VolumeInfo
-	// snapshots is keyed by snapshot IDs and records if a given snapshot must
-	// be cleaned up.
-	snapshots map[string]bool
+	// mutex protects access to managedResourceInfos.
+	mutex                sync.Mutex
+	managedResourceInfos resourceInfos
 }
 
 // ControllerClient interface wrappers
@@ -126,7 +168,7 @@ func (cl *Resources) createVolume(ctx context.Context, offset int, req *csi.Crea
 func (cl *Resources) deleteVolume(ctx context.Context, offset int, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	vol, err := cl.ControllerClient.DeleteVolume(ctx, req)
 	if err == nil {
-		cl.unregisterVolume(offset+1, req.VolumeId)
+		cl.unregisterResource(offset+1, req.VolumeId)
 	}
 	return vol, err
 }
@@ -154,25 +196,10 @@ func (cl *Resources) registerVolume(offset int, info VolumeInfo) {
 	ExpectWithOffset(offset, info.VolumeID).NotTo(BeEmpty(), "volume ID in volume info is empty")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	if cl.volumes == nil {
-		cl.volumes = make(map[string]*VolumeInfo)
+	if cl.managedResourceInfos == nil {
+		cl.managedResourceInfos = make(resourceInfos)
 	}
-	cl.volumes[info.VolumeID] = &info
-}
-
-// unregisterVolume removes the entry for the volume with the
-// given ID, thus preventing all cleanup operations for it.
-func (cl *Resources) unregisterVolume(offset int, id string) {
-	cl.mutex.Lock()
-	defer cl.mutex.Unlock()
-	cl.unregisterVolumeNoLock(offset+1, id)
-}
-
-func (cl *Resources) unregisterVolumeNoLock(offset int, id string) {
-	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister volume is missing")
-	if cl.volumes != nil {
-		delete(cl.volumes, id)
-	}
+	cl.managedResourceInfos.addItem(info.VolumeID, info)
 }
 
 // MustCreateSnapshot is like CreateSnapshot but asserts that the snapshot was
@@ -209,7 +236,7 @@ func (cl *Resources) createSnapshot(ctx context.Context, offset int, req *csi.Cr
 func (cl *Resources) deleteSnapshot(ctx context.Context, offset int, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	snap, err := cl.ControllerClient.DeleteSnapshot(ctx, req)
 	if err == nil && req.SnapshotId != "" {
-		cl.unregisterSnapshot(offset+1, req.SnapshotId)
+		cl.unregisterResource(offset+1, req.SnapshotId)
 	}
 	return snap, err
 }
@@ -222,107 +249,110 @@ func (cl *Resources) registerSnapshot(offset int, id string) {
 
 func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
-	if cl.snapshots == nil {
-		cl.snapshots = make(map[string]bool)
+	if cl.managedResourceInfos == nil {
+		cl.managedResourceInfos = make(resourceInfos)
 	}
-	cl.snapshots[id] = true
+	cl.managedResourceInfos.addItem(id, snapshotInfo{})
 }
 
-func (cl *Resources) unregisterSnapshot(offset int, id string) {
+func (cl *Resources) unregisterResource(offset int, id string) {
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.unregisterSnapshotNoLock(offset+1, id)
+	cl.unregisterResourceNoLock(offset+1, id)
 }
 
-func (cl *Resources) unregisterSnapshotNoLock(offset int, id string) {
-	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister snapshot is missing")
-	if cl.snapshots != nil {
-		delete(cl.snapshots, id)
+func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
+	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister resource is missing")
+	if cl.managedResourceInfos != nil {
+		delete(cl.managedResourceInfos, id)
 	}
 }
 
-// Cleanup calls unpublish methods as needed and deletes all volumes and
-// snapshots.
+// Cleanup calls unpublish methods as needed and deletes all managed resources.
 func (cl *Resources) Cleanup() {
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	ctx := context.Background()
 
-	cl.deleteSnapshots(ctx, 2)
-	cl.deleteVolumes(ctx, 2)
+	for len(cl.managedResourceInfos) > 0 {
+		resInfo := cl.managedResourceInfos.getLastInserted()
+		id := resInfo.id
+		switch resType := resInfo.data.(type) {
+		case VolumeInfo:
+			cl.cleanupVolume(ctx, 2, resType)
+		case snapshotInfo:
+			cl.cleanupSnapshot(ctx, 2, id)
+		default:
+			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
+		}
+		cl.unregisterResourceNoLock(2, id)
+	}
 }
 
-func (cl *Resources) deleteVolumes(ctx context.Context, offset int) {
-	logger := newLogger("cleanup volumes:")
+func (cl *Resources) cleanupVolume(ctx context.Context, offset int, info VolumeInfo) {
+	logger := newLogger("cleanup volume:")
 	defer logger.ExpectNoErrors(offset + 1)
 
-	for volumeID, info := range cl.volumes {
-		logger.Infof("deleting %s", volumeID)
-		if cl.NodeClient != nil {
-			if _, err := cl.NodeUnpublishVolume(
-				ctx,
-				&csi.NodeUnpublishVolumeRequest{
-					VolumeId:   volumeID,
-					TargetPath: cl.Context.TargetPath + "/target",
-				},
-			); err != nil && status.Code(err) != codes.NotFound {
-				logger.Errorf(err, "NodeUnpublishVolume failed: %s", err)
-			}
-
-			if cl.NodeStageSupported {
-				if _, err := cl.NodeUnstageVolume(
-					ctx,
-					&csi.NodeUnstageVolumeRequest{
-						VolumeId:          volumeID,
-						StagingTargetPath: cl.Context.StagingPath,
-					},
-				); err != nil && status.Code(err) != codes.NotFound {
-					logger.Errorf(err, "NodeUnstageVolume failed: %s", err)
-				}
-			}
-		}
-
-		if cl.ControllerPublishSupported && info.NodeID != "" {
-			_, err := cl.ControllerClient.ControllerUnpublishVolume(
-				ctx,
-				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: volumeID,
-					NodeId:   info.NodeID,
-					Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
-				},
-			)
-			logger.Errorf(err, "ControllerUnpublishVolume failed: %s", err)
-		}
-
-		if _, err := cl.ControllerClient.DeleteVolume(
+	volumeID := info.VolumeID
+	logger.Infof("deleting %s", volumeID)
+	if cl.NodeClient != nil {
+		if _, err := cl.NodeUnpublishVolume(
 			ctx,
-			&csi.DeleteVolumeRequest{
-				VolumeId: volumeID,
-				Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
+			&csi.NodeUnpublishVolumeRequest{
+				VolumeId:   volumeID,
+				TargetPath: cl.Context.TargetPath + "/target",
 			},
 		); err != nil && status.Code(err) != codes.NotFound {
-			logger.Errorf(err, "DeleteVolume failed: %s", err)
+			logger.Errorf(err, "NodeUnpublishVolume failed: %s", err)
 		}
 
-		cl.unregisterVolumeNoLock(offset+1, volumeID)
+		if cl.NodeStageSupported {
+			if _, err := cl.NodeUnstageVolume(
+				ctx,
+				&csi.NodeUnstageVolumeRequest{
+					VolumeId:          volumeID,
+					StagingTargetPath: cl.Context.StagingPath,
+				},
+			); err != nil && status.Code(err) != codes.NotFound {
+				logger.Errorf(err, "NodeUnstageVolume failed: %s", err)
+			}
+		}
+	}
+
+	if cl.ControllerPublishSupported && info.NodeID != "" {
+		_, err := cl.ControllerClient.ControllerUnpublishVolume(
+			ctx,
+			&csi.ControllerUnpublishVolumeRequest{
+				VolumeId: volumeID,
+				NodeId:   info.NodeID,
+				Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
+			},
+		)
+		logger.Errorf(err, "ControllerUnpublishVolume failed: %s", err)
+	}
+
+	if _, err := cl.ControllerClient.DeleteVolume(
+		ctx,
+		&csi.DeleteVolumeRequest{
+			VolumeId: volumeID,
+			Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
+		},
+	); err != nil && status.Code(err) != codes.NotFound {
+		logger.Errorf(err, "DeleteVolume failed: %s", err)
 	}
 }
 
-func (cl *Resources) deleteSnapshots(ctx context.Context, offset int) {
-	logger := newLogger("cleanup snapshots:")
+func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string) {
+	logger := newLogger("cleanup snapshot:")
 	defer logger.ExpectNoErrors(offset + 1)
 
-	for id := range cl.snapshots {
-		logger.Infof("deleting %s", id)
-		_, err := cl.ControllerClient.DeleteSnapshot(
-			ctx,
-			&csi.DeleteSnapshotRequest{
-				SnapshotId: id,
-				Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
-			},
-		)
-		logger.Errorf(err, "DeleteSnapshot failed: %s", err)
-
-		cl.unregisterSnapshotNoLock(offset+1, id)
-	}
+	logger.Infof("deleting %s", id)
+	_, err := cl.ControllerClient.DeleteSnapshot(
+		ctx,
+		&csi.DeleteSnapshotRequest{
+			SnapshotId: id,
+			Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
+		},
+	)
+	logger.Errorf(err, "DeleteSnapshot failed: %s", err)
 }
