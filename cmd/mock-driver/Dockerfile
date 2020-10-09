@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/static:latest
+FROM gcr.io/distroless/static:latest-amd64
 LABEL maintainers="Kubernetes Authors"
 LABEL description="CSI Mock Driver"
 ARG binary=./bin/mock-driver
