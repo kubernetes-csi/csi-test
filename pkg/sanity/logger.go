@@ -19,6 +19,7 @@ package sanity
 import (
 	"fmt"
 	"log"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 )
@@ -28,9 +29,25 @@ type logger struct {
 	numFailed int
 }
 
+var isDebug = os.Getenv("DEBUG_RESOURCE_MANAGER") != ""
+
 func newLogger(prefix string) *logger {
 	return &logger{
 		l: log.New(GinkgoWriter, prefix+" ", 0),
+	}
+}
+
+// Debugf logs a message in debug mode without marking the test as failed.
+func Debugf(format string, v ...interface{}) {
+	if isDebug {
+		newLogger("[DEBUG]").Infof(format, v...)
+	}
+}
+
+// Debug logs a message in debug mode without marking the test as failed.
+func Debug(v string) {
+	if isDebug {
+		newLogger("[DEBUG]").Info(v)
 	}
 }
 

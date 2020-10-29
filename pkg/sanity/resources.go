@@ -157,6 +157,7 @@ func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
 	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
+	Debugf("registering volume resource %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: info,
@@ -210,6 +211,7 @@ func (cl *Resources) registerSnapshot(offset int, id string) {
 
 func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
+	Debugf("registering snapshot resource %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: snapshotInfo{},
@@ -227,6 +229,7 @@ func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 	// Find resource info with the given ID and remove it.
 	for i, resInfo := range cl.managedResourceInfos {
 		if resInfo.id == id {
+			Debugf("unregistering resource %s", id)
 			cl.managedResourceInfos = append(cl.managedResourceInfos[:i], cl.managedResourceInfos[i+1:]...)
 			return
 		}
@@ -245,13 +248,16 @@ func (cl *Resources) Cleanup() {
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
+			Debugf("cleaning up volume %s", id)
 			cl.cleanupVolume(ctx, 2, id, resType)
 		case snapshotInfo:
+			Debugf("cleaning up snapshot %s", id)
 			cl.cleanupSnapshot(ctx, 2, id)
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
 		}
 	}
+	Debug("clearing managed resources list")
 	cl.managedResourceInfos = []resourceInfo{}
 }
 
