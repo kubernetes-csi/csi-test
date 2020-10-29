@@ -31,46 +31,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// managedResourceInfos is a map of managed resource infos keyed by resource
-// IDs.
-type resourceInfos map[string]resourceInfo
-
-// getLastInserted returns the last inserted resourceInfo, or nil if
-// resourceInfos is empty.
-func (ris resourceInfos) getLastInserted() *resourceInfo {
-	if len(ris) == 0 {
-		return nil
-	}
-
-	var last *resourceInfo
-	for _, ri := range ris {
-		if last == nil || ri.order > last.order {
-			last = &ri
-		}
-	}
-	return last
-}
-
-// addItem adds a resourceInfo item by the given ID and with the given data.
-func (ris resourceInfos) addItem(id string, data interface{}) {
-	nextOrder := -1
-	if lastInserted := ris.getLastInserted(); lastInserted != nil {
-		nextOrder = lastInserted.order
-	}
-	nextOrder++
-
-	ris[id] = resourceInfo{
-		id:    id,
-		order: nextOrder,
-		data:  data,
-	}
-}
-
 // resourceInfo represents a resource (i.e., a volume or a snapshot).
 type resourceInfo struct {
-	id    string
-	order int
-	data  interface{}
+	id   string
+	data interface{}
 }
 
 // volumeInfo keeps track of the information needed to delete a volume.
@@ -104,7 +68,7 @@ type Resources struct {
 
 	// mutex protects access to managedResourceInfos.
 	mutex                sync.Mutex
-	managedResourceInfos resourceInfos
+	managedResourceInfos []resourceInfo
 }
 
 // ControllerClient interface wrappers
@@ -193,10 +157,10 @@ func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
 	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	if cl.managedResourceInfos == nil {
-		cl.managedResourceInfos = make(resourceInfos)
-	}
-	cl.managedResourceInfos.addItem(id, info)
+	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
+		id:   id,
+		data: info,
+	})
 }
 
 // MustCreateSnapshot is like CreateSnapshot but asserts that the snapshot was
@@ -246,10 +210,10 @@ func (cl *Resources) registerSnapshot(offset int, id string) {
 
 func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
-	if cl.managedResourceInfos == nil {
-		cl.managedResourceInfos = make(resourceInfos)
-	}
-	cl.managedResourceInfos.addItem(id, snapshotInfo{})
+	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
+		id:   id,
+		data: snapshotInfo{},
+	})
 }
 
 func (cl *Resources) unregisterResource(offset int, id string) {
@@ -260,8 +224,12 @@ func (cl *Resources) unregisterResource(offset int, id string) {
 
 func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister resource is missing")
-	if cl.managedResourceInfos != nil {
-		delete(cl.managedResourceInfos, id)
+	// Find resource info with the given ID and remove it.
+	for i, resInfo := range cl.managedResourceInfos {
+		if resInfo.id == id {
+			cl.managedResourceInfos = append(cl.managedResourceInfos[:i], cl.managedResourceInfos[i+1:]...)
+			return
+		}
 	}
 }
 
@@ -271,8 +239,9 @@ func (cl *Resources) Cleanup() {
 	defer cl.mutex.Unlock()
 	ctx := context.Background()
 
-	for len(cl.managedResourceInfos) > 0 {
-		resInfo := cl.managedResourceInfos.getLastInserted()
+	// Clean up resources in LIFO order to account for dependency order.
+	for i := len(cl.managedResourceInfos) - 1; i >= 0; i-- {
+		resInfo := cl.managedResourceInfos[i]
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
@@ -282,8 +251,8 @@ func (cl *Resources) Cleanup() {
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
 		}
-		cl.unregisterResourceNoLock(2, id)
 	}
+	cl.managedResourceInfos = []resourceInfo{}
 }
 
 func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) {
