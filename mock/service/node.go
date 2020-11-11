@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strconv"
@@ -202,15 +203,19 @@ func (s *service) NodePublishVolume(
 			ISEphemeral: true,
 		}
 	} else {
-		if req.GetStagingTargetPath() != "" {
-			exists, err := checkTargetExists(req.GetStagingTargetPath())
+		if req.GetTargetPath() != "" {
+			exists, err := checkTargetExists(req.GetTargetPath())
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			if !exists {
-				status.Errorf(codes.Internal, "staging target path %s does not exist", req.GetStagingTargetPath())
+				// If target path does not exist we need to create the directory where volume will be staged
+				if err = os.Mkdir(req.TargetPath, os.FileMode(0755)); err != nil {
+					msg := fmt.Sprintf("NodePublishVolume: could not create target dir %q: %v", req.TargetPath, err)
+					return nil, status.Error(codes.Internal, msg)
+				}
 			}
-			v.VolumeContext[nodeMntPathKey] = req.GetStagingTargetPath()
+			v.VolumeContext[nodeMntPathKey] = req.GetTargetPath()
 		} else {
 			v.VolumeContext[nodeMntPathKey] = device
 		}
@@ -257,6 +262,12 @@ func (s *service) NodeUnpublishVolume(
 		// Check to see if the volume has already been unpublished.
 		if v.VolumeContext[nodeMntPathKey] == "" {
 			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+
+		// Delete any created paths
+		err := os.RemoveAll(v.VolumeContext[nodeMntPathKey])
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Unable to delete previously created target directory")
 		}
 
 		// Unpublish the volume.
