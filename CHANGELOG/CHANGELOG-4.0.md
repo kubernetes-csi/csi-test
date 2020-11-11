@@ -1,9 +1,32 @@
+# Release notes for v4.0.2
+
+# Changelog since v4.0.1
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Updates the mock driver to create the target directory in `NodePublishVolume`, and remove it in `NodeUnpublishVolume`. ([#303](https://github.com/kubernetes-csi/csi-test/pull/303), [@huffmanca](https://github.com/huffmanca))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
+# Release notes for v4.0.1
 # Changelog since v4.0.0
 
 ### Other Notable Changes
 
 - Restore snapshots-before-volumes cleanup order ([#289](https://github.com/kubernetes-csi/csi-test/pull/289), [@timoreimann](https://github.com/timoreimann))
 
+# Release notes for v4.0.0
 # Changelog since v3.1.0
 
 ## New Features
