@@ -1,3 +1,8 @@
+# Changelog since v3.1.1
+
+## Bug Fixes
+ - Updates the mock driver to create the target directory in `NodePublishVolume`, and remove it in `NodeUnpublishVolume`. ([#307](https://github.com/kubernetes-csi/csi-test/pull/307), [@msau42](https://github.com/msau42))
+
 # Changelog since v3.1.0
 
 ## Bug Fixes
