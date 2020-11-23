@@ -28,7 +28,7 @@ import (
 	"github.com/kubernetes-csi/csi-test/v4/driver"
 	"github.com/kubernetes-csi/csi-test/v4/mock/service"
 	"gopkg.in/yaml.v2"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func init() {
