@@ -1,6 +1,8 @@
 # github.com/container-storage-interface/spec v1.3.0
 ## explicit
 github.com/container-storage-interface/spec/lib/go/csi
+# github.com/go-logr/logr v0.2.0
+github.com/go-logr/logr
 # github.com/golang/mock v1.3.1
 ## explicit
 github.com/golang/mock/gomock
@@ -165,6 +167,6 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.2.5
 ## explicit
 gopkg.in/yaml.v2
-# k8s.io/klog v1.0.0
+# k8s.io/klog/v2 v2.4.0
 ## explicit
-k8s.io/klog
+k8s.io/klog/v2
