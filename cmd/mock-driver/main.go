@@ -16,16 +16,16 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/kubernetes-csi/csi-test/v4/driver"
+	"github.com/kubernetes-csi/csi-test/v4/internal/endpoint"
+	"github.com/kubernetes-csi/csi-test/v4/internal/proxy"
 	"github.com/kubernetes-csi/csi-test/v4/mock/service"
 	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
@@ -50,13 +50,37 @@ func main() {
 	flag.BoolVar(&config.DisableOnlineExpansion, "disable-online-expansion", false, "Disables online volume expansion capability.")
 	flag.BoolVar(&config.PermissiveTargetPath, "permissive-target-path", false, "Allows the CO to create PublishVolumeRequest.TargetPath, which violates the CSI spec.")
 	flag.StringVar(&hooksFile, "hooks-file", "", "YAML file with hook scripts.")
+	proxyEndpoint := flag.String("proxy-endpoint", "", "Instead of running the CSI driver code, just proxy connections from $CSI_ENDPOINT to the given listening socket.")
 	flag.Parse()
 
-	endpoint := os.Getenv("CSI_ENDPOINT")
+	csiEndpoint := os.Getenv("CSI_ENDPOINT")
 	controllerEndpoint := os.Getenv("CSI_CONTROLLER_ENDPOINT")
 	if len(controllerEndpoint) == 0 {
 		// If empty, set to the common endpoint.
-		controllerEndpoint = endpoint
+		controllerEndpoint = csiEndpoint
+	}
+
+	if *proxyEndpoint != "" {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		closer, err := proxy.Run(ctx, csiEndpoint, *proxyEndpoint)
+		if err != nil {
+			klog.Fatalf("failed to run proxy: %v", err)
+		}
+		defer closer.Close()
+
+		// Wait for signal
+		sigc := make(chan os.Signal, 1)
+		sigs := []os.Signal{
+			syscall.SIGTERM,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+		}
+		signal.Notify(sigc, sigs...)
+
+		<-sigc
+		return
 	}
 
 	if hooksFile != "" {
@@ -71,7 +95,7 @@ func main() {
 	// Create mock driver
 	s := service.New(config)
 
-	if endpoint == controllerEndpoint {
+	if csiEndpoint == controllerEndpoint {
 		servers := &driver.CSIDriverServers{
 			Controller: s,
 			Identity:   s,
@@ -86,10 +110,10 @@ func main() {
 		}
 
 		// Listen
-		l, cleanup, err := listen(endpoint)
+		l, cleanup, err := endpoint.Listen(csiEndpoint)
 		if err != nil {
 			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
-				endpoint,
+				csiEndpoint,
 				err)
 		}
 		defer cleanup()
@@ -134,7 +158,7 @@ func main() {
 		}
 
 		// Listen controller.
-		l, cleanupController, err := listen(controllerEndpoint)
+		l, cleanupController, err := endpoint.Listen(controllerEndpoint)
 		if err != nil {
 			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
 				controllerEndpoint,
@@ -150,10 +174,10 @@ func main() {
 		klog.Infof("mock controller driver started")
 
 		// Listen node.
-		l, cleanupNode, err := listen(endpoint)
+		l, cleanupNode, err := endpoint.Listen(csiEndpoint)
 		if err != nil {
 			klog.Exitf("Error: Unable to listen on %s socket: %v\n",
-				endpoint,
+				csiEndpoint,
 				err)
 		}
 		defer cleanupNode()
@@ -180,39 +204,6 @@ func main() {
 		dn.Stop()
 		klog.Infof("mock drivers stopped")
 	}
-}
-
-func parseEndpoint(ep string) (string, string, error) {
-	if strings.HasPrefix(strings.ToLower(ep), "unix://") || strings.HasPrefix(strings.ToLower(ep), "tcp://") {
-		s := strings.SplitN(ep, "://", 2)
-		if s[1] != "" {
-			return s[0], s[1], nil
-		}
-		return "", "", fmt.Errorf("Invalid endpoint: %v", ep)
-	}
-	// Assume everything else is a file path for a Unix Domain Socket.
-	return "unix", ep, nil
-}
-
-func listen(endpoint string) (net.Listener, func(), error) {
-	proto, addr, err := parseEndpoint(endpoint)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cleanup := func() {}
-	if proto == "unix" {
-		addr = "/" + addr
-		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) { //nolint: vetshadow
-			return nil, nil, fmt.Errorf("%s: %q", addr, err)
-		}
-		cleanup = func() {
-			os.Remove(addr)
-		}
-	}
-
-	l, err := net.Listen(proto, addr)
-	return l, cleanup, err
 }
 
 func parseHooksFile(file string) (*service.Hooks, error) {
