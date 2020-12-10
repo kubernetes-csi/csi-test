@@ -41,6 +41,7 @@ func DescribeSanity(text string, body func(*TestContext)) bool {
 // for the tests registered earlier with DescribeSanity.
 func registerTestsInGinkgo(sc *TestContext) {
 	for _, test := range tests {
+		test := test
 		Describe(test.text, func() {
 			BeforeEach(func() {
 				sc.Setup()
