@@ -159,7 +159,7 @@ func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
 	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	klog.V(4).Infof("registering volume resource %s", id)
+	klog.V(4).Infof("registering volume ID %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: info,
@@ -213,7 +213,7 @@ func (cl *Resources) registerSnapshot(offset int, id string) {
 
 func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
-	klog.V(4).Infof("registering snapshot resource %s", id)
+	klog.V(4).Infof("registering snapshot ID %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: snapshotInfo{},
@@ -231,7 +231,7 @@ func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 	// Find resource info with the given ID and remove it.
 	for i, resInfo := range cl.managedResourceInfos {
 		if resInfo.id == id {
-			klog.V(4).Infof("unregistering resource %s", id)
+			klog.V(4).Infof("unregistering resource ID %s", id)
 			cl.managedResourceInfos = append(cl.managedResourceInfos[:i], cl.managedResourceInfos[i+1:]...)
 			return
 		}
@@ -240,6 +240,7 @@ func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 
 // Cleanup calls unpublish methods as needed and deletes all managed resources.
 func (cl *Resources) Cleanup() {
+	klog.V(4).Info("cleaning up all registered resources")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	ctx := context.Background()
@@ -250,10 +251,8 @@ func (cl *Resources) Cleanup() {
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
-			klog.V(4).Infof("cleaning up volume %s", id)
 			cl.cleanupVolume(ctx, 2, id, resType)
 		case snapshotInfo:
-			klog.V(4).Infof("cleaning up snapshot %s", id)
 			cl.cleanupSnapshot(ctx, 2, id)
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
@@ -264,7 +263,7 @@ func (cl *Resources) Cleanup() {
 }
 
 func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) {
-	klog.Infof("[volume cleanup] deleting %s", volumeID)
+	klog.V(4).Infof("deleting volume ID %s", volumeID)
 	if cl.NodeClient != nil {
 		_, err := cl.NodeUnpublishVolume(
 			ctx,
@@ -273,7 +272,7 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 				TargetPath: cl.Context.TargetPath + "/target",
 			},
 		)
-		expectNoErrorOrMissing(offset+1, err, "[volume cleanup] NodeUnpublishVolume failed")
+		expectNoErrorOrMissing(offset+1, err, "NodeUnpublishVolume failed")
 
 		if cl.NodeStageSupported {
 			_, err := cl.NodeUnstageVolume(
@@ -283,7 +282,7 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 					StagingTargetPath: cl.Context.StagingPath,
 				},
 			)
-			expectNoErrorOrMissing(offset+1, err, "[volume cleanup] NodeUnstageVolume failed")
+			expectNoErrorOrMissing(offset+1, err, "NodeUnstageVolume failed")
 		}
 	}
 
@@ -296,7 +295,7 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 				Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
 			},
 		)
-		ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[volume cleanup] ControllerUnpublishVolume failed")
+		ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "ControllerUnpublishVolume failed")
 	}
 
 	_, err := cl.ControllerClient.DeleteVolume(
@@ -306,11 +305,11 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 			Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
 		},
 	)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[volume cleanup] DeleteVolume failed")
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "DeleteVolume failed")
 }
 
 func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string) {
-	klog.Infof("[snapshot cleanup] deleting %s", id)
+	klog.Infof("deleting snapshot ID %s", id)
 	_, err := cl.ControllerClient.DeleteSnapshot(
 		ctx,
 		&csi.DeleteSnapshotRequest{
@@ -318,7 +317,7 @@ func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string)
 			Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
 		},
 	)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[snapshot cleanup] DeleteSnapshot failed")
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "DeleteSnapshot failed")
 }
 
 func expectNoErrorOrMissing(offset int, err error, description string) {
