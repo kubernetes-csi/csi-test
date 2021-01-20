@@ -22,6 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onsi/ginkgo"
+	"k8s.io/klog/v2"
+
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 )
 
@@ -101,6 +104,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	klog.SetOutput(ginkgo.GinkgoWriter)
 	t := testing{}
 	sanity.Test(&t, config)
 	os.Exit(t.result)

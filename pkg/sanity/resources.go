@@ -29,6 +29,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/klog/v2"
 )
 
 // resourceInfo represents a resource (i.e., a volume or a snapshot).
@@ -157,7 +159,7 @@ func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
 	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	Debugf("registering volume resource %s", id)
+	klog.V(4).Infof("registering volume resource %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: info,
@@ -211,7 +213,7 @@ func (cl *Resources) registerSnapshot(offset int, id string) {
 
 func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
-	Debugf("registering snapshot resource %s", id)
+	klog.V(4).Infof("registering snapshot resource %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
 		data: snapshotInfo{},
@@ -229,7 +231,7 @@ func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 	// Find resource info with the given ID and remove it.
 	for i, resInfo := range cl.managedResourceInfos {
 		if resInfo.id == id {
-			Debugf("unregistering resource %s", id)
+			klog.V(4).Infof("unregistering resource %s", id)
 			cl.managedResourceInfos = append(cl.managedResourceInfos[:i], cl.managedResourceInfos[i+1:]...)
 			return
 		}
@@ -248,45 +250,40 @@ func (cl *Resources) Cleanup() {
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
-			Debugf("cleaning up volume %s", id)
+			klog.V(4).Infof("cleaning up volume %s", id)
 			cl.cleanupVolume(ctx, 2, id, resType)
 		case snapshotInfo:
-			Debugf("cleaning up snapshot %s", id)
+			klog.V(4).Infof("cleaning up snapshot %s", id)
 			cl.cleanupSnapshot(ctx, 2, id)
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
 		}
 	}
-	Debug("clearing managed resources list")
+	klog.V(4).Info("clearing managed resources list")
 	cl.managedResourceInfos = []resourceInfo{}
 }
 
 func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) {
-	logger := newLogger("cleanup volume:")
-	defer logger.ExpectNoErrors(offset + 1)
-
-	logger.Infof("deleting %s", volumeID)
+	klog.Infof("[volume cleanup] deleting %s", volumeID)
 	if cl.NodeClient != nil {
-		if _, err := cl.NodeUnpublishVolume(
+		_, err := cl.NodeUnpublishVolume(
 			ctx,
 			&csi.NodeUnpublishVolumeRequest{
 				VolumeId:   volumeID,
 				TargetPath: cl.Context.TargetPath + "/target",
 			},
-		); err != nil && status.Code(err) != codes.NotFound {
-			logger.Errorf(err, "NodeUnpublishVolume failed: %s", err)
-		}
+		)
+		expectNoErrorOrMissing(offset+1, err, "[volume cleanup] NodeUnpublishVolume failed")
 
 		if cl.NodeStageSupported {
-			if _, err := cl.NodeUnstageVolume(
+			_, err := cl.NodeUnstageVolume(
 				ctx,
 				&csi.NodeUnstageVolumeRequest{
 					VolumeId:          volumeID,
 					StagingTargetPath: cl.Context.StagingPath,
 				},
-			); err != nil && status.Code(err) != codes.NotFound {
-				logger.Errorf(err, "NodeUnstageVolume failed: %s", err)
-			}
+			)
+			expectNoErrorOrMissing(offset+1, err, "[volume cleanup] NodeUnstageVolume failed")
 		}
 	}
 
@@ -299,25 +296,21 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 				Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
 			},
 		)
-		logger.Errorf(err, "ControllerUnpublishVolume failed: %s", err)
+		ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[volume cleanup] ControllerUnpublishVolume failed")
 	}
 
-	if _, err := cl.ControllerClient.DeleteVolume(
+	_, err := cl.ControllerClient.DeleteVolume(
 		ctx,
 		&csi.DeleteVolumeRequest{
 			VolumeId: volumeID,
 			Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
 		},
-	); err != nil && status.Code(err) != codes.NotFound {
-		logger.Errorf(err, "DeleteVolume failed: %s", err)
-	}
+	)
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[volume cleanup] DeleteVolume failed")
 }
 
 func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string) {
-	logger := newLogger("cleanup snapshot:")
-	defer logger.ExpectNoErrors(offset + 1)
-
-	logger.Infof("deleting %s", id)
+	klog.Infof("[snapshot cleanup] deleting %s", id)
 	_, err := cl.ControllerClient.DeleteSnapshot(
 		ctx,
 		&csi.DeleteSnapshotRequest{
@@ -325,5 +318,11 @@ func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string)
 			Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
 		},
 	)
-	logger.Errorf(err, "DeleteSnapshot failed: %s", err)
+	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "[snapshot cleanup] DeleteSnapshot failed")
+}
+
+func expectNoErrorOrMissing(offset int, err error, description string) {
+	ExpectWithOffset(offset, err).To(SatisfyAny(
+		Not(HaveOccurred()),
+		WithTransform(status.Code, Equal(codes.NotFound))), description)
 }
