@@ -246,82 +246,93 @@ func (cl *Resources) Cleanup() {
 	ctx := context.Background()
 
 	// Clean up resources in LIFO order to account for dependency order.
+	var errs []error
 	for i := len(cl.managedResourceInfos) - 1; i >= 0; i-- {
 		resInfo := cl.managedResourceInfos[i]
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
-			cl.cleanupVolume(ctx, 2, id, resType)
+			errs = append(errs, cl.cleanupVolume(ctx, 2, id, resType)...)
 		case snapshotInfo:
-			cl.cleanupSnapshot(ctx, 2, id)
+			errs = append(errs, cl.cleanupSnapshot(ctx, 2, id)...)
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
 		}
 	}
+
+	ExpectWithOffset(2, errs).To(BeEmpty(), "resource cleanup failed")
+
 	klog.V(4).Info("clearing managed resources list")
 	cl.managedResourceInfos = []resourceInfo{}
 }
 
-func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) {
+func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) (errs []error) {
 	klog.V(4).Infof("deleting volume ID %s", volumeID)
 	if cl.NodeClient != nil {
-		_, err := cl.NodeUnpublishVolume(
+		if _, err := cl.NodeUnpublishVolume(
 			ctx,
 			&csi.NodeUnpublishVolumeRequest{
 				VolumeId:   volumeID,
 				TargetPath: cl.Context.TargetPath + "/target",
 			},
-		)
-		expectNoErrorOrMissing(offset+1, err, "NodeUnpublishVolume failed")
+		); isRelevantError(err) {
+			errs = append(errs, fmt.Errorf("NodeUnpublishVolume for volume ID %s failed: %s", volumeID, err))
+		}
 
 		if cl.NodeStageSupported {
-			_, err := cl.NodeUnstageVolume(
+			if _, err := cl.NodeUnstageVolume(
 				ctx,
 				&csi.NodeUnstageVolumeRequest{
 					VolumeId:          volumeID,
 					StagingTargetPath: cl.Context.StagingPath,
 				},
-			)
-			expectNoErrorOrMissing(offset+1, err, "NodeUnstageVolume failed")
+			); isRelevantError(err) {
+				errs = append(errs, fmt.Errorf("NodeUnstageVolume for volume ID %s failed: %s", volumeID, err))
+			}
 		}
 	}
 
 	if cl.ControllerPublishSupported && info.NodeID != "" {
-		_, err := cl.ControllerClient.ControllerUnpublishVolume(
+		if _, err := cl.ControllerClient.ControllerUnpublishVolume(
 			ctx,
 			&csi.ControllerUnpublishVolumeRequest{
 				VolumeId: volumeID,
 				NodeId:   info.NodeID,
 				Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
 			},
-		)
-		ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "ControllerUnpublishVolume failed")
+		); err != nil {
+			errs = append(errs, fmt.Errorf("ControllerUnpublishVolume for volume ID %s failed: %s", volumeID, err))
+		}
 	}
 
-	_, err := cl.ControllerClient.DeleteVolume(
+	if _, err := cl.ControllerClient.DeleteVolume(
 		ctx,
 		&csi.DeleteVolumeRequest{
 			VolumeId: volumeID,
 			Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
 		},
-	)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "DeleteVolume failed")
+	); err != nil {
+		errs = append(errs, fmt.Errorf("DeleteVolume for volume ID %s failed: %s", volumeID, err))
+	}
+
+	return errs
 }
 
-func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, id string) {
-	klog.Infof("deleting snapshot ID %s", id)
-	_, err := cl.ControllerClient.DeleteSnapshot(
+func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, snapshotID string) []error {
+	klog.Infof("deleting snapshot ID %s", snapshotID)
+	if _, err := cl.ControllerClient.DeleteSnapshot(
 		ctx,
 		&csi.DeleteSnapshotRequest{
-			SnapshotId: id,
+			SnapshotId: snapshotID,
 			Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
 		},
-	)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "DeleteSnapshot failed")
+	); err != nil {
+		return []error{fmt.Errorf("NodeUnstageVolume for volume ID %s failed: %s", snapshotID, err)}
+	}
+
+	return nil
 }
 
-func expectNoErrorOrMissing(offset int, err error, description string) {
-	ExpectWithOffset(offset, err).To(SatisfyAny(
-		Not(HaveOccurred()),
-		WithTransform(status.Code, Equal(codes.NotFound))), description)
+func isRelevantError(err error) bool {
+	return err != nil && status.Code(err) != codes.NotFound
 }
