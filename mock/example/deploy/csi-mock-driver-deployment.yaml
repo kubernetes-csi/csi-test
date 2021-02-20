@@ -88,7 +88,7 @@ spec:
         - name: mock-driver
           image: k8s.gcr.io/sig-storage/mock-driver:v3.1.0
           args:
-            - "--disable-attach=true"
+            - "--attach-limit=50"
           env:
             - name: CSI_ENDPOINT
               value: /csi/csi.sock
