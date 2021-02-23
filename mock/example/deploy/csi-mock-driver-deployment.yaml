@@ -86,9 +86,11 @@ spec:
           securityContext:
             privileged: true
         - name: mock-driver
-          image: k8s.gcr.io/sig-storage/mock-driver:v3.1.0
+          image: k8s.gcr.io/sig-storage/mock-driver:v4.1.0
           args:
             - "--attach-limit=50"
+            # Required for e2e test log parsing
+            - "--v=5"
           env:
             - name: CSI_ENDPOINT
               value: /csi/csi.sock
@@ -98,6 +100,10 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+            - name: kubelet-pods-dir
+              mountPath: /var/lib/kubelet/pods
+            - name: kubelet-csi-dir
+              mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
       volumes:
         - name: socket-dir
           hostPath:
@@ -107,7 +113,16 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins_registry
             type: Directory
-
+        - name: kubelet-pods-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory
+            # mock driver doesn't make mounts and therefore doesn't need mount propagation.
+            # mountPropagation: Bidirectional
+        - name: kubelet-csi-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/kubernetes.io/csi
+            type: DirectoryOrCreate
 ---
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver

@@ -67,7 +67,7 @@ func (s *service) NodeStageVolume(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if !exists {
-		status.Errorf(codes.Internal, "staging target path %s does not exist", req.StagingTargetPath)
+		return nil, status.Errorf(codes.Internal, "staging target path %s does not exist", req.StagingTargetPath)
 	}
 
 	s.volsRWL.Lock()
