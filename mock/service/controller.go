@@ -17,7 +17,6 @@ package service
 
 import (
 	"fmt"
-	"math"
 	"path"
 	"reflect"
 	"strconv"
@@ -411,8 +410,8 @@ func (s *service) ListVolumes(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Aborted,
-				"startingToken=%d !< int32=%d",
-				startingToken, math.MaxUint32)
+				"startingToken=%s: %v",
+				v, err)
 		}
 		startingToken = int32(i)
 	}
@@ -800,8 +799,8 @@ func getAllSnapshots(s *service, req *csi.ListSnapshotsRequest) (*csi.ListSnapsh
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Aborted,
-				"startingToken=%d !< int32=%d",
-				startingToken, math.MaxUint32)
+				"startingToken=%s: %v",
+				v, err)
 		}
 		startingToken = int32(i)
 	}
