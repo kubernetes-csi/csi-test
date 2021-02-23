@@ -9,6 +9,8 @@ Usage of mock:
         Disables RPC_PUBLISH_UNPUBLISH_VOLUME capability.
   -name string
         CSI driver name. (default "io.kubernetes.storage.mock")
+  -v=5
+        Enable gRPC call logging.
 ```
 
 Limitation about this mock CSI Driver are:
