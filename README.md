@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.org/kubernetes-csi/csi-test.svg?branch=master)](https://travis-ci.org/kubernetes-csi/csi-test)
-[![Docker Repository on Quay](https://quay.io/repository/k8scsi/mock-driver/status "Docker Repository on
-Quay")](https://quay.io/repository/k8scsi/mock-driver)
+[![Build Status](https://k8s-testgrid.appspot.com/sig-storage-csi-other#pull-kubernetes-csi-csi-test)](https://k8s-testgrid.appspot.com/sig-storage-csi-other#pull-kubernetes-csi-csi-test)
+[![Docker Repository on gcr](https://console.cloud.google.com/gcr/images/k8s-artifacts-prod/US/sig-storage/mock-driver)](https://console.cloud.google.com/gcr/images/k8s-artifacts-prod/US/sig-storage/mock-driver)
 
 # csi-test
 
@@ -14,9 +13,7 @@ CO developers can use this framework to create drivers based on the
 
 ### Mock driver for testing
 
-We also provide a container called `quay.io/k8scsi/mock-driver:canary` which can be used as an in-memory mock driver.
-It follows the same release cycle as other containers, so the latest release is `quay.io/k8scsi/mock-driver:v0.3.0`.
-
+We also provide a container called `k8s.gcr.io/sig-storage/mock-driver` which can be used as an in-memory mock driver.
 You will need to setup the environment variable `CSI_ENDPOINT` for the mock driver to know where to create the unix
 domain socket.
 
@@ -34,7 +31,7 @@ CSI driver.
 
 ### Note
 
-* Master is for CSI v1.2.0. Please see the branches for other CSI releases.
+* Master is for CSI v1.3.0. Please see the branches for other CSI releases.
 * Building has been tested with the Go version specified in release-tools/travis.yml
 
 ## Community, discussion, contribution, and support
