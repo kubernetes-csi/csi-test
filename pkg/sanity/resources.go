@@ -327,7 +327,7 @@ func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, snapshotID
 			Secrets:    cl.Context.Secrets.DeleteSnapshotSecret,
 		},
 	); err != nil {
-		return []error{fmt.Errorf("NodeUnstageVolume for volume ID %s failed: %s", snapshotID, err)}
+		return []error{fmt.Errorf("DeleteSnapshot for snapshot ID %s failed: %s", snapshotID, err)}
 	}
 
 	return nil
