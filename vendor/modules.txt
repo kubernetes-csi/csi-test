@@ -1,4 +1,4 @@
-# github.com/container-storage-interface/spec v1.3.0
+# github.com/container-storage-interface/spec v1.5.0
 ## explicit
 github.com/container-storage-interface/spec/lib/go/csi
 # github.com/fsnotify/fsnotify v1.4.9
