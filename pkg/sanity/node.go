@@ -387,7 +387,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no target path is provided", func() {
@@ -402,7 +402,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume capability is provided", func() {
@@ -419,7 +419,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -433,7 +433,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no target path is provided", func() {
@@ -447,7 +447,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -480,7 +480,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no staging target path is provided", func() {
@@ -499,7 +499,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume capability is provided", func() {
@@ -542,7 +542,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -564,7 +564,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no staging target path is provided", func() {
@@ -578,7 +578,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -600,7 +600,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume path is provided", func() {
@@ -614,7 +614,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when volume is not found", func() {
@@ -629,7 +629,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when volume does not exist on the specified path", func() {
@@ -666,7 +666,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 	})
@@ -691,7 +691,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume path is provided", func() {
@@ -710,7 +710,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when volume is not found", func() {
@@ -725,7 +725,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should work if node-expand is called after node-publish", func() {
