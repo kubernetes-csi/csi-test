@@ -83,7 +83,7 @@ var _ = DescribeSanity("Identity Service", func(sc *TestContext) {
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code() == codes.FailedPrecondition ||
-				serverError.Code() == codes.OK).To(BeTrue())
+				serverError.Code() == codes.OK).To(BeTrue(), "unexpected error: %s", serverError.Message())
 
 			if res.GetReady() != nil {
 				Expect(res.GetReady().GetValue() == true ||
