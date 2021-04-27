@@ -101,9 +101,23 @@ echo $targetpath
 rm -rf $@
 ' > custompathremoval.bash
 
-	chmod +x custompathcreation.bash custompathremoval.bash
+	# Create a script for custom target path check.
+	echo '#!/bin/bash
+if [ -f "$1" ]; then
+    echo "file"
+elif [ -d "$1" ]; then
+    echo "directory"
+elif [ -e "$1" ]; then
+    echo "other"
+else
+    echo "not_found"
+fi
+' > custompathcheck.bash
+
 	local creationscriptpath="$PWD/custompathcreation.bash"
 	local removalscriptpath="$PWD/custompathremoval.bash"
+	local checkscriptpath="$PWD/custompathcheck.bash"
+	chmod +x $creationscriptpath $removalscriptpath $checkscriptpath
 
 	CSI_ENDPOINT=$1 ./bin/mock-driver &
 	local pid=$!
@@ -116,7 +130,8 @@ rm -rf $@
 		--csi.createmountpathcmd=$creationscriptpath \
 		--csi.createstagingpathcmd=$creationscriptpath \
 		--csi.removemountpathcmd=$removalscriptpath \
-		--csi.removestagingpathcmd=$removalscriptpath
+		--csi.removestagingpathcmd=$removalscriptpath \
+		--csi.checkpathcmd=$checkscriptpath \
 )
 
 make
