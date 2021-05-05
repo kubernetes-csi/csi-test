@@ -81,6 +81,8 @@ func main() {
 	stringVar(&config.RemoveTargetPathCmd, "removemountpathcmd", "Command to run for target path removal")
 	stringVar(&config.RemoveStagingPathCmd, "removestagingpathcmd", "Command to run for staging path removal")
 	durationVar(&config.RemovePathCmdTimeout, "removepathcmdtimeout", "Timeout for the commands to remove target and staging paths, in seconds")
+	stringVar(&config.CheckPathCmd, "checkpathcmd", "Command to run to check a given path. It must print 'file', 'directory', 'not_found', or 'other' on stdout.")
+	durationVar(&config.CheckPathCmdTimeout, "checkpathcmdtimeout", "Timeout for the command to check a given path, in seconds")
 	stringVar(&config.SecretsFile, "secrets", "CSI secrets file")
 	stringVar(&config.TestVolumeAccessType, "testvolumeaccesstype", "Volume capability access type, valid values are mount or block")
 	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")

@@ -449,6 +449,64 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			Expect(ok).To(BeTrue())
 			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
+
+		It("should remove target path", func() {
+			// This test may break for consumers that are using
+			// custom target path functions if they have not yet
+			// implemented similar functionality to check if the
+			// path exists. Skip this test if there is a custom
+			// command or function provided to create the path,
+			// but not yet provided to check the path.
+			if sc.Config.CreateTargetPathCmd != "" && sc.Config.CheckPathCmd == "" {
+				Skip("CreateTargetPathCmd was set, but CheckPathCmd was not. Please update your testing configuration to enable CheckPathCmd.")
+			}
+			if sc.Config.CreateTargetDir != nil && sc.Config.CheckPath == nil {
+				Skip("CreateTargetDir was set, but CheckPath was not. Please update your testing configuration to enable CheckPath.")
+			}
+
+			name := UniqueString("sanity-node-unpublish-volume")
+			vol := createVolume(name)
+			volid := vol.GetVolume().GetVolumeId()
+			volpath := sc.TargetPath + "/target"
+
+			By("Getting a node id")
+			nid, err := r.NodeGetInfo(
+				context.Background(),
+				&csi.NodeGetInfoRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nid).NotTo(BeNil())
+			Expect(nid.GetNodeId()).NotTo(BeEmpty())
+
+			By("Staging and publishing a volume")
+			conpubvol := controllerPublishVolume(name, vol, nid)
+			_ = nodeStageVolume(name, vol, conpubvol)
+			_ = nodePublishVolume(name, vol, conpubvol)
+
+			// Verify that the path exists before calling
+			// NodeUnpublishVolume.
+			By("Checking the target path exists")
+			pa, err := CheckPath(volpath, sc.Config)
+			Expect(err).NotTo(HaveOccurred(), "checking path %q", volpath)
+			Expect(pa).NotTo(Equal(PathIsNotFound), "path %q should have been created by CSI driver and the test config should be enabling testing for that path", volpath)
+
+			By("Unpublishing the volume")
+			_, err = r.NodeUnpublishVolume(
+				context.Background(),
+				&csi.NodeUnpublishVolumeRequest{
+					VolumeId:   volid,
+					TargetPath: volpath,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The CSI spec states that the SP MUST delete
+			// the file or directory it created at this path
+			// as part of NodeUnpublishVolume.
+			By("Checking the target path was removed")
+			pa, err = CheckPath(volpath, sc.Config)
+			Expect(err).NotTo(HaveOccurred(), "checking path %q", volpath)
+			Expect(pa).To(Equal(PathIsNotFound), "path %q should have been removed by the CSI driver during NodeUnpublishVolume", volpath)
+		})
 	})
 
 	Describe("NodeStageVolume", func() {
