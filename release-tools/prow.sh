@@ -77,7 +77,10 @@ version_to_git () {
     esac
 }
 
-configvar CSI_PROW_BUILD_PLATFORMS "linux amd64; windows amd64 .exe; linux ppc64le -ppc64le; linux s390x -s390x; linux arm64 -arm64" "Go target platforms (= GOOS + GOARCH) and file suffix of the resulting binaries"
+# the list of windows versions was matched from:
+# - https://hub.docker.com/_/microsoft-windows-nanoserver
+# - https://hub.docker.com/_/microsoft-windows-servercore
+configvar CSI_PROW_BUILD_PLATFORMS "linux amd64; linux ppc64le -ppc64le; linux s390x -s390x; linux arm64 -arm64; windows amd64 .exe nanoserver:1809 servercore:ltsc2019; windows amd64 .exe nanoserver:1909 servercore:1909; windows amd64 .exe nanoserver:2004 servercore:2004; windows amd64 .exe nanoserver:20H2 servercore:20H2" "Go target platforms (= GOOS + GOARCH) and file suffix of the resulting binaries"
 
 # If we have a vendor directory, then use it. We must be careful to only
 # use this for "make" invocations inside the project's repo itself because
@@ -236,7 +239,7 @@ configvar CSI_PROW_E2E_IMPORT_PATH "k8s.io/kubernetes" "E2E package"
 # of the cluster. The alternative would have been to (cross-)compile csi-sanity
 # and install it inside the cluster, which is not necessarily easier.
 configvar CSI_PROW_SANITY_REPO https://github.com/kubernetes-csi/csi-test "csi-test repo"
-configvar CSI_PROW_SANITY_VERSION v4.0.2 "csi-test version" # v4.0.2
+configvar CSI_PROW_SANITY_VERSION v4.2.0 "csi-test version"
 configvar CSI_PROW_SANITY_PACKAGE_PATH github.com/kubernetes-csi/csi-test "csi-test package"
 configvar CSI_PROW_SANITY_SERVICE "hostpath-service" "Kubernetes TCP service name that exposes csi.sock"
 configvar CSI_PROW_SANITY_POD "csi-hostpathplugin-0" "Kubernetes pod with CSI driver"
@@ -632,11 +635,16 @@ EOF
 
 # Deletes kind cluster inside a prow job
 delete_cluster_inside_prow_job() {
+    local name="$1"
+
     # Inside a real Prow job it is better to clean up at runtime
     # instead of leaving that to the Prow job cleanup code
     # because the later sometimes times out (https://github.com/kubernetes-csi/csi-release-tools/issues/24#issuecomment-554765872).
+    #
+    # This is also a good time to collect logs.
     if [ "$JOB_NAME" ]; then
         if kind get clusters | grep -q csi-prow; then
+            run kind export logs --name=csi-prow "${ARTIFACTS}/cluster-logs/$name"
             run kind delete cluster --name=csi-prow || die "kind delete failed"
         fi
         unset KUBECONFIG
@@ -723,7 +731,7 @@ install_csi_driver () {
     fi
 }
 
-# Installs all nessesary snapshotter CRDs  
+# Installs all nessesary snapshotter CRDs
 install_snapshot_crds() {
   # Wait until volumesnapshot CRDs are in place.
   CRD_BASE_DIR="https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${CSI_SNAPSHOTTER_VERSION}/client/config/crd"
@@ -770,7 +778,7 @@ install_snapshot_controller() {
     fi
     echo "$(date +%H:%M:%S)" "waiting for snapshot RBAC setup complete, attempt #$cnt"
 	cnt=$((cnt + 1))
-    sleep 10   
+    sleep 10
   done
 
   SNAPSHOT_CONTROLLER_YAML="${CONTROLLER_DIR}/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml"
@@ -839,7 +847,7 @@ install_snapshot_controller() {
     fi
     echo "$(date +%H:%M:%S)" "waiting for snapshot controller deployment to complete, attempt #$cnt"
 	cnt=$((cnt + 1))
-    sleep 10   
+    sleep 10
   done
 }
 
@@ -979,7 +987,7 @@ run_sanity () (
 kubectl exec "${CSI_PROW_SANITY_POD}" -c "${CSI_PROW_SANITY_CONTAINER}" -- mkdir "\$@" && echo "\$@"
 EOF
     # Using "rm -rf" as fallback for "rmdir" is a workaround for:
-    # Node Service 
+    # Node Service
     #     should work
     # /nvme/gopath.tmp/src/github.com/kubernetes-csi/csi-test/pkg/sanity/node.go:624
     # STEP: reusing connection to CSI driver at dns:///172.17.0.2:30896
@@ -1143,7 +1151,7 @@ make_test_to_junit () {
 # version_gt 1.3.1 v1.2.0  (returns true)
 # version_gt 1.1.1 release-1.2.0  (returns false)
 # version_gt 1.2.0 1.2.2  (returns false)
-function version_gt() { 
+function version_gt() {
     versions=$(for ver in "$@"; do ver=${ver#release-}; ver=${ver#kubernetes-}; echo "${ver#v}"; done)
     greaterVersion=${1#"release-"};
     greaterVersion=${greaterVersion#"kubernetes-"};
@@ -1206,7 +1214,7 @@ main () {
                 if [ "$rbac_file_path" == "" ]; then
                     rbac_file_path="$(pwd)/deploy/kubernetes/rbac.yaml"
                 fi
-                
+
                 if [ -e "$rbac_file_path" ]; then
                     # This is one of those components which has its own RBAC rules (like external-provisioner).
                     # We are testing a locally built image and also want to test with the the current,
@@ -1271,7 +1279,7 @@ main () {
                     fi
                 fi
             fi
-            delete_cluster_inside_prow_job
+            delete_cluster_inside_prow_job non-alpha
         fi
 
         if tests_need_alpha_cluster && [ "${CSI_PROW_E2E_ALPHA_GATES}" ]; then
@@ -1306,7 +1314,7 @@ main () {
                     fi
                 fi
             fi
-            delete_cluster_inside_prow_job
+            delete_cluster_inside_prow_job alpha
         fi
     fi
 
