@@ -1,6 +1,6 @@
 approvers:
-- saad-ali
-- lpabon
+- kubernetes-csi-approvers
 - pohly
-- msau42
-- jsafrane
+
+reviewers:
+- kubernetes-csi-reviewers
