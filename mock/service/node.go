@@ -375,6 +375,13 @@ func (s *service) NodeGetCapabilities(
 				},
 			},
 		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
+				},
+			},
+		},
 	}
 	if s.config.NodeExpansionRequired {
 		capabilities = append(capabilities, &csi.NodeServiceCapability{
