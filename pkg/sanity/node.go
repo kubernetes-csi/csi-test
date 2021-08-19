@@ -342,6 +342,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				case csi.NodeServiceCapability_RPC_EXPAND_VOLUME:
 				case csi.NodeServiceCapability_RPC_VOLUME_CONDITION:
 				case csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER:
+				case csi.NodeServiceCapability_RPC_VOLUME_MOUNT_GROUP:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
