@@ -63,21 +63,8 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/robertkrimen/otto v0.0.0-20200922221731-ef014fd054ac
-## explicit
-github.com/robertkrimen/otto
-github.com/robertkrimen/otto/ast
-github.com/robertkrimen/otto/dbg
-github.com/robertkrimen/otto/file
-github.com/robertkrimen/otto/parser
-github.com/robertkrimen/otto/registry
-github.com/robertkrimen/otto/token
-# github.com/sirupsen/logrus v1.7.0
-## explicit
-github.com/sirupsen/logrus
 # golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
 ## explicit
-golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
@@ -91,7 +78,6 @@ golang.org/x/net/trace
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-golang.org/x/sys/windows
 # golang.org/x/text v0.3.4
 ## explicit
 golang.org/x/text/encoding
@@ -200,10 +186,6 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
-# gopkg.in/sourcemap.v1 v1.0.5
-## explicit
-gopkg.in/sourcemap.v1
-gopkg.in/sourcemap.v1/base64vlq
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0

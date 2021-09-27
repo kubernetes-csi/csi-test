@@ -22,7 +22,6 @@ TCP_SERVER="tcp://localhost:7654"
 # ... and slightly differently for gRPC.
 TCP_CLIENT="dns:///localhost:7654"
 CSI_ENDPOINTS="$CSI_ENDPOINTS ${UDS}"
-CSI_MOCK_VERSION="master"
 
 # cleanup mock_driver_pid files...
 cleanup () {
@@ -31,7 +30,7 @@ cleanup () {
     kill -9 "$pid"
     # We don't care about the 'hack/e2e.sh: line 15: 117018 Killed                  CSI_ENDPOINT=$1 ./bin/mock-driver'
     wait "$pid" 2>/dev/null
-    rm -f "$@"
+    rm -rf "$@"
 }
 
 #
@@ -40,36 +39,20 @@ cleanup () {
 #      See https://github.com/grpc/grpc/blob/master/doc/naming.md
 runTest()
 (
-	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	tmp=$(mktemp -d)
+	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1' EXIT
+        trap 'cleanup $pid $1 $tmp' EXIT
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.testnodevolumeattachlimit
 )
 
-runTestWithDifferentAddresses()
-(
-	CSI_ENDPOINT=$1 CSI_CONTROLLER_ENDPOINT=$2 ./bin/mock-driver &
-	local pid=$!
-        trap 'cleanup $pid $1' EXIT
-
-	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$1 --csi.controllerendpoint=$2
-)
-
-runTestWithCreds()
-(
-	CSI_ENDPOINT=$1 CSI_ENABLE_CREDS=true ./bin/mock-driver &
-	local pid=$!
-        trap 'cleanup $pid $1' EXIT
-
-	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.secrets=mock/mocksecret.yaml --csi.testnodevolumeattachlimit
-)
-
 runTestAPI()
 (
-	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	tmp=$(mktemp -d)
+	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1' EXIT
+        trap 'cleanup $pid $1 $tmp' EXIT
 
 	go test -count=1 -v ./hack/_apitest/api_test.go && \
 	go test -count=1 -v ./hack/_embedded/embedded_test.go
@@ -77,9 +60,10 @@ runTestAPI()
 
 runTestAPIWithCustomTargetPaths()
 (
-	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	tmp=$(mktemp -d)
+	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1' EXIT
+        trap 'cleanup $pid $1 $tmp' EXIT
 
 	# Running a specific test to verify that the custom target paths are called
 	# a deterministic number of times.
@@ -119,9 +103,10 @@ fi
 	local checkscriptpath="$PWD/custompathcheck.bash"
 	chmod +x $creationscriptpath $removalscriptpath $checkscriptpath
 
-	CSI_ENDPOINT=$1 ./bin/mock-driver &
+	tmp=$(mktemp -d)
+	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1; rm $creationscriptpath $removalscriptpath' EXIT
+        trap 'cleanup $pid $1 $tmp $creationscriptpath $removalscriptpath' EXIT
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS \
 		--csi.endpoint=$2 \
@@ -142,8 +127,6 @@ cd ../..
 
 runTest "${TCP_SERVER}" "${TCP_CLIENT}" &&
 runTest "${UDS}" "${UDS}" &&
-runTestWithCreds "${UDS}" "${UDS}" &&
 runTestAPI "${UDS}" &&
-runTestWithDifferentAddresses "${UDS_NODE}" "${UDS_CONTROLLER}" &&
 runTestAPIWithCustomTargetPaths "${UDS}" &&
 runTestWithCustomTargetPaths "${UDS}" "${UDS}"
