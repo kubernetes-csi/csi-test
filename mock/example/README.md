@@ -1,1 +1,0 @@
-Please refer to [mock csi driver example](https://github.com/kubernetes-csi/csi-test/tree/master/mock#mock-csi-driver-example) section for how to play with it.

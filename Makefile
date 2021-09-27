@@ -12,23 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This repository builds two commands, mock-driver and csi-sanity,
-# but csi-sanity has its own build rules and only mock-driver gets
-# published as a container image.
-CMDS=mock-driver
+# This repository builds one command, csi-sanity, but it has its own build
+# rules no image to be published.
+CMDS=
 all: build build-sanity
 
 include release-tools/build.make
 
 # We have to exclude generic testing of the csi-sanity command because
 # the test binary only works in combination with a CSI driver.
-# Instead we test with the special ./hack/e2e.sh.
+# Instead we test with the special ./hack/e2e.sh and the
+# csi-driver-host-path that we build from source.
 TEST_GO_FILTER_CMD+=| grep -v /cmd/csi-sanity
 .PHONY: test-sanity
 test: test-sanity
-test-sanity:
+test-sanity: bin/hostpathplugin
 	@ echo; echo "### $@:"
-	./hack/e2e.sh
+	if [ $$(id -u) = 0 ]; then \
+		./hack/e2e.sh; \
+	else \
+		sudo ./hack/e2e.sh; \
+	fi
 
 build-sanity:
 	$(MAKE) -C cmd/csi-sanity all
+
+
+TEST_HOSTPATH_VERSION=v1.7.3
+TEST_HOSTPATH_SOURCE=bin/hostpath-source
+TEST_HOSTPATH_REPO=https://github.com/kubernetes-csi/csi-driver-host-path.git
+bin/hostpathplugin:
+	mkdir -p $(@D)
+	if ! [ -d $(TEST_HOSTPATH_SOURCE) ]; then \
+		mkdir -p $(dir $(TEST_HOSTPATH_SOURCE)) && \
+		git clone $(TEST_HOSTPATH_REPO) $(TEST_HOSTPATH_SOURCE); \
+	fi
+	cd $(TEST_HOSTPATH_SOURCE) && git checkout $(TEST_HOSTPATH_VERSION)
+	make -C $(TEST_HOSTPATH_SOURCE) build
+	ln -fs $(abspath $(TEST_HOSTPATH_SOURCE))/bin/hostpathplugin $@

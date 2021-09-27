@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This repository builds two commands, mock-driver and csi-sanity,
-# but csi-sanity has its own build rules and only mock-driver gets
-# published as a container image.
-
 APP_NAME := csi-sanity
 VER :=$(shell git describe)
 RELEASEVER := $(shell git describe --abbrev=0)
