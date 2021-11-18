@@ -65,6 +65,7 @@ type CSICreds struct {
 	CreateSnapshotSecret                       string
 	DeleteSnapshotSecret                       string
 	ControllerValidateVolumeCapabilitiesSecret string
+	ListSnapshotsSecret                        string
 }
 
 type CSIDriver struct {
@@ -184,6 +185,7 @@ func setDefaultCreds(creds *CSICreds) {
 		CreateSnapshotSecret:                       "secretval7",
 		DeleteSnapshotSecret:                       "secretval8",
 		ControllerValidateVolumeCapabilitiesSecret: "secretval9",
+		ListSnapshotsSecret:                        "secretval10",
 	}
 }
 
@@ -262,6 +264,8 @@ func isAuthenticated(req interface{}, creds *CSICreds) (bool, error) {
 		return authenticateDeleteSnapshot(r, creds)
 	case *csi.ValidateVolumeCapabilitiesRequest:
 		return authenticateControllerValidateVolumeCapabilities(r, creds)
+	case *csi.ListSnapshotsRequest:
+		return authenticateListSnapshots(r, creds)
 	default:
 		return true, nil
 	}
@@ -301,6 +305,10 @@ func authenticateDeleteSnapshot(req *csi.DeleteSnapshotRequest, creds *CSICreds)
 
 func authenticateControllerValidateVolumeCapabilities(req *csi.ValidateVolumeCapabilitiesRequest, creds *CSICreds) (bool, error) {
 	return credsCheck(req.GetSecrets(), creds.ControllerValidateVolumeCapabilitiesSecret)
+}
+
+func authenticateListSnapshots(req *csi.ListSnapshotsRequest, creds *CSICreds) (bool, error) {
+	return credsCheck(req.GetSecrets(), creds.ListSnapshotsSecret)
 }
 
 func credsCheck(secrets map[string]string, secretVal string) (bool, error) {
