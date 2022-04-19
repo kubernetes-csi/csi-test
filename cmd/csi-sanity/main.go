@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"k8s.io/klog/v2"
 
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
@@ -90,7 +90,7 @@ func main() {
 	stringVar(&config.TestVolumeParametersFile, "testvolumeparameters", "YAML file of volume parameters for provisioned volumes")
 	stringVar(&config.TestSnapshotParametersFile, "testsnapshotparameters", "YAML file of snapshot parameters for provisioned snapshots")
 	boolVar(&config.TestNodeVolumeAttachLimit, "testnodevolumeattachlimit", "Test node volume attach limit")
-	stringVar(&config.JUnitFile, "junitfile", "JUnit XML output file where test results will be written")
+	flag.Var(flag.Lookup("ginkgo.junit-report").Value, prefix+"junitfile", "JUnit XML output file where test results will be written (deprecated: use ginkgo.junit-report instead)")
 
 	flag.Parse()
 	if *version {
