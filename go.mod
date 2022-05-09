@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/go-logr/logr v0.3.0 // indirect
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.1.2
 	github.com/onsi/ginkgo v1.16.5
