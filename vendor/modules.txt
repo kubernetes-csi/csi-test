@@ -3,8 +3,7 @@
 github.com/container-storage-interface/spec/lib/go/csi
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/go-logr/logr v0.3.0
-## explicit
+# github.com/go-logr/logr v1.2.0
 github.com/go-logr/logr
 # github.com/golang/mock v1.6.0
 ## explicit
@@ -190,6 +189,10 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# k8s.io/klog/v2 v2.4.0
+# k8s.io/klog/v2 v2.60.1
 ## explicit
 k8s.io/klog/v2
+k8s.io/klog/v2/internal/buffer
+k8s.io/klog/v2/internal/clock
+k8s.io/klog/v2/internal/serialize
+k8s.io/klog/v2/internal/severity
