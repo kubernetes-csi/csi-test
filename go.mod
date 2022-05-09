@@ -3,7 +3,7 @@ module github.com/kubernetes-csi/csi-test/v4
 go 1.16
 
 require (
-	github.com/container-storage-interface/spec v1.5.0
+	github.com/container-storage-interface/spec v1.6.0
 	github.com/go-logr/logr v0.3.0 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
