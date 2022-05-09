@@ -6,7 +6,7 @@ github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v0.3.0
 ## explicit
 github.com/go-logr/logr
-# github.com/golang/mock v1.4.4
+# github.com/golang/mock v1.6.0
 ## explicit
 github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.5.2
