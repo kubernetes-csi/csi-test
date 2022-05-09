@@ -8,7 +8,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.1.2
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	google.golang.org/genproto v0.0.0-20201209185603-f92720507ed4 // indirect
 	google.golang.org/grpc v1.34.0
