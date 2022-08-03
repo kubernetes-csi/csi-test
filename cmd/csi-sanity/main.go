@@ -25,7 +25,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"k8s.io/klog/v2"
 
-	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
+	"github.com/kubernetes-csi/csi-test/v5/pkg/sanity"
 )
 
 const (
