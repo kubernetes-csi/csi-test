@@ -17,7 +17,7 @@ limitations under the License.
 package sanity
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 type test struct {

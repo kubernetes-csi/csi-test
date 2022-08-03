@@ -31,8 +31,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -97,11 +96,6 @@ type TestConfig struct {
 	TestVolumeParameters      map[string]string
 	TestNodeVolumeAttachLimit bool
 	TestVolumeAccessType      string
-
-	// JUnitFile is used by Test to store test results in JUnit
-	// format. When using GinkgoTest, the caller is responsible
-	// for configuring the Ginkgo runner.
-	JUnitFile string
 
 	// TestSnapshotParametersFile for setting CreateVolumeRequest.Parameters.
 	TestSnapshotParametersFile string
@@ -225,12 +219,7 @@ func Test(t GinkgoTestingT, config TestConfig) {
 	sc := GinkgoTest(&config)
 	RegisterFailHandler(Fail)
 
-	var specReporters []Reporter
-	if config.JUnitFile != "" {
-		junitReporter := reporters.NewJUnitReporter(config.JUnitFile)
-		specReporters = append(specReporters, junitReporter)
-	}
-	RunSpecsWithDefaultAndCustomReporters(t, "CSI Driver Test Suite", specReporters)
+	RunSpecs(t, "CSI Driver Test Suite")
 	sc.Finalize()
 }
 
