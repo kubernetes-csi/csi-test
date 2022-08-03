@@ -1,4 +1,4 @@
-module github.com/kubernetes-csi/csi-test/v4
+module github.com/kubernetes-csi/csi-test/v5
 
 go 1.16
 

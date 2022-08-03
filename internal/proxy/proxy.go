@@ -37,7 +37,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/kubernetes-csi/csi-test/v4/internal/endpoint"
+	"github.com/kubernetes-csi/csi-test/v5/internal/endpoint"
 )
 
 // New listens on both endpoints and starts accepting connections
