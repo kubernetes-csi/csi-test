@@ -12,7 +12,7 @@ require (
 	golang.org/x/net v0.0.0-20220802222814-0bcc04d9c69b // indirect
 	golang.org/x/sys v0.0.0-20220731174439-a90be440212d // indirect
 	google.golang.org/genproto v0.0.0-20201209185603-f92720507ed4 // indirect
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.49.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/klog/v2 v2.70.1
 )
