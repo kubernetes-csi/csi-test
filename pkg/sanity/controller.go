@@ -106,6 +106,41 @@ func isControllerCapabilitySupported(
 }
 
 var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestContext) {
+	BeforeEach(func() {
+		ids := csi.NewIdentityClient(sc.Conn)
+		res, err := ids.GetPluginCapabilities(context.Background(), &csi.GetPluginCapabilitiesRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+
+		isController := false
+
+		for _, cap := range res.GetCapabilities() {
+			switch cap.GetType().(type) {
+			case *csi.PluginCapability_Service_:
+				switch cap.GetService().GetType() {
+				case csi.PluginCapability_Service_CONTROLLER_SERVICE:
+					isController = true
+				case csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS:
+				default:
+					Fail(fmt.Sprintf("Unknown service: %v\n", cap.GetService().GetType()))
+				}
+			case *csi.PluginCapability_VolumeExpansion_:
+				switch cap.GetVolumeExpansion().GetType() {
+				case csi.PluginCapability_VolumeExpansion_ONLINE:
+				case csi.PluginCapability_VolumeExpansion_OFFLINE:
+				default:
+					Fail(fmt.Sprintf("Unknown volume expansion mode: %v\n", cap.GetVolumeExpansion().GetType()))
+				}
+			default:
+				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetType()))
+			}
+		}
+
+		if !isController {
+			Skip("does not implement controller")
+		}
+	})
+
 	var r *Resources
 
 	BeforeEach(func() {
