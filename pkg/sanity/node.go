@@ -189,11 +189,14 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		nodeVolumeStatsSupported     bool
 		nodeExpansionSupported       bool
 		controllerExpansionSupported bool
+		controllerCreateSupported    bool
 	)
 
 	createVolume := func(volumeName string) *csi.CreateVolumeResponse {
 		By("creating a single node writer volume for expansion")
-		return r.MustCreateVolume(
+		var createVolume *csi.CreateVolumeResponse
+		if controllerCreateSupported {
+			createVolume = r.MustCreateVolume(
 			context.Background(),
 			&csi.CreateVolumeRequest{
 				Name: volumeName,
@@ -207,6 +210,15 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				Parameters: sc.Config.TestVolumeParameters,
 			},
 		)
+		} else {
+			createVolume = &csi.CreateVolumeResponse{
+				Volume: &csi.Volume{
+					VolumeId: "testID",
+				},
+			}
+		}
+
+		return createVolume
 	}
 
 	controllerPublishVolume := func(volumeName string, vol *csi.CreateVolumeResponse, nid *csi.NodeGetInfoResponse) *csi.ControllerPublishVolumeResponse {
@@ -304,6 +316,9 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			controllerPublishSupported = isControllerCapabilitySupported(
 				cl,
 				csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME)
+			controllerCreateSupported = isControllerCapabilitySupported(
+				cl,
+				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME)
 		}
 		nodeStageSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME)
 		nodeVolumeStatsSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
@@ -566,7 +581,9 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			By("creating a single node writer volume")
 			name := UniqueString("sanity-node-stage-nocaps")
 
-			vol := r.MustCreateVolume(
+			var vol *csi.CreateVolumeResponse
+			if controllerCreateSupported {
+				vol = r.MustCreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name: name,
@@ -584,6 +601,13 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
+			} else {
+				vol = &csi.CreateVolumeResponse{
+					Volume: &csi.Volume{
+						VolumeId: name + "id",
+					},
+				}
+			}
 
 			_, err := r.NodeStageVolume(
 				context.Background(),
