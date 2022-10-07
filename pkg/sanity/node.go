@@ -152,7 +152,7 @@ func runControllerTest(sc *TestContext, r *Resources, controllerPublishSupported
 			context.Background(),
 			&csi.NodePublishVolumeRequest{
 				VolumeId:          vol.GetVolume().GetVolumeId(),
-				TargetPath:        sc.TargetPath + "/target",
+				TargetPath:        sc.TargetPath,
 				StagingTargetPath: stagingPath,
 				VolumeCapability:  TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				VolumeContext:     vol.GetVolume().GetVolumeContext(),
@@ -171,7 +171,7 @@ func runControllerTest(sc *TestContext, r *Resources, controllerPublishSupported
 			context.Background(),
 			&csi.NodeGetVolumeStatsRequest{
 				VolumeId:   vol.GetVolume().GetVolumeId(),
-				VolumePath: sc.TargetPath + "/target",
+				VolumePath: sc.TargetPath,
 			},
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -828,7 +828,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				context.Background(),
 				&csi.NodeExpandVolumeRequest{
 					VolumeId:   vol.GetVolume().GetVolumeId(),
-					VolumePath: sc.TargetPath + "/target",
+					VolumePath: sc.TargetPath,
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeExpandSize(sc),
 					},
