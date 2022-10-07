@@ -56,7 +56,6 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 		context.Background(),
 		&csi.GetPluginCapabilitiesRequest{})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(caps).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
 		if cap.GetService() != nil && cap.GetService().GetType() == capType {
@@ -290,7 +289,6 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		req := &csi.GetPluginCapabilitiesRequest{}
 		res, err := i.GetPluginCapabilities(context.Background(), req)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(res).NotTo(BeNil())
 		for _, cap := range res.GetCapabilities() {
 			switch cap.GetType().(type) {
 			case *csi.PluginCapability_Service_:
