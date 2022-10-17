@@ -91,7 +91,7 @@ golang.org/x/text/unicode/norm
 # google.golang.org/genproto v0.0.0-20201209185603-f92720507ed4
 ## explicit; go 1.11
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.49.0
+# google.golang.org/grpc v1.50.1
 ## explicit; go 1.17
 google.golang.org/grpc
 google.golang.org/grpc/attributes
