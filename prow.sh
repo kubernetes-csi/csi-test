@@ -86,7 +86,7 @@ configvar CSI_PROW_BUILD_PLATFORMS "linux amd64 amd64; linux ppc64le ppc64le -pp
 # which is disabled with GOFLAGS=-mod=vendor).
 configvar GOFLAGS_VENDOR "$( [ -d vendor ] && echo '-mod=vendor' )" "Go flags for using the vendor directory"
 
-configvar CSI_PROW_GO_VERSION_BUILD "1.18" "Go version for building the component" # depends on component's source code
+configvar CSI_PROW_GO_VERSION_BUILD "1.19" "Go version for building the component" # depends on component's source code
 configvar CSI_PROW_GO_VERSION_E2E "" "override Go version for building the Kubernetes E2E test suite" # normally doesn't need to be set, see install_e2e
 configvar CSI_PROW_GO_VERSION_SANITY "${CSI_PROW_GO_VERSION_BUILD}" "Go version for building the csi-sanity test suite" # depends on CSI_PROW_SANITY settings below
 configvar CSI_PROW_GO_VERSION_KIND "${CSI_PROW_GO_VERSION_BUILD}" "Go version for building 'kind'" # depends on CSI_PROW_KIND_VERSION below
@@ -196,7 +196,7 @@ kindest/node:v1.18.20@sha256:738cdc23ed4be6cc0b7ea277a2ebcc454c8373d7d8fb991a7fc
 # If the deployment script is called with CSI_PROW_TEST_DRIVER=<file name> as
 # environment variable, then it must write a suitable test driver configuration
 # into that file in addition to installing the driver.
-configvar CSI_PROW_DRIVER_VERSION "v1.8.0" "CSI driver version"
+configvar CSI_PROW_DRIVER_VERSION "v1.11.0" "CSI driver version"
 configvar CSI_PROW_DRIVER_REPO https://github.com/kubernetes-csi/csi-driver-host-path "CSI driver repo"
 configvar CSI_PROW_DEPLOYMENT "" "deployment"
 configvar CSI_PROW_DEPLOYMENT_SUFFIX "" "additional suffix in kubernetes-x.yy[suffix].yaml files"
@@ -227,6 +227,9 @@ configvar CSI_PROW_DRIVER_CANARY_REGISTRY "gcr.io/k8s-staging-sig-storage" "regi
 configvar CSI_PROW_E2E_VERSION "$(version_to_git "${CSI_PROW_KUBERNETES_VERSION}")"  "E2E version"
 configvar CSI_PROW_E2E_REPO "https://github.com/kubernetes/kubernetes" "E2E repo"
 configvar CSI_PROW_E2E_IMPORT_PATH "k8s.io/kubernetes" "E2E package"
+
+# Local path for e2e tests. Set to "none" to disable.
+configvar CSI_PROW_SIDECAR_E2E_IMPORT_PATH "none" "CSI Sidecar E2E package"
 
 # csi-sanity testing from the csi-test repo can be run against the installed
 # CSI driver. For this to work, deploying the driver must expose the Unix domain
@@ -282,13 +285,18 @@ tests_enabled () {
 sanity_enabled () {
     [ "${CSI_PROW_TESTS_SANITY}" = "sanity" ] && tests_enabled "sanity"
 }
+
+sidecar_tests_enabled () {
+  [ "${CSI_PROW_SIDECAR_E2E_IMPORT_PATH}" != "none" ]
+}
+
 tests_need_kind () {
     tests_enabled "parallel" "serial" "serial-alpha" "parallel-alpha" ||
-        sanity_enabled
+        sanity_enabled || sidecar_tests_enabled
 }
 tests_need_non_alpha_cluster () {
     tests_enabled "parallel" "serial" ||
-        sanity_enabled
+        sanity_enabled || sidecar_tests_enabled
 }
 tests_need_alpha_cluster () {
     tests_enabled "parallel-alpha" "serial-alpha"
@@ -352,6 +360,11 @@ configvar CSI_PROW_E2E_ALPHA_GATES "$(get_versioned_variable CSI_PROW_E2E_ALPHA_
 configvar CSI_PROW_E2E_GATES_LATEST '' "non alpha feature gates for latest Kubernetes"
 configvar CSI_PROW_E2E_GATES "$(get_versioned_variable CSI_PROW_E2E_GATES "${csi_prow_kubernetes_version_suffix}")" "non alpha E2E feature gates"
 
+# Focus for local tests run in the sidecar E2E repo. Only used if CSI_PROW_SIDECAR_E2E_IMPORT_PATH
+# is not set to "none". If empty, all tests in the sidecar repo will be run.
+configvar CSI_PROW_SIDECAR_E2E_FOCUS '' "tags for local E2E tests"
+configvar CSI_PROW_SIDECAR_E2E_SKIP '' "local tests that need to be skipped"
+
 # Which external-snapshotter tag to use for the snapshotter CRD and snapshot-controller deployment
 default_csi_snapshotter_version () {
 	if [ "${CSI_PROW_KUBERNETES_VERSION}" = "latest" ] || [ "${CSI_PROW_DRIVER_CANARY}" = "canary" ]; then
@@ -368,7 +381,7 @@ configvar CSI_SNAPSHOTTER_VERSION "$(default_csi_snapshotter_version)" "external
 # whether they can run with the current cluster provider, but until
 # they are, we filter them out by name. Like the other test selection
 # variables, this is again a space separated list of regular expressions.
-configvar CSI_PROW_E2E_SKIP 'Disruptive' "tests that need to be skipped"
+configvar CSI_PROW_E2E_SKIP '\[Disruptive\]|\[Feature:SELinux\]' "tests that need to be skipped"
 
 # This creates directories that are required for testing.
 ensure_paths () {
@@ -942,6 +955,9 @@ install_e2e () {
         return
     fi
 
+    if sidecar_tests_enabled; then
+        run_with_go "${CSI_PROW_GO_VERSION_BUILD}" go test -c -o "${CSI_PROW_WORK}/e2e-local.test" "${CSI_PROW_SIDECAR_E2E_IMPORT_PATH}"
+    fi
     git_checkout "${CSI_PROW_E2E_REPO}" "${GOPATH}/src/${CSI_PROW_E2E_IMPORT_PATH}" "${CSI_PROW_E2E_VERSION}" --depth=1 &&
     if [ "${CSI_PROW_E2E_IMPORT_PATH}" = "k8s.io/kubernetes" ]; then
         patch_kubernetes "${GOPATH}/src/${CSI_PROW_E2E_IMPORT_PATH}" "${CSI_PROW_WORK}" &&
@@ -992,13 +1008,21 @@ run_e2e () (
     # the full Kubernetes E2E testsuite while only running a few tests.
     move_junit () {
         if ls "${ARTIFACTS}"/junit_[0-9]*.xml 2>/dev/null >/dev/null; then
-            run_filter_junit -t="External.Storage|CSI.mock.volume" -o "${ARTIFACTS}/junit_${name}.xml" "${ARTIFACTS}"/junit_[0-9]*.xml && rm -f "${ARTIFACTS}"/junit_[0-9]*.xml
+            mkdir -p "${ARTIFACTS}/junit/${name}" &&
+                mkdir -p "${ARTIFACTS}/junit/steps" &&
+                run_filter_junit -t="External.Storage|CSI.mock.volume" -o "${ARTIFACTS}/junit/steps/junit_${name}.xml" "${ARTIFACTS}"/junit_[0-9]*.xml &&
+                mv "${ARTIFACTS}"/junit_[0-9]*.xml "${ARTIFACTS}/junit/${name}/"
         fi
     }
     trap move_junit EXIT
 
-    cd "${GOPATH}/src/${CSI_PROW_E2E_IMPORT_PATH}" &&
-    run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo -v "$@" "${CSI_PROW_WORK}/e2e.test" -- -report-dir "${ARTIFACTS}" -storage.testdriver="${CSI_PROW_WORK}/test-driver.yaml"
+    if [ "${name}" == "local" ]; then
+        cd "${GOPATH}/src/${CSI_PROW_SIDECAR_E2E_IMPORT_PATH}" &&
+        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo -v "$@" "${CSI_PROW_WORK}/e2e-local.test" -- -report-dir "${ARTIFACTS}" -report-prefix local
+    else
+        cd "${GOPATH}/src/${CSI_PROW_E2E_IMPORT_PATH}" &&
+        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo -v "$@" "${CSI_PROW_WORK}/e2e.test" -- -report-dir "${ARTIFACTS}" -storage.testdriver="${CSI_PROW_WORK}/test-driver.yaml"
+    fi
 )
 
 # Run csi-sanity against installed CSI driver.
@@ -1064,13 +1088,14 @@ kubectl exec "$pod" -c "${CSI_PROW_SANITY_CONTAINER}" -- /bin/sh -c "\${CHECK_PA
 EOF
 
     chmod u+x "${CSI_PROW_WORK}"/*dir_in_pod.sh
+    mkdir -p "${ARTIFACTS}/junit/steps"
 
     # This cannot run in parallel, because -csi.junitfile output
     # from different Ginkgo nodes would go to the same file. Also the
     # staging and target directories are the same.
     run_with_loggers "${CSI_PROW_WORK}/csi-sanity" \
                      -ginkgo.v \
-                     -csi.junitfile "${ARTIFACTS}/junit_sanity.xml" \
+                     -csi.junitfile "${ARTIFACTS}/junit/steps/junit_sanity.xml" \
                      -csi.endpoint "dns:///$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' csi-prow-control-plane):$(kubectl get "services/${CSI_PROW_SANITY_SERVICE}" -o "jsonpath={..nodePort}")" \
                      -csi.stagingdir "/tmp/staging" \
                      -csi.mountdir "/tmp/mount" \
@@ -1100,7 +1125,8 @@ make_test_to_junit () {
     # Plain make-test.xml was not delivered as text/xml by the web
     # server and ignored by spyglass. It seems that the name has to
     # match junit*.xml.
-    out="${ARTIFACTS}/junit_make_test.xml"
+    out="${ARTIFACTS}/junit/steps/junit_make_test.xml"
+    mkdir -p "$(dirname "$out")"
     testname=
     echo "<testsuite>" >>"$out"
 
@@ -1310,6 +1336,15 @@ main () {
                         ret=1
                     fi
                 fi
+
+                if sidecar_tests_enabled; then
+                    if ! run_e2e local \
+                         -focus="${CSI_PROW_SIDECAR_E2E_FOCUS}" \
+                         -skip="$(regex_join "${CSI_PROW_E2E_SERIAL}")"; then
+                        warn "E2E sidecar failed"
+                        ret=1
+                    fi
+                fi
             fi
             delete_cluster_inside_prow_job non-alpha
         fi
@@ -1355,8 +1390,8 @@ main () {
     fi
 
     # Merge all junit files into one. This gets rid of duplicated "skipped" tests.
-    if ls "${ARTIFACTS}"/junit_*.xml 2>/dev/null >&2; then
-        run_filter_junit -o "${CSI_PROW_WORK}/junit_final.xml" "${ARTIFACTS}"/junit_*.xml && rm "${ARTIFACTS}"/junit_*.xml && mv "${CSI_PROW_WORK}/junit_final.xml" "${ARTIFACTS}"
+    if ls "${ARTIFACTS}"/junit/steps/junit_*.xml 2>/dev/null >&2; then
+        run_filter_junit -o "${ARTIFACTS}/junit_final.xml" "${ARTIFACTS}"/junit/steps/junit_*.xml
     fi
 
     return "$ret"
