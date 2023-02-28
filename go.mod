@@ -7,8 +7,8 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
-	github.com/onsi/ginkgo/v2 v2.8.3
-	github.com/onsi/gomega v1.27.0
+	github.com/onsi/ginkgo/v2 v2.8.4
+	github.com/onsi/gomega v1.27.1
 	google.golang.org/grpc v1.52.3
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/klog/v2 v2.90.0
