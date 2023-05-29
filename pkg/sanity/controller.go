@@ -225,6 +225,9 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				VolumeCapabilities: []*csi.VolumeCapability{
 					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: TestVolumeSize(sc),
+				},
 				Secrets:    sc.Secrets.CreateVolumeSecret,
 				Parameters: sc.Config.TestVolumeParameters,
 			}
