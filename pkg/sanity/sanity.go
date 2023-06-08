@@ -320,7 +320,7 @@ func (sc *TestContext) Finalize() {
 	if sc.Conn != nil {
 		sc.Conn.Close()
 	}
-	if sc.ControllerConn != nil {
+	if sc.ControllerConn != nil && sc.ControllerConn != sc.Conn {
 		sc.ControllerConn.Close()
 	}
 }
