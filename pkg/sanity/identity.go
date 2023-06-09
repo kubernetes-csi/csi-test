@@ -32,80 +32,88 @@ import (
 
 var _ = DescribeSanity("Identity Service", func(sc *TestContext) {
 	var (
-		c csi.IdentityClient
+		cs map[string]csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewIdentityClient(sc.Conn)
+		cs = make(map[string]csi.IdentityClient)
+		cs["Node Service"] = csi.NewIdentityClient(sc.Conn)
+		if sc.ControllerConn != nil && sc.ControllerConn != sc.Conn {
+			cs["Controller Service"] = csi.NewIdentityClient(sc.ControllerConn)
+		}
 	})
 
 	Describe("GetPluginCapabilities", func() {
 		It("should return appropriate capabilities", func() {
-			req := &csi.GetPluginCapabilitiesRequest{}
-			res, err := c.GetPluginCapabilities(context.Background(), req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).NotTo(BeNil())
+			for name, c := range cs {
+				req := &csi.GetPluginCapabilitiesRequest{}
+				res, err := c.GetPluginCapabilities(context.Background(), req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).NotTo(BeNil())
 
-			By("checking successful response")
-			for _, cap := range res.GetCapabilities() {
-				switch cap.GetType().(type) {
-				case *csi.PluginCapability_Service_:
-					switch cap.GetService().GetType() {
-					case csi.PluginCapability_Service_CONTROLLER_SERVICE:
-					case csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS:
-					case csi.PluginCapability_Service_GROUP_CONTROLLER_SERVICE:
+				By(fmt.Sprintf("[%s] checking successful response", name))
+				for _, cap := range res.GetCapabilities() {
+					switch cap.GetType().(type) {
+					case *csi.PluginCapability_Service_:
+						switch cap.GetService().GetType() {
+						case csi.PluginCapability_Service_CONTROLLER_SERVICE:
+						case csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS:
+						case csi.PluginCapability_Service_GROUP_CONTROLLER_SERVICE:
+						default:
+							Fail(fmt.Sprintf("Unknown service: %v\n", cap.GetService().GetType()))
+						}
+					case *csi.PluginCapability_VolumeExpansion_:
+						switch cap.GetVolumeExpansion().GetType() {
+						case csi.PluginCapability_VolumeExpansion_ONLINE:
+						case csi.PluginCapability_VolumeExpansion_OFFLINE:
+						default:
+							Fail(fmt.Sprintf("Unknown volume expansion mode: %v\n", cap.GetVolumeExpansion().GetType()))
+						}
 					default:
-						Fail(fmt.Sprintf("Unknown service: %v\n", cap.GetService().GetType()))
+						Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetType()))
 					}
-				case *csi.PluginCapability_VolumeExpansion_:
-					switch cap.GetVolumeExpansion().GetType() {
-					case csi.PluginCapability_VolumeExpansion_ONLINE:
-					case csi.PluginCapability_VolumeExpansion_OFFLINE:
-					default:
-						Fail(fmt.Sprintf("Unknown volume expansion mode: %v\n", cap.GetVolumeExpansion().GetType()))
-					}
-				default:
-					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetType()))
 				}
 			}
-
 		})
 
 	})
 
 	Describe("Probe", func() {
 		It("should return appropriate information", func() {
-			req := &csi.ProbeRequest{}
-			res, err := c.Probe(context.Background(), req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).NotTo(BeNil())
+			for name, c := range cs {
+				req := &csi.ProbeRequest{}
+				res, err := c.Probe(context.Background(), req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).NotTo(BeNil())
 
-			By("verifying return status")
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code() == codes.FailedPrecondition ||
-				serverError.Code() == codes.OK).To(BeTrue(), "unexpected error: %s", serverError.Message())
+				By(fmt.Sprintf("[%s] verifying return status", name))
+				serverError, ok := status.FromError(err)
+				Expect(ok).To(BeTrue())
+				Expect(serverError.Code() == codes.FailedPrecondition ||
+					serverError.Code() == codes.OK).To(BeTrue(), "unexpected error: %s", serverError.Message())
 
-			if res.GetReady() != nil {
-				Expect(res.GetReady().GetValue() == true ||
-					res.GetReady().GetValue() == false).To(BeTrue())
+				if res.GetReady() != nil {
+					Expect(res.GetReady().GetValue() || !res.GetReady().GetValue()).To(BeTrue())
+				}
 			}
 		})
 	})
 
 	Describe("GetPluginInfo", func() {
 		It("should return appropriate information", func() {
-			req := &csi.GetPluginInfoRequest{}
-			res, err := c.GetPluginInfo(context.Background(), req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).NotTo(BeNil())
+			for name, c := range cs {
+				req := &csi.GetPluginInfoRequest{}
+				res, err := c.GetPluginInfo(context.Background(), req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).NotTo(BeNil())
 
-			By("verifying name size and characters")
-			Expect(res.GetName()).ToNot(HaveLen(0))
-			Expect(len(res.GetName())).To(BeNumerically("<=", 63))
-			Expect(regexp.
-				MustCompile("^[a-zA-Z][A-Za-z0-9-\\.\\_]{0,61}[a-zA-Z]$").
-				MatchString(res.GetName())).To(BeTrue())
+				By(fmt.Sprintf("[%s] verifying name size and characters", name))
+				Expect(res.GetName()).ToNot(HaveLen(0))
+				Expect(len(res.GetName())).To(BeNumerically("<=", 63))
+				Expect(regexp.
+					MustCompile(`^[a-zA-Z][A-Za-z0-9-\\.\\_]{0,61}[a-zA-Z]$`).
+					MatchString(res.GetName())).To(BeTrue())
+			}
 		})
 	})
 })
