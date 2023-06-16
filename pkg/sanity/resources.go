@@ -61,6 +61,10 @@ type Resources struct {
 	// invoked directly if automatic cleanup is not desired and cannot be
 	// avoided otherwise.
 	csi.ControllerClient
+	// GroupControllerClient is meant for struct-internal usage. It should only be
+	// invoked directly if automatic cleanup is not desired and cannot be
+	// avoided otherwise.
+	csi.GroupControllerClient
 	// NodeClient is meant for struct-internal usage. It should only be invoked
 	// directly if automatic cleanup is not desired and cannot be avoided
 	// otherwise.
