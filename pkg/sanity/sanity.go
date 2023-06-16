@@ -199,8 +199,8 @@ func NewTestConfig() TestConfig {
 		IdempotentCount:      10,
 		CheckPathCmdTimeout:  10 * time.Second,
 
-		DialOptions:           []grpc.DialOption{grpc.WithInsecure()},
-		ControllerDialOptions: []grpc.DialOption{grpc.WithInsecure()},
+		DialOptions:           []grpc.DialOption{grpc.WithInsecure(), grpc.WithAuthority("localhost")},
+		ControllerDialOptions: []grpc.DialOption{grpc.WithInsecure(), grpc.WithAuthority("localhost")},
 	}
 }
 
