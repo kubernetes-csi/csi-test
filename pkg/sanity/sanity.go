@@ -274,6 +274,10 @@ func (sc *TestContext) Setup() {
 			sc.ControllerConn = sc.Conn
 			sc.controllerConnAddress = sc.Config.Address
 		} else {
+			if sc.ControllerConn != nil {
+				sc.ControllerConn.Close()
+			}
+			By("connecting to CSI driver controller")
 			sc.ControllerConn, err = utils.Connect(sc.Config.ControllerAddress, sc.Config.ControllerDialOptions...)
 			Expect(err).NotTo(HaveOccurred())
 			sc.controllerConnAddress = sc.Config.ControllerAddress
