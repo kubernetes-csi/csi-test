@@ -68,7 +68,7 @@ func isPluginCapabilitySupported(c csi.IdentityClient,
 
 func runControllerTest(sc *TestContext, r *Resources, controllerPublishSupported bool, nodeStageSupported bool, nodeVolumeStatsSupported bool, count int) {
 
-	name := UniqueString("sanity-node-full")
+	name := UniqueString(fmt.Sprintf("sanity-node-full-%d", count))
 
 	By("getting node information")
 	ni, err := r.NodeGetInfo(
