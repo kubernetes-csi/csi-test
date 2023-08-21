@@ -17,7 +17,7 @@ The release manager must:
 Whenever a new Kubernetes minor version is released, our kubernetes-csi CI jobs
 must be updated.
 
-[Our CI jobs](https://testgrid.k8s.io/sig-storage-csi-ci) have the
+[Our CI jobs](https://k8s-testgrid.appspot.com/sig-storage-csi-ci) have the
 naming convention `<hostpath-deployment-version>-on-<kubernetes-version>`.
 
 1. Jobs should be actively monitored to find and fix failures in sidecars and
