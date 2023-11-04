@@ -1,4 +1,4 @@
-[![Build Status](https://k8s-testgrid.appspot.com/sig-storage-csi-other#pull-kubernetes-csi-csi-test)](https://k8s-testgrid.appspot.com/sig-storage-csi-other#pull-kubernetes-csi-csi-test)
+[![Build Status](https://testgrid.k8s.io/sig-storage-csi-other#pull-kubernetes-csi-csi-test)](https://testgrid.k8s.io/sig-storage-csi-other#pull-kubernetes-csi-csi-test)
 
 # csi-test
 
