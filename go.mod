@@ -6,7 +6,7 @@ require (
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.3
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.29.0
 	google.golang.org/grpc v1.58.1
