@@ -11,7 +11,7 @@ require (
 	github.com/onsi/gomega v1.29.0
 	google.golang.org/grpc v1.58.1
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/klog/v2 v2.100.1
+	k8s.io/klog/v2 v2.110.1
 )
 
 require (
