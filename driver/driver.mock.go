@@ -80,6 +80,18 @@ func (mr *MockIdentityServerMockRecorder) Probe(arg0, arg1 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Probe", reflect.TypeOf((*MockIdentityServer)(nil).Probe), arg0, arg1)
 }
 
+// mustEmbedUnimplementedIdentityServer mocks base method.
+func (m *MockIdentityServer) mustEmbedUnimplementedIdentityServer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "mustEmbedUnimplementedIdentityServer")
+}
+
+// mustEmbedUnimplementedIdentityServer indicates an expected call of mustEmbedUnimplementedIdentityServer.
+func (mr *MockIdentityServerMockRecorder) mustEmbedUnimplementedIdentityServer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedIdentityServer", reflect.TypeOf((*MockIdentityServer)(nil).mustEmbedUnimplementedIdentityServer))
+}
+
 // MockControllerServer is a mock of ControllerServer interface.
 type MockControllerServer struct {
 	ctrl     *gomock.Controller
@@ -313,6 +325,18 @@ func (mr *MockControllerServerMockRecorder) ValidateVolumeCapabilities(arg0, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVolumeCapabilities", reflect.TypeOf((*MockControllerServer)(nil).ValidateVolumeCapabilities), arg0, arg1)
 }
 
+// mustEmbedUnimplementedControllerServer mocks base method.
+func (m *MockControllerServer) mustEmbedUnimplementedControllerServer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "mustEmbedUnimplementedControllerServer")
+}
+
+// mustEmbedUnimplementedControllerServer indicates an expected call of mustEmbedUnimplementedControllerServer.
+func (mr *MockControllerServerMockRecorder) mustEmbedUnimplementedControllerServer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedControllerServer", reflect.TypeOf((*MockControllerServer)(nil).mustEmbedUnimplementedControllerServer))
+}
+
 // MockNodeServer is a mock of NodeServer interface.
 type MockNodeServer struct {
 	ctrl     *gomock.Controller
@@ -454,4 +478,16 @@ func (m *MockNodeServer) NodeUnstageVolume(arg0 context.Context, arg1 *csi.NodeU
 func (mr *MockNodeServerMockRecorder) NodeUnstageVolume(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeUnstageVolume", reflect.TypeOf((*MockNodeServer)(nil).NodeUnstageVolume), arg0, arg1)
+}
+
+// mustEmbedUnimplementedNodeServer mocks base method.
+func (m *MockNodeServer) mustEmbedUnimplementedNodeServer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "mustEmbedUnimplementedNodeServer")
+}
+
+// mustEmbedUnimplementedNodeServer indicates an expected call of mustEmbedUnimplementedNodeServer.
+func (mr *MockNodeServerMockRecorder) mustEmbedUnimplementedNodeServer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedNodeServer", reflect.TypeOf((*MockNodeServer)(nil).mustEmbedUnimplementedNodeServer))
 }

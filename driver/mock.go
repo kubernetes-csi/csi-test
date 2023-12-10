@@ -19,6 +19,7 @@ package driver
 import (
 	"net"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v5/utils"
 	"google.golang.org/grpc"
 )
@@ -38,9 +39,18 @@ func NewMockCSIDriver(servers *MockCSIDriverServers) *MockCSIDriver {
 	return &MockCSIDriver{
 		CSIDriver: CSIDriver{
 			servers: &CSIDriverServers{
-				Controller: servers.Controller,
-				Node:       servers.Node,
-				Identity:   servers.Identity,
+				Controller: struct {
+					csi.UnsafeControllerServer
+					*MockControllerServer
+				}{MockControllerServer: servers.Controller},
+				Node: struct {
+					csi.UnsafeNodeServer
+					*MockNodeServer
+				}{MockNodeServer: servers.Node},
+				Identity: struct {
+					csi.UnsafeIdentityServer
+					*MockIdentityServer
+				}{MockIdentityServer: servers.Identity},
 			},
 		},
 	}
