@@ -13,8 +13,8 @@
 # limitations under the License.
 
 APP_NAME := csi-sanity
-VER :=$(shell git describe)
-RELEASEVER := $(shell git describe --abbrev=0)
+VER :=$(shell git describe --tags)
+RELEASEVER := $(shell git describe --tags --abbrev=0)
 BRANCH := $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 SHA := $(shell git rev-parse --short HEAD)
 ARCH := $(shell go env GOARCH)
