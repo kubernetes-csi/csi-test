@@ -77,63 +77,36 @@ type Resources struct {
 
 // ControllerClient interface wrappers
 
-// CreateVolume proxies to a Controller service implementation and registers the
-// volume for cleanup.
-func (cl *Resources) CreateVolume(ctx context.Context, in *csi.CreateVolumeRequest, _ ...grpc.CallOption) (*csi.CreateVolumeResponse, error) {
-	return cl.createVolume(ctx, 2, in)
-}
-
-// DeleteVolume proxies to a Controller service implementation and unregisters
-// the volume from cleanup.
-func (cl *Resources) DeleteVolume(ctx context.Context, in *csi.DeleteVolumeRequest, _ ...grpc.CallOption) (*csi.DeleteVolumeResponse, error) {
-	return cl.deleteVolume(ctx, 2, in)
-}
-
-// ControllerPublishVolume proxies to a Controller service implementation and
-// adds the node ID to the corresponding volume for cleanup.
-func (cl *Resources) ControllerPublishVolume(ctx context.Context, in *csi.ControllerPublishVolumeRequest, _ ...grpc.CallOption) (*csi.ControllerPublishVolumeResponse, error) {
-	return cl.controllerPublishVolume(ctx, 2, in)
-}
-
-// CreateSnapshot proxies to a Controller service implementation and registers
-// the snapshot for cleanup.
-func (cl *Resources) CreateSnapshot(ctx context.Context, in *csi.CreateSnapshotRequest, _ ...grpc.CallOption) (*csi.CreateSnapshotResponse, error) {
-	return cl.createSnapshot(ctx, 2, in)
-}
-
-// DeleteSnapshot proxies to a Controller service implementation and unregisters
-// the snapshot from cleanup.
-func (cl *Resources) DeleteSnapshot(ctx context.Context, in *csi.DeleteSnapshotRequest, _ ...grpc.CallOption) (*csi.DeleteSnapshotResponse, error) {
-	return cl.deleteSnapshot(ctx, 2, in)
-}
-
 // MustCreateVolume is like CreateVolume but asserts that the volume was
 // successfully created.
 func (cl *Resources) MustCreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) *csi.CreateVolumeResponse {
-	return cl.mustCreateVolumeWithOffset(ctx, 2, req)
-}
-
-func (cl *Resources) mustCreateVolumeWithOffset(ctx context.Context, offset int, req *csi.CreateVolumeRequest) *csi.CreateVolumeResponse {
-	vol, err := cl.createVolume(ctx, offset+1, req)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "volume create failed")
-	ExpectWithOffset(offset, vol).NotTo(BeNil(), "volume response is nil")
-	ExpectWithOffset(offset, vol.GetVolume()).NotTo(BeNil(), "volume in response is nil")
-	ExpectWithOffset(offset, vol.GetVolume().GetVolumeId()).NotTo(BeEmpty(), "volume ID in response is missing")
+	GinkgoHelper()
+	vol, err := cl.CreateVolume(ctx, req)
+	Expect(err).NotTo(HaveOccurred(), "volume create failed")
+	Expect(vol).NotTo(BeNil(), "volume response is nil")
+	Expect(vol.GetVolume()).NotTo(BeNil(), "volume in response is nil")
+	Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty(), "volume ID in response is missing")
 	return vol
 }
 
-func (cl *Resources) createVolume(ctx context.Context, offset int, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	vol, err := cl.ControllerClient.CreateVolume(ctx, req)
+// CreateVolume proxies to a Controller service implementation and registers the
+// volume for cleanup.
+func (cl *Resources) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest, opts ...grpc.CallOption) (*csi.CreateVolumeResponse, error) {
+	GinkgoHelper()
+	vol, err := cl.ControllerClient.CreateVolume(ctx, req, opts...)
 	if err == nil && vol != nil && vol.GetVolume().GetVolumeId() != "" {
-		cl.registerVolume(offset+1, vol.GetVolume().GetVolumeId(), volumeInfo{})
+		cl.registerVolume(vol.GetVolume().GetVolumeId(), volumeInfo{})
 	}
 	return vol, err
 }
 
-func (cl *Resources) deleteVolume(ctx context.Context, offset int, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	vol, err := cl.ControllerClient.DeleteVolume(ctx, req)
+// DeleteVolume proxies to a Controller service implementation and unregisters
+// the volume from cleanup.
+func (cl *Resources) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest, opts ...grpc.CallOption) (*csi.DeleteVolumeResponse, error) {
+	GinkgoHelper()
+	vol, err := cl.ControllerClient.DeleteVolume(ctx, req, opts...)
 	if err == nil {
-		cl.unregisterResource(offset+1, req.VolumeId)
+		cl.unregisterResource(req.VolumeId)
 	}
 	return vol, err
 }
@@ -141,24 +114,29 @@ func (cl *Resources) deleteVolume(ctx context.Context, offset int, req *csi.Dele
 // MustControllerPublishVolume is like ControllerPublishVolume but asserts that
 // the volume was successfully controller-published.
 func (cl *Resources) MustControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) *csi.ControllerPublishVolumeResponse {
-	conpubvol, err := cl.controllerPublishVolume(ctx, 2, req)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "controller publish volume failed")
-	ExpectWithOffset(1, conpubvol).NotTo(BeNil(), "controller publish volume response is nil")
+	GinkgoHelper()
+	conpubvol, err := cl.ControllerPublishVolume(ctx, req)
+	Expect(err).NotTo(HaveOccurred(), "controller publish volume failed")
+	Expect(conpubvol).NotTo(BeNil(), "controller publish volume response is nil")
 	return conpubvol
 }
 
-func (cl *Resources) controllerPublishVolume(ctx context.Context, offset int, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	conpubvol, err := cl.ControllerClient.ControllerPublishVolume(ctx, req)
+// ControllerPublishVolume proxies to a Controller service implementation and
+// adds the node ID to the corresponding volume for cleanup.
+func (cl *Resources) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest, opts ...grpc.CallOption) (*csi.ControllerPublishVolumeResponse, error) {
+	GinkgoHelper()
+	conpubvol, err := cl.ControllerClient.ControllerPublishVolume(ctx, req, opts...)
 	if err == nil && req.VolumeId != "" && req.NodeId != "" {
-		cl.registerVolume(offset+1, req.VolumeId, volumeInfo{NodeID: req.NodeId})
+		cl.registerVolume(req.VolumeId, volumeInfo{NodeID: req.NodeId})
 	}
 	return conpubvol, err
 }
 
 // registerVolume adds or updates an entry for given volume.
-func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
-	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "volume ID is empty")
-	ExpectWithOffset(offset, info).NotTo(BeNil(), "volume info is nil")
+func (cl *Resources) registerVolume(id string, info volumeInfo) {
+	GinkgoHelper()
+	Expect(id).NotTo(BeEmpty(), "volume ID is empty")
+	Expect(info).NotTo(BeNil(), "volume info is nil")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
 	klog.V(4).Infof("registering volume ID %s", id)
@@ -171,14 +149,11 @@ func (cl *Resources) registerVolume(offset int, id string, info volumeInfo) {
 // MustCreateSnapshot is like CreateSnapshot but asserts that the snapshot was
 // successfully created.
 func (cl *Resources) MustCreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) *csi.CreateSnapshotResponse {
-	return cl.mustCreateSnapshotWithOffset(ctx, 2, req)
-}
-
-func (cl *Resources) mustCreateSnapshotWithOffset(ctx context.Context, offset int, req *csi.CreateSnapshotRequest) *csi.CreateSnapshotResponse {
-	snap, err := cl.createSnapshot(ctx, offset+1, req)
-	ExpectWithOffset(offset, err).NotTo(HaveOccurred(), "create snapshot failed")
-	ExpectWithOffset(offset, snap).NotTo(BeNil(), "create snasphot response is nil")
-	verifySnapshotInfoWithOffset(offset+1, snap.GetSnapshot())
+	GinkgoHelper()
+	snap, err := cl.CreateSnapshot(ctx, req)
+	Expect(err).NotTo(HaveOccurred(), "create snapshot failed")
+	Expect(snap).NotTo(BeNil(), "create snasphot response is nil")
+	verifySnapshotInfo(snap.GetSnapshot())
 	return snap
 }
 
@@ -186,35 +161,39 @@ func (cl *Resources) mustCreateSnapshotWithOffset(ctx context.Context, offset in
 // CreateVolumeRequest and a snapshot subsequently. It registers the volume and
 // snapshot and asserts that both were created successfully.
 func (cl *Resources) MustCreateSnapshotFromVolumeRequest(ctx context.Context, req *csi.CreateVolumeRequest, snapshotName string) (*csi.CreateSnapshotResponse, *csi.CreateVolumeResponse) {
-	vol := cl.mustCreateVolumeWithOffset(ctx, 2, req)
-	snap := cl.mustCreateSnapshotWithOffset(ctx, 2, MakeCreateSnapshotReq(cl.Context, snapshotName, vol.Volume.VolumeId))
+	GinkgoHelper()
+	vol := cl.MustCreateVolume(ctx, req)
+	snap := cl.MustCreateSnapshot(ctx, MakeCreateSnapshotReq(cl.Context, snapshotName, vol.Volume.VolumeId))
 	return snap, vol
 }
 
-func (cl *Resources) createSnapshot(ctx context.Context, offset int, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	snap, err := cl.ControllerClient.CreateSnapshot(ctx, req)
+// CreateSnapshot proxies to a Controller service implementation and registers
+// the snapshot for cleanup.
+func (cl *Resources) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest, opts ...grpc.CallOption) (*csi.CreateSnapshotResponse, error) {
+	GinkgoHelper()
+	snap, err := cl.ControllerClient.CreateSnapshot(ctx, req, opts...)
 	if err == nil && snap.GetSnapshot().GetSnapshotId() != "" {
-		cl.registerSnapshot(offset+1, snap.Snapshot.SnapshotId)
+		cl.registerSnapshot(snap.Snapshot.SnapshotId)
 	}
 	return snap, err
 }
 
-func (cl *Resources) deleteSnapshot(ctx context.Context, offset int, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	snap, err := cl.ControllerClient.DeleteSnapshot(ctx, req)
+// DeleteSnapshot proxies to a Controller service implementation and unregisters
+// the snapshot from cleanup.
+func (cl *Resources) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest, opts ...grpc.CallOption) (*csi.DeleteSnapshotResponse, error) {
+	GinkgoHelper()
+	snap, err := cl.ControllerClient.DeleteSnapshot(ctx, req, opts...)
 	if err == nil && req.SnapshotId != "" {
-		cl.unregisterResource(offset+1, req.SnapshotId)
+		cl.unregisterResource(req.SnapshotId)
 	}
 	return snap, err
 }
 
-func (cl *Resources) registerSnapshot(offset int, id string) {
+func (cl *Resources) registerSnapshot(id string) {
+	GinkgoHelper()
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.registerSnapshotNoLock(offset+1, id)
-}
-
-func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
-	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for register snapshot is missing")
+	Expect(id).NotTo(BeEmpty(), "ID for register snapshot is missing")
 	klog.V(4).Infof("registering snapshot ID %s", id)
 	cl.managedResourceInfos = append(cl.managedResourceInfos, resourceInfo{
 		id:   id,
@@ -222,14 +201,11 @@ func (cl *Resources) registerSnapshotNoLock(offset int, id string) {
 	})
 }
 
-func (cl *Resources) unregisterResource(offset int, id string) {
+func (cl *Resources) unregisterResource(id string) {
+	GinkgoHelper()
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
-	cl.unregisterResourceNoLock(offset+1, id)
-}
-
-func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
-	ExpectWithOffset(offset, id).NotTo(BeEmpty(), "ID for unregister resource is missing")
+	Expect(id).NotTo(BeEmpty(), "ID for unregister resource is missing")
 	// Find resource info with the given ID and remove it.
 	for i, resInfo := range cl.managedResourceInfos {
 		if resInfo.id == id {
@@ -242,6 +218,7 @@ func (cl *Resources) unregisterResourceNoLock(offset int, id string) {
 
 // Cleanup calls unpublish methods as needed and deletes all managed resources.
 func (cl *Resources) Cleanup() {
+	GinkgoHelper()
 	klog.V(4).Info("cleaning up all registered resources")
 	cl.mutex.Lock()
 	defer cl.mutex.Unlock()
@@ -254,21 +231,21 @@ func (cl *Resources) Cleanup() {
 		id := resInfo.id
 		switch resType := resInfo.data.(type) {
 		case volumeInfo:
-			errs = append(errs, cl.cleanupVolume(ctx, 2, id, resType)...)
+			errs = append(errs, cl.cleanupVolume(ctx, id, resType)...)
 		case snapshotInfo:
-			errs = append(errs, cl.cleanupSnapshot(ctx, 2, id)...)
+			errs = append(errs, cl.cleanupSnapshot(ctx, id)...)
 		default:
 			Fail(fmt.Sprintf("unknown resource type: %T", resType), 1)
 		}
 	}
 
-	ExpectWithOffset(2, errs).To(BeEmpty(), "resource cleanup failed")
+	Expect(errs).To(BeEmpty(), "resource cleanup failed")
 
 	klog.V(4).Info("clearing managed resources list")
 	cl.managedResourceInfos = []resourceInfo{}
 }
 
-func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID string, info volumeInfo) (errs []error) {
+func (cl *Resources) cleanupVolume(ctx context.Context, volumeID string, info volumeInfo) (errs []error) {
 	klog.V(4).Infof("deleting volume ID %s", volumeID)
 	if cl.NodeClient != nil {
 		if _, err := cl.NodeUnpublishVolume(
@@ -320,7 +297,7 @@ func (cl *Resources) cleanupVolume(ctx context.Context, offset int, volumeID str
 	return errs
 }
 
-func (cl *Resources) cleanupSnapshot(ctx context.Context, offset int, snapshotID string) []error {
+func (cl *Resources) cleanupSnapshot(ctx context.Context, snapshotID string) []error {
 	klog.Infof("deleting snapshot ID %s", snapshotID)
 	if _, err := cl.ControllerClient.DeleteSnapshot(
 		ctx,
