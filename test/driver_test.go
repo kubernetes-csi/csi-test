@@ -31,6 +31,7 @@ import (
 // This example assumes that your driver will create the server and listen on
 // some unix domain socket or port for tests.
 type simpleDriver struct {
+	csi.UnimplementedIdentityServer
 	listener net.Listener
 	server   *grpc.Server
 	wg       sync.WaitGroup
