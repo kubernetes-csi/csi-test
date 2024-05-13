@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -569,9 +570,20 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				Skip("Snapshot not supported")
 			}
 
-			By("creating a snapshot")
+			By("creating a volume")
 			vol1Req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-source-vol"))
-			snap, _ := r.MustCreateSnapshotFromVolumeRequest(context.Background(), vol1Req, UniqueString("sanity-controller-snap-from-vol"))
+			vol1 := r.MustCreateVolume(context.Background(), vol1Req)
+
+			By("creating a snapshot from the volume")
+			var snap *csi.CreateSnapshotResponse
+			snapReq := MakeCreateSnapshotReq(sc, UniqueString("sanity-controller-snap-from-vol"), vol1.Volume.VolumeId)
+			for {
+				snap = r.MustCreateSnapshot(context.Background(), snapReq)
+				if snap.Snapshot.ReadyToUse {
+					break
+				}
+				time.Sleep(5 * time.Second)
+			}
 
 			By("creating a volume from source snapshot")
 			vol2Name := UniqueString("sanity-controller-vol-from-snap")
