@@ -145,6 +145,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_PUBLISH_READONLY:
 				case csi.ControllerServiceCapability_RPC_CLONE_VOLUME:
 				case csi.ControllerServiceCapability_RPC_EXPAND_VOLUME:
+				case csi.ControllerServiceCapability_RPC_MODIFY_VOLUME:
 				case csi.ControllerServiceCapability_RPC_LIST_VOLUMES_PUBLISHED_NODES:
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME:
 				case csi.ControllerServiceCapability_RPC_VOLUME_CONDITION:
@@ -1530,13 +1531,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 	})
 
 	It("should fail if no volume id is given", func() {
-		expReq := &csi.ControllerExpandVolumeRequest{
-			VolumeId: "",
-			CapacityRange: &csi.CapacityRange{
-				RequiredBytes: TestVolumeExpandSize(sc),
-			},
-			Secrets: sc.Secrets.ControllerExpandVolumeSecret,
-		}
+		expReq := MakeExpandVolumeReq(sc, "")
 		rsp, err := r.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).To(HaveOccurred())
 		Expect(rsp).To(BeNil())
@@ -1580,18 +1575,121 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 		vol := r.MustCreateVolume(context.Background(), req)
 
 		By("expanding the volume")
-		expReq := &csi.ControllerExpandVolumeRequest{
-			VolumeId: vol.GetVolume().GetVolumeId(),
-			CapacityRange: &csi.CapacityRange{
-				RequiredBytes: TestVolumeExpandSize(sc),
-			},
-			Secrets:          sc.Secrets.ControllerExpandVolumeSecret,
-			VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
-		}
+		expReq := MakeExpandVolumeReq(sc, vol.GetVolume().GetVolumeId())
 		rsp, err := r.ControllerExpandVolume(context.Background(), expReq)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rsp).NotTo(BeNil())
 		Expect(rsp.GetCapacityBytes()).To(Equal(TestVolumeExpandSize(sc)))
+	})
+})
+
+var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext) {
+	var r *Resources
+
+	BeforeEach(func() {
+		r = &Resources{
+			ControllerClient: csi.NewControllerClient(sc.ControllerConn),
+			Context:          sc,
+		}
+
+		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_MODIFY_VOLUME) {
+			Skip("ControllerExpandVolume not supported")
+		}
+
+		// TODO skip certain tests if testvolumemutableparameters yaml not passed in?
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
+	It("should fail if no volume id is given", func() {
+		modifyReq := MakeModifyVolumeReq(sc, "")
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+	})
+
+	It("should fail if volume does not exist", func() {
+		modifyReq := MakeModifyVolumeReq(sc, "non-existing-volume-id")
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+	})
+
+	It("should fail if specified mutable parameters are not supported by the volume", func() {
+
+		By("creating a new volume")
+
+		// Create a new volume.
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		vol := r.MustCreateVolume(context.Background(), volReq)
+
+		By("failing to modify the volume")
+
+		modifyReq := &csi.ControllerModifyVolumeRequest{
+			VolumeId: vol.GetVolume().GetVolumeId(),
+			MutableParameters: map[string]string{
+				"XXX_FakeKey": "XXX_FakeValue",
+			},
+			Secrets: sc.Secrets.ControllerModifyVolumeSecret,
+		}
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+	})
+
+	// TODO Q: Should we enforce Empty MutableParameters list as InvalidArgument Err? (no mention in CSI Spec)
+	It("should fail if no mutable parameters specified", func() {
+
+		By("creating a new volume")
+
+		// Create a new volume.
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		vol := r.MustCreateVolume(context.Background(), volReq)
+
+		By("failing to modify the volume")
+
+		modifyReq := &csi.ControllerModifyVolumeRequest{
+			VolumeId: vol.GetVolume().GetVolumeId(),
+			Secrets:  sc.Secrets.ControllerModifyVolumeSecret,
+		}
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+		Expect(err).To(HaveOccurred())
+		Expect(rsp).To(BeNil())
+
+		serverError, ok := status.FromError(err)
+		Expect(ok).To(BeTrue())
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+	})
+
+	It("should work", func() {
+
+		By("creating a new volume")
+
+		// Create a new volume.
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		vol := r.MustCreateVolume(context.Background(), volReq)
+
+		By("modifying the volume")
+
+		modifyReq := MakeModifyVolumeReq(sc, vol.GetVolume().GetVolumeId())
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
 	})
 })
 
@@ -1672,6 +1770,27 @@ func MakeControllerUnpublishVolumeReq(sc *TestContext, volID, nodeID string) *cs
 		VolumeId: volID,
 		NodeId:   nodeID,
 		Secrets:  sc.Secrets.ControllerUnpublishVolumeSecret,
+	}
+}
+
+// MakeExpandVolumeReq creates and returns a ControllerExpandVolumeRequest.
+func MakeExpandVolumeReq(sc *TestContext, volID string) *csi.ControllerExpandVolumeRequest {
+	return &csi.ControllerExpandVolumeRequest{
+		VolumeId: volID,
+		CapacityRange: &csi.CapacityRange{
+			RequiredBytes: TestVolumeExpandSize(sc),
+		},
+		Secrets:          sc.Secrets.ControllerExpandVolumeSecret,
+		VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+	}
+}
+
+// MakeModifyVolumeReq creates and returns a ControllerModifyVolumeRequest.
+func MakeModifyVolumeReq(sc *TestContext, volID string) *csi.ControllerModifyVolumeRequest {
+	return &csi.ControllerModifyVolumeRequest{
+		VolumeId:          volID,
+		MutableParameters: sc.Config.TestVolumeMutableParameters,
+		Secrets:           sc.Secrets.ControllerModifyVolumeSecret,
 	}
 }
 
