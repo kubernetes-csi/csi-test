@@ -200,12 +200,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					StartingToken: "invalid-token",
 				},
 			)
-			Expect(err).To(HaveOccurred())
-			Expect(vols).To(BeNil())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.Aborted), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(vols, err, codes.Aborted)
 		})
 
 		It("check the presence of new volumes and absence of deleted ones in the volume list", func() {
@@ -376,23 +371,19 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 		})
 
 		It("should fail when no name is provided", func() {
-			_, err := r.CreateVolume(
+			rsp, err := r.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
 			name := UniqueString("sanity-controller-create-no-volume-capabilities")
-			_, err := r.CreateVolume(
+			rsp, err := r.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name:       name,
@@ -400,11 +391,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		// TODO: whether CreateVolume request with no capacity should fail or not depends on driver implementation
@@ -523,7 +510,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			)
 			size2 := 2 * TestVolumeSize(sc)
 
-			_, err := r.CreateVolume(
+			rsp, err := r.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name: name,
@@ -538,10 +525,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.AlreadyExists)
 		})
 
 		It("should not fail when creating volume with maximum-length name", func() {
@@ -615,11 +599,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					},
 				},
 			}
-			_, err := r.CreateVolume(context.Background(), volReq)
-			Expect(err).To(HaveOccurred())
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+			rsp, err := r.CreateVolume(context.Background(), volReq)
+			ExpectErrorCode(rsp, err, codes.NotFound)
 		})
 
 		It("should create volume from an existing source volume", func() {
@@ -661,11 +642,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					},
 				},
 			}
-			_, err := r.CreateVolume(context.Background(), volReq)
-			Expect(err).To(HaveOccurred())
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+			rsp, err := r.CreateVolume(context.Background(), volReq)
+			ExpectErrorCode(rsp, err, codes.NotFound)
 		})
 	})
 
@@ -678,17 +656,13 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 		It("should fail when no volume id is provided", func() {
 
-			_, err := r.DeleteVolume(
+			rsp, err := r.DeleteVolume(
 				context.Background(),
 				&csi.DeleteVolumeRequest{
 					Secrets: sc.Secrets.DeleteVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should succeed when an invalid volume id is used", func() {
@@ -741,16 +715,12 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 	Describe("ValidateVolumeCapabilities", func() {
 		It("should fail when no volume id is provided", func() {
 
-			_, err := r.ValidateVolumeCapabilities(
+			rsp, err := r.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
 					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
@@ -774,18 +744,14 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				},
 			)
 
-			_, err := r.ValidateVolumeCapabilities(
+			rsp, err := r.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId:           vol.GetVolume().GetVolumeId(),
 					VolumeCapabilities: nil,
 					Secrets:            sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				})
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should return appropriate values (no optional values added)", func() {
@@ -832,7 +798,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 		It("should fail when the requested volume does not exist", func() {
 
-			_, err := r.ValidateVolumeCapabilities(
+			rsp, err := r.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
@@ -842,11 +808,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.NotFound)
 		})
 	})
 
@@ -859,38 +821,30 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 		It("should fail when no volume id is provided", func() {
 
-			_, err := r.ControllerPublishVolume(
+			rsp, err := r.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					Secrets: sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when no node id is provided", func() {
 
-			_, err := r.ControllerPublishVolume(
+			rsp, err := r.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when no volume capability is provided", func() {
 
-			_, err := r.ControllerPublishVolume(
+			rsp, err := r.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
@@ -898,11 +852,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when publishing more volumes than the node max attach limit", func() {
@@ -959,12 +909,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-			Expect(conpubvol).To(BeNil())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(conpubvol, err, codes.NotFound)
 		})
 
 		It("should fail when the node does not exist", func() {
@@ -1052,12 +997,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			pubReq.Readonly = true
 
 			conpubvol, err = r.ControllerPublishVolume(context.Background(), pubReq)
-			Expect(err).To(HaveOccurred())
-			Expect(conpubvol).To(BeNil())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(conpubvol, err, codes.AlreadyExists)
 		})
 	})
 
@@ -1086,17 +1026,13 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 		It("should fail when no volume id is provided", func() {
 
-			_, err := r.ControllerUnpublishVolume(
+			rsp, err := r.ControllerUnpublishVolume(
 				context.Background(),
 				&csi.ControllerUnpublishVolumeRequest{
 					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 	})
 })
@@ -1379,12 +1315,8 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *TestContex
 			req.Secrets = sc.Secrets.DeleteSnapshotSecret
 		}
 
-		_, err := r.DeleteSnapshot(context.Background(), req)
-		Expect(err).To(HaveOccurred())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		rsp, err := r.DeleteSnapshot(context.Background(), req)
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should succeed when an invalid snapshot id is used", func() {
@@ -1437,11 +1369,8 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 			req.Secrets = sc.Secrets.CreateSnapshotSecret
 		}
 
-		_, err := r.CreateSnapshot(context.Background(), req)
-		Expect(err).To(HaveOccurred())
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		rsp, err := r.CreateSnapshot(context.Background(), req)
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should fail when no source volume id is provided", func() {
@@ -1454,11 +1383,8 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 			req.Secrets = sc.Secrets.CreateSnapshotSecret
 		}
 
-		_, err := r.CreateSnapshot(context.Background(), req)
-		Expect(err).To(HaveOccurred())
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		rsp, err := r.CreateSnapshot(context.Background(), req)
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should succeed when requesting to create a snapshot with already existing name and same source volume ID", func() {
@@ -1488,11 +1414,8 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 
 		By("creating a snapshot with the same name but different source volume ID")
 		req := MakeCreateSnapshotReq(sc, snapshotName, volume2.GetVolume().GetVolumeId())
-		_, err := r.CreateSnapshot(context.Background(), req)
-		Expect(err).To(HaveOccurred())
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
+		rsp, err := r.CreateSnapshot(context.Background(), req)
+		ExpectErrorCode(rsp, err, codes.AlreadyExists)
 	})
 
 	It("should succeed when creating snapshot with maximum-length name", func() {
@@ -1533,12 +1456,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 	It("should fail if no volume id is given", func() {
 		expReq := MakeExpandVolumeReq(sc, "")
 		rsp, err := r.ControllerExpandVolume(context.Background(), expReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should fail if no capacity range is given", func() {
@@ -1547,12 +1465,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 			Secrets:  sc.Secrets.ControllerExpandVolumeSecret,
 		}
 		rsp, err := r.ControllerExpandVolume(context.Background(), expReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should work", func() {
@@ -1606,23 +1519,13 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 	It("should fail if no volume id is given", func() {
 		modifyReq := MakeModifyVolumeReq(sc, "")
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should fail if volume does not exist", func() {
 		modifyReq := MakeModifyVolumeReq(sc, "non-existing-volume-id")
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.NotFound)
 	})
 
 	It("should fail if specified mutable parameters are not supported by the volume", func() {
@@ -1643,12 +1546,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 			Secrets: sc.Secrets.ControllerModifyVolumeSecret,
 		}
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	// TODO Q: Should we enforce Empty MutableParameters list as InvalidArgument Err? (no mention in CSI Spec)
@@ -1667,12 +1565,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 			Secrets:  sc.Secrets.ControllerModifyVolumeSecret,
 		}
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
-		Expect(err).To(HaveOccurred())
-		Expect(rsp).To(BeNil())
-
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
 	It("should work", func() {
