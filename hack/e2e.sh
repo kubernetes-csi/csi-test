@@ -112,7 +112,7 @@ fi
 	tmp=$(mktemp -d)
 	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1 $tmp $creationscriptpath $removalscriptpath' EXIT
+        trap 'cleanup $pid $1 $tmp $creationscriptpath $removalscriptpath $checkscriptpath' EXIT
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS \
 		--csi.endpoint=$2 \
