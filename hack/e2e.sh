@@ -22,6 +22,7 @@ TCP_SERVER="tcp://localhost:7654"
 # ... and slightly differently for gRPC.
 TCP_CLIENT="dns:///localhost:7654"
 CSI_ENDPOINTS="$CSI_ENDPOINTS ${UDS}"
+MUTABLE_PARAMETER_KEY="realKey"
 
 # cleanup mock_driver_pid files...
 cleanup () {
@@ -40,11 +41,16 @@ cleanup () {
 runTest()
 (
 	tmp=$(mktemp -d)
-	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
+	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id -enable-controller-modify-volume -accepted-mutable-parameter-names "$MUTABLE_PARAMETER_KEY" &
 	local pid=$!
-        trap 'cleanup $pid $1 $tmp' EXIT
+        trap 'cleanup $pid $1 $tmp $mutableparametersfile' EXIT
 
-	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.testnodevolumeattachlimit
+	echo "$MUTABLE_PARAMETER_KEY: bar
+" > testmutableparameters.yaml
+
+  local mutableparametersfile="$PWD/testmutableparameters.yaml"
+
+	./cmd/csi-sanity/csi-sanity $TESTARGS --csi.endpoint=$2 --csi.testnodevolumeattachlimit --csi.testvolumemutableparameters=$mutableparametersfile
 )
 
 runTestAPI()
@@ -106,7 +112,7 @@ fi
 	tmp=$(mktemp -d)
 	./bin/hostpathplugin -statedir "$tmp" -endpoint "$1" -nodeid fake-node-id &
 	local pid=$!
-        trap 'cleanup $pid $1 $tmp $creationscriptpath $removalscriptpath' EXIT
+        trap 'cleanup $pid $1 $tmp $creationscriptpath $removalscriptpath $checkscriptpath' EXIT
 
 	./cmd/csi-sanity/csi-sanity $TESTARGS \
 		--csi.endpoint=$2 \
