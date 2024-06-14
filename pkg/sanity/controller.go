@@ -645,6 +645,34 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.CreateVolume(context.Background(), volReq)
 			ExpectErrorCode(rsp, err, codes.NotFound)
 		})
+
+		It("should create volume with a volume attribute class", func() {
+			if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_MODIFY_VOLUME) {
+				Skip("Modify volume not supported")
+			}
+
+			By("creating a volume")
+			volName := UniqueString("sanity-controller-vol-with-mutable-parameters")
+			volReq := MakeCreateVolumeReq(sc, volName)
+			volReq.MutableParameters = sc.Config.TestVolumeMutableParameters
+			_, err := r.CreateVolume(context.Background(), volReq)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not create volume with an invalid volume attribute class", func() {
+			if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_MODIFY_VOLUME) {
+				Skip("Modify Volume not supported")
+			}
+
+			By("failing to create a volume")
+			volName := UniqueString("sanity-controller-vol-with-mutable-parameters")
+			volReq := MakeCreateVolumeReq(sc, volName)
+			volReq.MutableParameters = map[string]string{
+				"XXX_FakeKey": "XXX_FakeValue",
+			}
+			rsp, err := r.CreateVolume(context.Background(), volReq)
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
+		})
 	})
 
 	Describe("DeleteVolume", func() {
@@ -1508,8 +1536,6 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_MODIFY_VOLUME) {
 			Skip("ControllerExpandVolume not supported")
 		}
-
-		// TODO skip certain tests if testvolumemutableparameters yaml not passed in?
 	})
 
 	AfterEach(func() {
@@ -1532,7 +1558,6 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 
 		By("creating a new volume")
 
-		// Create a new volume.
 		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
@@ -1549,12 +1574,12 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
-	// TODO Q: Should we enforce Empty MutableParameters list as InvalidArgument Err? (no mention in CSI Spec)
+	// TODO Q: Should we enforce Empty MutableParameters list as InvalidArgument Err?
+	// TODO Q Cont: KEP says it is OPTIONAL, k/k: storage/types says required, but no mention in CSI Spec
 	It("should fail if no mutable parameters specified", func() {
 
 		By("creating a new volume")
 
-		// Create a new volume.
 		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
@@ -1568,11 +1593,10 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 
-	It("should work", func() {
+	It("should modify a volume created without a volume attribute class", func() {
 
 		By("creating a new volume")
 
-		// Create a new volume.
 		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
@@ -1583,6 +1607,44 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rsp).NotTo(BeNil())
+	})
+
+	It("should modify a volume created with a volume attribute class", func() {
+
+		By("creating a new volume with volume attribute class")
+
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		volReq.MutableParameters = sc.Config.TestVolumeMutableParameters
+		vol := r.MustCreateVolume(context.Background(), volReq)
+
+		By("modifying the volume")
+
+		modifyReq := MakeModifyVolumeReq(sc, vol.GetVolume().GetVolumeId())
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
+	})
+
+	It("should fail to modify a volume created with a volume attribute class if new mutable parameters are not supported by volume", func() {
+
+		By("creating a new volume with volume attribute class")
+
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		volReq.MutableParameters = sc.Config.TestVolumeMutableParameters
+		vol := r.MustCreateVolume(context.Background(), volReq)
+
+		By("failing to modify the volume")
+
+		modifyReq := &csi.ControllerModifyVolumeRequest{
+			VolumeId: vol.GetVolume().GetVolumeId(),
+			MutableParameters: map[string]string{
+				"XXX_FakeKey": "XXX_FakeValue",
+			},
+			Secrets: sc.Secrets.ControllerModifyVolumeSecret,
+		}
+		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
 	})
 })
 
