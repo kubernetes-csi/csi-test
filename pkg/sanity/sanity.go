@@ -97,7 +97,7 @@ type TestConfig struct {
 	TestNodeVolumeAttachLimit bool
 	TestVolumeAccessType      string
 
-	// TestSnapshotParametersFile for setting CreateVolumeRequest.Parameters.
+	// TestSnapshotParametersFile for setting CreateSnapshotRequest.Parameters.
 	TestSnapshotParametersFile string
 	TestSnapshotParameters     map[string]string
 
