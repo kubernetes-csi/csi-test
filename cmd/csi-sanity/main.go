@@ -88,6 +88,7 @@ func main() {
 	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")
 	int64Var(&config.TestVolumeExpandSize, "testvolumeexpandsize", "Target size for expanded volumes")
 	stringVar(&config.TestVolumeParametersFile, "testvolumeparameters", "YAML file of volume parameters for provisioned volumes")
+	stringVar(&config.TestVolumeMutableParametersFile, "testvolumemutableparameters", "YAML file of mutable parameters for modifying volumes")
 	stringVar(&config.TestSnapshotParametersFile, "testsnapshotparameters", "YAML file of snapshot parameters for provisioned snapshots")
 	boolVar(&config.TestNodeVolumeAttachLimit, "testnodevolumeattachlimit", "Test node volume attach limit")
 	flag.Var(flag.Lookup("ginkgo.junit-report").Value, prefix+"junitfile", "JUnit XML output file where test results will be written (deprecated: use ginkgo.junit-report instead)")

@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"google.golang.org/grpc/codes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -156,64 +154,48 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 
 	Describe("CreateVolumeGroupSnapshot", func() {
 		It("should fail when no name is provided", func() {
-			_, err := r.CreateVolumeGroupSnapshot(
+			rsp, err := r.CreateVolumeGroupSnapshot(
 				context.Background(),
 				&csi.CreateVolumeGroupSnapshotRequest{
 					Secrets: sc.Secrets.CreateSnapshotSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 	})
 
 	Describe("GetVolumeGroupSnapshot", func() {
 		It("should fail when no volume id is provided", func() {
-			_, err := r.GetVolumeGroupSnapshot(
+			rsp, err := r.GetVolumeGroupSnapshot(
 				context.Background(),
 				&csi.GetVolumeGroupSnapshotRequest{
 					Secrets: sc.Secrets.ListSnapshotsSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should fail when an invalid volume id is used", func() {
-			_, err := r.GetVolumeGroupSnapshot(
+			rsp, err := r.GetVolumeGroupSnapshot(
 				context.Background(),
 				&csi.GetVolumeGroupSnapshotRequest{
 					GroupSnapshotId: sc.Config.IDGen.GenerateInvalidVolumeID(),
 					Secrets:         sc.Secrets.ListSnapshotsSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.NotFound)
 		})
 	})
 
 	Describe("DeleteVolumeGroupSnapshot", func() {
 		It("should fail when no volume id is provided", func() {
-			_, err := r.DeleteVolumeGroupSnapshot(
+			rsp, err := r.DeleteVolumeGroupSnapshot(
 				context.Background(),
 				&csi.DeleteVolumeGroupSnapshotRequest{
 					Secrets: sc.Secrets.DeleteSnapshotSecret,
 				},
 			)
-			Expect(err).To(HaveOccurred())
-
-			serverError, ok := status.FromError(err)
-			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
 		It("should succeed when an invalid volume id is used", func() {

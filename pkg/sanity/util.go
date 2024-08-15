@@ -18,8 +18,11 @@ package sanity
 
 import (
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/google/uuid"
+	. "github.com/onsi/gomega"
 )
 
 // IDGenerator generates valid and invalid Volume and Node IDs to be used in
@@ -63,4 +66,14 @@ func (d DefaultIDGenerator) GenerateUniqueValidNodeID() string {
 
 func (d DefaultIDGenerator) GenerateInvalidNodeID() string {
 	return "fake-node-id"
+}
+
+// ExpectErrorCode confirms that the correct error code was returned
+func ExpectErrorCode(response any, err error, code codes.Code) {
+	Expect(err).To(HaveOccurred())
+	Expect(response).To(BeNil())
+
+	serverError, ok := status.FromError(err)
+	Expect(ok).To(BeTrue())
+	Expect(serverError.Code()).To(Equal(code), "unexpected error: %s", serverError.Message())
 }
