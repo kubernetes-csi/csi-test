@@ -1776,6 +1776,7 @@ func VolumeLifecycle(r *Resources, sc *TestContext, count int) {
 				VolumeId:         vol.GetVolume().GetVolumeId(),
 				NodeId:           ni.GetNodeId(),
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+				VolumeContext:    vol.GetVolume().GetVolumeContext(),
 				Readonly:         false,
 				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 			},
