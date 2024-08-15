@@ -580,7 +580,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					},
 				},
 			}
-			_, err := r.CreateVolume(context.Background(), vol2Req)
+			vol, err := r.CreateVolume(context.Background(), vol2Req)
+			Expect(vol.GetVolume().ContentSource).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
