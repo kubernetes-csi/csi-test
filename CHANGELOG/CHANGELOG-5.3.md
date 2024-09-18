@@ -1,3 +1,24 @@
+# Release notes for v5.3.1
+
+# Changelog since v5.3.0
+
+## Urgent Upgrade Notes.
+
+### (No, really, you MUST read this before you upgrade)
+
+- If you are upgrading CSI spec to v1.10.0 and rely on mocking gRPC calls in your tests, you may need to use the csi-test utils package's Protobuf Matcher: `example.EXPECT().ExampleRequest(Protobuf(requestMsg)).Return(responseMsg, nil).AnyTimes()` ([#553](https://github.com/kubernetes-csi/csi-test/pull/553), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
 # Release notes for v5.3.0
 
 # Changelog since v5.2.0
