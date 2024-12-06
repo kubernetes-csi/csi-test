@@ -78,7 +78,7 @@ version_to_git () {
 # the list of windows versions was matched from:
 # - https://hub.docker.com/_/microsoft-windows-nanoserver
 # - https://hub.docker.com/_/microsoft-windows-servercore
-configvar CSI_PROW_BUILD_PLATFORMS "linux amd64 amd64; linux ppc64le ppc64le -ppc64le; linux s390x s390x -s390x; linux arm arm -arm; linux arm64 arm64 -arm64; linux arm arm/v7 -armv7; windows amd64 amd64 .exe nanoserver:1809 servercore:ltsc2019; windows amd64 amd64 .exe nanoserver:20H2 servercore:20H2; windows amd64 amd64 .exe nanoserver:ltsc2022 servercore:ltsc2022" "Go target platforms (= GOOS + GOARCH) and file suffix of the resulting binaries"
+configvar CSI_PROW_BUILD_PLATFORMS "linux amd64 amd64; linux ppc64le ppc64le -ppc64le; linux s390x s390x -s390x; linux arm arm -arm; linux arm64 arm64 -arm64; linux arm arm/v7 -armv7; windows amd64 amd64 .exe nanoserver:1809 servercore:ltsc2019; windows amd64 amd64 .exe nanoserver:ltsc2022 servercore:ltsc2022" "Go target platforms (= GOOS + GOARCH) and file suffix of the resulting binaries"
 
 # If we have a vendor directory, then use it. We must be careful to only
 # use this for "make" invocations inside the project's repo itself because
@@ -86,7 +86,7 @@ configvar CSI_PROW_BUILD_PLATFORMS "linux amd64 amd64; linux ppc64le ppc64le -pp
 # which is disabled with GOFLAGS=-mod=vendor).
 configvar GOFLAGS_VENDOR "$( [ -d vendor ] && echo '-mod=vendor' )" "Go flags for using the vendor directory"
 
-configvar CSI_PROW_GO_VERSION_BUILD "1.19" "Go version for building the component" # depends on component's source code
+configvar CSI_PROW_GO_VERSION_BUILD "1.23.1" "Go version for building the component" # depends on component's source code
 configvar CSI_PROW_GO_VERSION_E2E "" "override Go version for building the Kubernetes E2E test suite" # normally doesn't need to be set, see install_e2e
 configvar CSI_PROW_GO_VERSION_SANITY "${CSI_PROW_GO_VERSION_BUILD}" "Go version for building the csi-sanity test suite" # depends on CSI_PROW_SANITY settings below
 configvar CSI_PROW_GO_VERSION_KIND "${CSI_PROW_GO_VERSION_BUILD}" "Go version for building 'kind'" # depends on CSI_PROW_KIND_VERSION below
@@ -101,7 +101,10 @@ configvar CSI_PROW_GINKGO_VERSION v1.7.0 "Ginkgo"
 
 # Ginkgo runs the E2E test in parallel. The default is based on the number
 # of CPUs, but typically this can be set to something higher in the job.
-configvar CSI_PROW_GINKO_PARALLEL "-p" "Ginko parallelism parameter(s)"
+configvar CSI_PROW_GINKGO_PARALLEL "-p" "Ginkgo parallelism parameter(s)"
+
+# Timeout value for the overall ginkgo test suite.
+configvar CSI_PROW_GINKGO_TIMEOUT "1h" "Ginkgo timeout"
 
 # Enables building the code in the repository. On by default, can be
 # disabled in jobs which only use pre-built components.
@@ -196,7 +199,7 @@ kindest/node:v1.18.20@sha256:738cdc23ed4be6cc0b7ea277a2ebcc454c8373d7d8fb991a7fc
 # If the deployment script is called with CSI_PROW_TEST_DRIVER=<file name> as
 # environment variable, then it must write a suitable test driver configuration
 # into that file in addition to installing the driver.
-configvar CSI_PROW_DRIVER_VERSION "v1.11.0" "CSI driver version"
+configvar CSI_PROW_DRIVER_VERSION "v1.12.0" "CSI driver version"
 configvar CSI_PROW_DRIVER_REPO https://github.com/kubernetes-csi/csi-driver-host-path "CSI driver repo"
 configvar CSI_PROW_DEPLOYMENT "" "deployment"
 configvar CSI_PROW_DEPLOYMENT_SUFFIX "" "additional suffix in kubernetes-x.yy[suffix].yaml files"
@@ -228,8 +231,11 @@ configvar CSI_PROW_E2E_VERSION "$(version_to_git "${CSI_PROW_KUBERNETES_VERSION}
 configvar CSI_PROW_E2E_REPO "https://github.com/kubernetes/kubernetes" "E2E repo"
 configvar CSI_PROW_E2E_IMPORT_PATH "k8s.io/kubernetes" "E2E package"
 
-# Local path for e2e tests. Set to "none" to disable.
-configvar CSI_PROW_SIDECAR_E2E_IMPORT_PATH "none" "CSI Sidecar E2E package"
+# Local path & package path for e2e tests. Set to "none" to disable.
+# When using versioned go modules, the import path is the module path whereas the path
+# should not contain the version and be the directory where the module is checked out.
+configvar CSI_PROW_SIDECAR_E2E_IMPORT_PATH "none" "CSI Sidecar E2E package (go import path)"
+configvar CSI_PROW_SIDECAR_E2E_PATH "${CSI_PROW_SIDECAR_E2E_IMPORT_PATH}" "CSI Sidecar E2E path (directory)"
 
 # csi-sanity testing from the csi-test repo can be run against the installed
 # CSI driver. For this to work, deploying the driver must expose the Unix domain
@@ -237,7 +243,7 @@ configvar CSI_PROW_SIDECAR_E2E_IMPORT_PATH "none" "CSI Sidecar E2E package"
 # of the cluster. The alternative would have been to (cross-)compile csi-sanity
 # and install it inside the cluster, which is not necessarily easier.
 configvar CSI_PROW_SANITY_REPO https://github.com/kubernetes-csi/csi-test "csi-test repo"
-configvar CSI_PROW_SANITY_VERSION v5.0.0 "csi-test version"
+configvar CSI_PROW_SANITY_VERSION v5.2.0 "csi-test version"
 configvar CSI_PROW_SANITY_PACKAGE_PATH github.com/kubernetes-csi/csi-test "csi-test package"
 configvar CSI_PROW_SANITY_SERVICE "hostpath-service" "Kubernetes TCP service name that exposes csi.sock"
 configvar CSI_PROW_SANITY_POD "csi-hostpathplugin-0" "Kubernetes pod with CSI driver"
@@ -245,7 +251,7 @@ configvar CSI_PROW_SANITY_CONTAINER "hostpath" "Kubernetes container with CSI dr
 
 # The version of dep to use for 'make test-vendor'. Ignored if the project doesn't
 # use dep. Only binary releases of dep are supported (https://github.com/golang/dep/releases).
-configvar CSI_PROW_DEP_VERSION v0.5.1 "golang dep version to be used for vendor checking"
+configvar CSI_PROW_DEP_VERSION v0.5.4 "golang dep version to be used for vendor checking"
 
 # Each job can run one or more of the following tests, identified by
 # a single word:
@@ -419,7 +425,7 @@ die () {
     exit 1
 }
 
-# Ensure that PATH has the desired version of the Go tools, then run command given as argument.
+# Ensure we use the desired version of the Go tools, then run command given as argument.
 # Empty parameter uses the already installed Go. In Prow, that version is kept up-to-date by
 # bumping the container image regularly.
 run_with_go () {
@@ -427,15 +433,15 @@ run_with_go () {
     version="$1"
     shift
 
-    if ! [ "$version" ] || go version 2>/dev/null | grep -q "go$version"; then
-        run "$@"
-    else
-        if ! [ -d "${CSI_PROW_WORK}/go-$version" ];  then
-            run curl --fail --location "https://dl.google.com/go/go$version.linux-amd64.tar.gz" | tar -C "${CSI_PROW_WORK}" -zxf - || die "installation of Go $version failed"
-            mv "${CSI_PROW_WORK}/go" "${CSI_PROW_WORK}/go-$version"
+    if [ "$version" ]; then
+        version=go$version
+        if [ "$(GOTOOLCHAIN=$version go version | cut -d' ' -f3)" != "$version" ]; then
+            die "Please install Go 1.21+"
         fi
-        PATH="${CSI_PROW_WORK}/go-$version/bin:$PATH" run "$@"
+    else
+        version=local
     fi
+    GOTOOLCHAIN=$version run "$@"
 }
 
 # Ensure that we have the desired version of kind.
@@ -469,7 +475,7 @@ install_dep () {
     if dep version 2>/dev/null | grep -q "version:.*${CSI_PROW_DEP_VERSION}$"; then
         return
     fi
-    run curl --fail --location -o "${CSI_PROW_WORK}/bin/dep" "https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64" &&
+    run curl --fail --location -o "${CSI_PROW_WORK}/bin/dep" "https://github.com/golang/dep/releases/download/${CSI_PROW_DEP_VERSION}/dep-linux-amd64" &&
         chmod u+x "${CSI_PROW_WORK}/bin/dep"
 }
 
@@ -561,7 +567,15 @@ go_version_for_kubernetes () (
     local version="$2"
     local go_version
 
-    # We use the minimal Go version specified for each K8S release (= minimum_go_version in hack/lib/golang.sh).
+    # Try to get the version for .go-version
+    go_version="$( cat "$path/.go-version" )"
+    if [ "$go_version" ]; then
+        echo "$go_version"
+        return
+    fi
+
+    # Fall back to hack/lib/golang.sh parsing.
+    # This is necessary in v1.26.0 and older Kubernetes releases that do not have .go-version.
     # More recent versions might also work, but we don't want to count on that.
     go_version="$(grep minimum_go_version= "$path/hack/lib/golang.sh" | sed -e 's/.*=go//')"
     if ! [ "$go_version" ]; then
@@ -872,10 +886,17 @@ install_snapshot_controller() {
   cnt=0
   expected_running_pods=$(kubectl apply --dry-run=client -o "jsonpath={.spec.replicas}" -f "$SNAPSHOT_CONTROLLER_YAML")
   expected_namespace=$(kubectl apply --dry-run=client -o "jsonpath={.metadata.namespace}" -f "$SNAPSHOT_CONTROLLER_YAML")
-  while [ "$(kubectl get pods -n "$expected_namespace" -l app=snapshot-controller | grep 'Running' -c)" -lt "$expected_running_pods" ]; do
+  expect_key='app\.kubernetes\.io/name'
+  expected_label=$(kubectl apply --dry-run=client -o "jsonpath={.spec.template.metadata.labels['$expect_key']}" -f "$SNAPSHOT_CONTROLLER_YAML")
+  if [ -z "${expected_label}" ]; then
+    expect_key='app'
+    expected_label=$(kubectl apply --dry-run=client -o "jsonpath={.spec.template.metadata.labels['$expect_key']}" -f "$SNAPSHOT_CONTROLLER_YAML")
+  fi
+  expect_key=${expect_key//\\/}
+  while [ "$(kubectl get pods -n "$expected_namespace" -l "$expect_key"="$expected_label" | grep 'Running' -c)" -lt "$expected_running_pods" ]; do
     if [ $cnt -gt 30 ]; then
         echo "snapshot-controller pod status:"
-        kubectl describe pods -n "$expected_namespace" -l app=snapshot-controller
+        kubectl describe pods -n "$expected_namespace" -l "$expect_key"="$expected_label"
         echo >&2 "ERROR: snapshot controller not ready after over 5 min"
         exit 1
     fi
@@ -1017,11 +1038,11 @@ run_e2e () (
     trap move_junit EXIT
 
     if [ "${name}" == "local" ]; then
-        cd "${GOPATH}/src/${CSI_PROW_SIDECAR_E2E_IMPORT_PATH}" &&
-        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo -v "$@" "${CSI_PROW_WORK}/e2e-local.test" -- -report-dir "${ARTIFACTS}" -report-prefix local
+        cd "${GOPATH}/src/${CSI_PROW_SIDECAR_E2E_PATH}" &&
+        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo --timeout="${CSI_PROW_GINKGO_TIMEOUT}" -v "$@" "${CSI_PROW_WORK}/e2e-local.test" -- -report-dir "${ARTIFACTS}" -report-prefix local
     else
         cd "${GOPATH}/src/${CSI_PROW_E2E_IMPORT_PATH}" &&
-        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo -v "$@" "${CSI_PROW_WORK}/e2e.test" -- -report-dir "${ARTIFACTS}" -storage.testdriver="${CSI_PROW_WORK}/test-driver.yaml"
+        run_with_loggers env KUBECONFIG="$KUBECONFIG" KUBE_TEST_REPO_LIST="$(if [ -e "${CSI_PROW_WORK}/e2e-repo-list" ]; then echo "${CSI_PROW_WORK}/e2e-repo-list"; fi)" ginkgo --timeout="${CSI_PROW_GINKGO_TIMEOUT}" -v "$@" "${CSI_PROW_WORK}/e2e.test" -- -report-dir "${ARTIFACTS}" -storage.testdriver="${CSI_PROW_WORK}/test-driver.yaml"
     fi
 )
 
@@ -1310,7 +1331,7 @@ main () {
                 if tests_enabled "parallel"; then
                     # Ignore: Double quote to prevent globbing and word splitting.
                     # shellcheck disable=SC2086
-                    if ! run_e2e parallel ${CSI_PROW_GINKO_PARALLEL} \
+                    if ! run_e2e parallel ${CSI_PROW_GINKGO_PARALLEL} \
                          -focus="$focus" \
                          -skip="$(regex_join "${CSI_PROW_E2E_SERIAL}" "${CSI_PROW_E2E_ALPHA}" "${CSI_PROW_E2E_SKIP}")"; then
                         warn "E2E parallel failed"
@@ -1320,7 +1341,7 @@ main () {
                     # Run tests that are feature tagged, but non-alpha
                     # Ignore: Double quote to prevent globbing and word splitting.
                     # shellcheck disable=SC2086
-                    if ! run_e2e parallel-features ${CSI_PROW_GINKO_PARALLEL} \
+                    if ! run_e2e parallel-features ${CSI_PROW_GINKGO_PARALLEL} \
                          -focus="$focus.*($(regex_join "${CSI_PROW_E2E_FOCUS}"))" \
                          -skip="$(regex_join "${CSI_PROW_E2E_SERIAL}")"; then
                         warn "E2E parallel features failed"
@@ -1368,7 +1389,7 @@ main () {
                 if tests_enabled "parallel-alpha"; then
                     # Ignore: Double quote to prevent globbing and word splitting.
                     # shellcheck disable=SC2086
-                    if ! run_e2e parallel-alpha ${CSI_PROW_GINKO_PARALLEL} \
+                    if ! run_e2e parallel-alpha ${CSI_PROW_GINKGO_PARALLEL} \
                          -focus="$focus.*($(regex_join "${CSI_PROW_E2E_ALPHA}"))" \
                          -skip="$(regex_join "${CSI_PROW_E2E_SERIAL}" "${CSI_PROW_E2E_SKIP}")"; then
                         warn "E2E parallel alpha failed"
