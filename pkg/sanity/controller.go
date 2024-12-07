@@ -1559,7 +1559,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 
 		By("creating a new volume")
 
-		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume-unsupported"))
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
 		By("failing to modify the volume")
@@ -1595,7 +1595,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 
 		By("creating a new volume with volume attribute class")
 
-		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume-with-vac"))
 		volReq.MutableParameters = sc.Config.TestVolumeMutableParameters
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
@@ -1612,7 +1612,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 
 		By("creating a new volume with volume attribute class")
 
-		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume"))
+		volReq := MakeCreateVolumeReq(sc, UniqueString("sanity-modify-volume-with-vac-not-supported"))
 		volReq.MutableParameters = sc.Config.TestVolumeMutableParameters
 		vol := r.MustCreateVolume(context.Background(), volReq)
 
