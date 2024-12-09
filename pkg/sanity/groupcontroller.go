@@ -157,7 +157,7 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 			rsp, err := r.CreateVolumeGroupSnapshot(
 				context.Background(),
 				&csi.CreateVolumeGroupSnapshotRequest{
-					Secrets: sc.Secrets.CreateSnapshotSecret,
+					Secrets: sc.GetCreateSnapshotSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -169,7 +169,7 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 			rsp, err := r.GetVolumeGroupSnapshot(
 				context.Background(),
 				&csi.GetVolumeGroupSnapshotRequest{
-					Secrets: sc.Secrets.ListSnapshotsSecret,
+					Secrets: sc.GetListSnapshotsSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -180,7 +180,7 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 				context.Background(),
 				&csi.GetVolumeGroupSnapshotRequest{
 					GroupSnapshotId: sc.Config.IDGen.GenerateInvalidVolumeID(),
-					Secrets:         sc.Secrets.ListSnapshotsSecret,
+					Secrets:         sc.GetListSnapshotsSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.NotFound)
@@ -192,7 +192,7 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 			rsp, err := r.DeleteVolumeGroupSnapshot(
 				context.Background(),
 				&csi.DeleteVolumeGroupSnapshotRequest{
-					Secrets: sc.Secrets.DeleteSnapshotSecret,
+					Secrets: sc.GetDeleteSnapshotSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -203,7 +203,7 @@ var _ = DescribeSanity("GroupController Service [GroupController VolumeGroupSnap
 				context.Background(),
 				&csi.DeleteVolumeGroupSnapshotRequest{
 					GroupSnapshotId: sc.Config.IDGen.GenerateInvalidVolumeID(),
-					Secrets:         sc.Secrets.DeleteSnapshotSecret,
+					Secrets:         sc.GetDeleteSnapshotSecret(),
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
