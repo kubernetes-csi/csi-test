@@ -222,7 +222,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				VolumeCapabilities: []*csi.VolumeCapability{
 					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
-				Secrets:    sc.Secrets.CreateVolumeSecret,
+				Secrets:    sc.GetCreateVolumeSecret(),
 				Parameters: sc.Config.TestVolumeParameters,
 			}
 
@@ -240,7 +240,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			delReq := &csi.DeleteVolumeRequest{
 				VolumeId: vol.GetVolume().GetVolumeId(),
-				Secrets:  sc.Secrets.DeleteVolumeSecret,
+				Secrets:  sc.GetDeleteVolumeSecret(),
 			}
 
 			_, err = r.DeleteVolume(context.Background(), delReq)
@@ -296,7 +296,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 						VolumeCapabilities: []*csi.VolumeCapability{
 							TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 						},
-						Secrets:    sc.Secrets.CreateVolumeSecret,
+						Secrets:    sc.GetCreateVolumeSecret(),
 						Parameters: sc.Config.TestVolumeParameters,
 					}
 
@@ -325,7 +325,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				Expect(existing_vols[vol.Volume.VolumeId]).To(BeTrue())
 				delReq := &csi.DeleteVolumeRequest{
 					VolumeId: vol.Volume.VolumeId,
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
+					Secrets:  sc.GetDeleteVolumeSecret(),
 				}
 
 				_, err := r.DeleteVolume(context.Background(), delReq)
@@ -340,7 +340,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				VolumeCapabilities: []*csi.VolumeCapability{
 					TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				},
-				Secrets:    sc.Secrets.CreateVolumeSecret,
+				Secrets:    sc.GetCreateVolumeSecret(),
 				Parameters: sc.Config.TestVolumeParameters,
 			}
 			vol := r.MustCreateVolume(context.Background(), req)
@@ -374,7 +374,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -387,7 +387,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name:       name,
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -410,7 +410,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -431,7 +431,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -462,7 +462,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -479,7 +479,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -504,7 +504,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 						RequiredBytes: size1,
 						LimitBytes:    size1,
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -521,7 +521,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 						RequiredBytes: size2,
 						LimitBytes:    size2,
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -543,7 +543,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: size,
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -688,7 +688,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.DeleteVolume(
 				context.Background(),
 				&csi.DeleteVolumeRequest{
-					Secrets: sc.Secrets.DeleteVolumeSecret,
+					Secrets: sc.GetDeleteVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -700,7 +700,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				context.Background(),
 				&csi.DeleteVolumeRequest{
 					VolumeId: sc.Config.IDGen.GenerateInvalidVolumeID(),
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
+					Secrets:  sc.GetDeleteVolumeSecret(),
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -722,7 +722,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -734,7 +734,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				context.Background(),
 				&csi.DeleteVolumeRequest{
 					VolumeId: vol.GetVolume().GetVolumeId(),
-					Secrets:  sc.Secrets.DeleteVolumeSecret,
+					Secrets:  sc.GetDeleteVolumeSecret(),
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -747,7 +747,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.ValidateVolumeCapabilities(
 				context.Background(),
 				&csi.ValidateVolumeCapabilitiesRequest{
-					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+					Secrets: sc.GetControllerValidateVolumeCapabilitiesSecret(),
 				})
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
@@ -768,7 +768,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -778,7 +778,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId:           vol.GetVolume().GetVolumeId(),
 					VolumeCapabilities: nil,
-					Secrets:            sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+					Secrets:            sc.GetControllerValidateVolumeCapabilitiesSecret(),
 				})
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
@@ -799,7 +799,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					CapacityRange: &csi.CapacityRange{
 						RequiredBytes: TestVolumeSize(sc),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -813,7 +813,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					VolumeCapabilities: []*csi.VolumeCapability{
 						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
-					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+					Secrets: sc.GetControllerValidateVolumeCapabilitiesSecret(),
 				})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(valivolcap).NotTo(BeNil())
@@ -834,7 +834,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					VolumeCapabilities: []*csi.VolumeCapability{
 						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
-					Secrets: sc.Secrets.ControllerValidateVolumeCapabilitiesSecret,
+					Secrets: sc.GetControllerValidateVolumeCapabilitiesSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.NotFound)
@@ -853,7 +853,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					Secrets: sc.Secrets.ControllerPublishVolumeSecret,
+					Secrets: sc.GetControllerPublishVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -865,7 +865,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					Secrets:  sc.GetControllerPublishVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -878,7 +878,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				&csi.ControllerPublishVolumeRequest{
 					VolumeId: sc.Config.IDGen.GenerateUniqueValidVolumeID(),
 					NodeId:   sc.Config.IDGen.GenerateUniqueValidNodeID(),
-					Secrets:  sc.Secrets.ControllerPublishVolumeSecret,
+					Secrets:  sc.GetControllerPublishVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -935,7 +935,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					NodeId:           sc.Config.IDGen.GenerateUniqueValidNodeID(),
 					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					Readonly:         false,
-					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+					Secrets:          sc.GetControllerPublishVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(conpubvol, err, codes.NotFound)
@@ -954,7 +954,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					VolumeCapabilities: []*csi.VolumeCapability{
 						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -969,7 +969,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					NodeId:           sc.Config.IDGen.GenerateUniqueValidNodeID(),
 					VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					Readonly:         false,
-					Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+					Secrets:          sc.GetControllerPublishVolumeSecret(),
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -996,7 +996,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 					VolumeCapabilities: []*csi.VolumeCapability{
 						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
-					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Secrets:    sc.GetCreateVolumeSecret(),
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
@@ -1017,7 +1017,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				NodeId:           nid.GetNodeId(),
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				Readonly:         false,
-				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+				Secrets:          sc.GetControllerPublishVolumeSecret(),
 			}
 
 			conpubvol := r.MustControllerPublishVolume(context.Background(), pubReq)
@@ -1058,7 +1058,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			rsp, err := r.ControllerUnpublishVolume(
 				context.Background(),
 				&csi.ControllerUnpublishVolumeRequest{
-					Secrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+					Secrets: sc.GetControllerUnpublishVolumeSecret(),
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -1491,7 +1491,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 	It("should fail if no capacity range is given", func() {
 		expReq := &csi.ControllerExpandVolumeRequest{
 			VolumeId: "",
-			Secrets:  sc.Secrets.ControllerExpandVolumeSecret,
+			Secrets:  sc.GetControllerExpandVolumeSecret(),
 		}
 		rsp, err := r.ControllerExpandVolume(context.Background(), expReq)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -1509,7 +1509,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 				TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 			},
 			Parameters: sc.Config.TestVolumeParameters,
-			Secrets:    sc.Secrets.CreateVolumeSecret,
+			Secrets:    sc.GetCreateVolumeSecret(),
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: TestVolumeSize(sc),
 			},
@@ -1569,7 +1569,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 			MutableParameters: map[string]string{
 				"XXX_FakeKey": "XXX_FakeValue",
 			},
-			Secrets: sc.Secrets.ControllerModifyVolumeSecret,
+			Secrets: sc.GetControllerModifyVolumeSecret(),
 		}
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -1623,7 +1623,7 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 			MutableParameters: map[string]string{
 				"XXX_FakeKey": "XXX_FakeValue",
 			},
-			Secrets: sc.Secrets.ControllerModifyVolumeSecret,
+			Secrets: sc.GetControllerModifyVolumeSecret(),
 		}
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
@@ -1697,7 +1697,7 @@ func MakeControllerPublishVolumeReq(sc *TestContext, volID, nodeID string) *csi.
 		NodeId:           nodeID,
 		VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 		Readonly:         false,
-		Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+		Secrets:          sc.GetControllerPublishVolumeSecret(),
 	}
 }
 
@@ -1706,7 +1706,7 @@ func MakeControllerUnpublishVolumeReq(sc *TestContext, volID, nodeID string) *cs
 	return &csi.ControllerUnpublishVolumeRequest{
 		VolumeId: volID,
 		NodeId:   nodeID,
-		Secrets:  sc.Secrets.ControllerUnpublishVolumeSecret,
+		Secrets:  sc.GetControllerUnpublishVolumeSecret(),
 	}
 }
 
@@ -1717,7 +1717,7 @@ func MakeExpandVolumeReq(sc *TestContext, volID string) *csi.ControllerExpandVol
 		CapacityRange: &csi.CapacityRange{
 			RequiredBytes: TestVolumeExpandSize(sc),
 		},
-		Secrets:          sc.Secrets.ControllerExpandVolumeSecret,
+		Secrets:          sc.GetControllerExpandVolumeSecret(),
 		VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 	}
 }
@@ -1727,7 +1727,7 @@ func MakeModifyVolumeReq(sc *TestContext, volID string) *csi.ControllerModifyVol
 	return &csi.ControllerModifyVolumeRequest{
 		VolumeId:          volID,
 		MutableParameters: sc.Config.TestVolumeMutableParameters,
-		Secrets:           sc.Secrets.ControllerModifyVolumeSecret,
+		Secrets:           sc.GetControllerModifyVolumeSecret(),
 	}
 }
 
@@ -1762,7 +1762,7 @@ func VolumeLifecycle(r *Resources, sc *TestContext, count int) {
 			VolumeCapabilities: []*csi.VolumeCapability{
 				TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 			},
-			Secrets:                   sc.Secrets.CreateVolumeSecret,
+			Secrets:                   sc.GetCreateVolumeSecret(),
 			Parameters:                sc.Config.TestVolumeParameters,
 			AccessibilityRequirements: accReqs,
 		},
@@ -1779,7 +1779,7 @@ func VolumeLifecycle(r *Resources, sc *TestContext, count int) {
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				VolumeContext:    vol.GetVolume().GetVolumeContext(),
 				Readonly:         false,
-				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
+				Secrets:          sc.GetControllerPublishVolumeSecret(),
 			},
 		)
 	}
