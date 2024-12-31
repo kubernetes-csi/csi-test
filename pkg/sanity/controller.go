@@ -446,6 +446,36 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", TestVolumeSize(sc)), BeZero()))
 		})
 
+		It("should return appropriate values SingleNodeWriter WithCapacity Limit", func() {
+
+			By("creating a volume")
+			name := UniqueString("sanity-controller-create-single-with-capacity-limit")
+
+			vol, err := r.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						LimitBytes: TestVolumeSize(sc),
+					},
+					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Parameters: sc.Config.TestVolumeParameters,
+				},
+			)
+			if serverError, ok := status.FromError(err); ok &&
+				(serverError.Code() == codes.OutOfRange || serverError.Code() == codes.Unimplemented) {
+				Skip("Required bytes not supported")
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.GetVolume()).NotTo(BeNil())
+			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically("<=", TestVolumeSize(sc)))
+		})
+
 		It("should not fail when requesting to create a volume with already existing name and same capacity", func() {
 
 			By("creating a volume")
