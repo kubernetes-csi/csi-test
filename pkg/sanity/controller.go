@@ -394,26 +394,35 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
-		// TODO: whether CreateVolume request with no capacity should fail or not depends on driver implementation
+		// whether CreateVolume request with no capacity should fail or not depends on driver implementation
 		It("should return appropriate values SingleNodeWriter NoCapacity", func() {
 
 			By("creating a volume")
 			name := UniqueString("sanity-controller-create-single-no-capacity")
 
-			r.MustCreateVolume(
+			vol, err := r.CreateVolume(
 				context.Background(),
 				&csi.CreateVolumeRequest{
 					Name: name,
 					VolumeCapabilities: []*csi.VolumeCapability{
 						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 					},
-					CapacityRange: &csi.CapacityRange{
-						RequiredBytes: TestVolumeSize(sc),
-					},
 					Secrets:    sc.Secrets.CreateVolumeSecret,
 					Parameters: sc.Config.TestVolumeParameters,
 				},
 			)
+			if err != nil {
+				serverError, ok := status.FromError(err)
+				Expect(ok).To(BeTrue())
+				Expect(vol).To(BeNil())
+				Expect(serverError.Code() == codes.InvalidArgument || serverError.Code() == codes.Unimplemented)
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vol).NotTo(BeNil())
+				Expect(vol.GetVolume()).NotTo(BeNil())
+				Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+				Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", 0))
+			}
 		})
 
 		It("should return appropriate values SingleNodeWriter WithCapacity 1Gi", func() {
