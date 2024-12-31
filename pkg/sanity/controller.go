@@ -394,6 +394,62 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
 		})
 
+		It("should fail with negative capacity", func() {
+
+			By("creating a volume")
+			name := UniqueString("sanity-controller-create-single-with-negative-capacity")
+
+			vol, err := r.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: -1 * TestVolumeSize(sc),
+					},
+					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Parameters: sc.Config.TestVolumeParameters,
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(vol).To(BeNil())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code() == codes.OutOfRange || serverError.Code() == codes.InvalidArgument, "unexpected error: %s", serverError.Message())
+		})
+
+		It("should fail with invalid capacity", func() {
+
+			By("creating a volume")
+			name := UniqueString("sanity-controller-create-single-with-invalid-capacity")
+
+			vol, err := r.CreateVolume(
+				context.Background(),
+				&csi.CreateVolumeRequest{
+					Name: name,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
+					},
+					CapacityRange: &csi.CapacityRange{
+						// LimitBytes < RequiredBytes is impossible to honor
+						RequiredBytes: TestVolumeExpandSize(sc),
+						LimitBytes:    TestVolumeSize(sc),
+					},
+					Secrets:    sc.Secrets.CreateVolumeSecret,
+					Parameters: sc.Config.TestVolumeParameters,
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(vol).To(BeNil())
+
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code() == codes.OutOfRange || serverError.Code() == codes.InvalidArgument, "unexpected error: %s", serverError.Message())
+		})
+
 		// whether CreateVolume request with no capacity should fail or not depends on driver implementation
 		It("should return appropriate values SingleNodeWriter NoCapacity", func() {
 
