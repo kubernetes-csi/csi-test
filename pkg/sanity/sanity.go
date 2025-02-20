@@ -218,6 +218,142 @@ func NewTestContext(config *TestConfig) *TestContext {
 	}
 }
 
+// GetCreateVolumeSecret retrieves the secret credentials required for creating
+// a volume. This function returns a map containing the key-value pairs of the
+// secret if available in the TestContext's CSISecrets structure. If no secret
+// is defined for CreateVolumeSecret, it returns nil.
+func (tc *TestContext) GetCreateVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.CreateVolumeSecret
+}
+
+// GetDeleteVolumeSecret retrieves the secret credentials required for deleting
+// a volume. This function returns a map containing the key-value pairs of the
+// secret if available in the TestContext's CSISecrets structure. If no secret
+// is defined for DeleteVolumeSecret, it returns nil.
+func (tc *TestContext) GetDeleteVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.DeleteVolumeSecret
+}
+
+// GetControllerPublishVolumeSecret retrieves the secret credentials required
+// for publishing a volume by the controller. This function returns a map
+// containing the key-value pairs of the secret if available in the TestContext's
+// CSISecrets structure. If no secret is defined for ControllerPublishVolumeSecret,
+// it returns nil.
+func (tc *TestContext) GetControllerPublishVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ControllerPublishVolumeSecret
+}
+
+// GetControllerUnpublishVolumeSecret retrieves the secret credentials required
+// for unpublishing a volume by the controller. This function returns a map
+// containing the key-value pairs of the secret if available in the TestContext's
+// CSISecrets structure. If no secret is defined for ControllerUnpublishVolumeSecret,
+// it returns nil.
+func (tc *TestContext) GetControllerUnpublishVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ControllerUnpublishVolumeSecret
+}
+
+// GetControllerValidateVolumeCapabilitiesSecret retrieves the secret credentials
+// required for validating volume capabilities. This function returns a map
+// containing the key-value pairs of the secret if available in the TestContext's
+// CSISecrets structure. If no secret is defined for ControllerValidateVolumeCapabilitiesSecret,
+// it returns nil.
+func (tc *TestContext) GetControllerValidateVolumeCapabilitiesSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ControllerValidateVolumeCapabilitiesSecret
+}
+
+// GetNodeStageVolumeSecret retrieves the secret credentials required for staging
+// a volume on the node. This function returns a map containing the key-value
+// pairs of the secret if available in the TestContext's CSISecrets structure.
+// If no secret is defined for NodeStageVolumeSecret, it returns nil.
+func (tc *TestContext) GetNodeStageVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.NodeStageVolumeSecret
+}
+
+// GetNodePublishVolumeSecret retrieves the secret credentials required for
+// publishing a volume on the node. This function returns a map containing
+// the key-value pairs of the secret if available in the TestContext's
+// CSISecrets structure. If no secret is defined for NodePublishVolumeSecret,
+// it returns nil.
+func (tc *TestContext) GetNodePublishVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.NodePublishVolumeSecret
+}
+
+// GetCreateSnapshotSecret retrieves the secret credentials required for creating
+// a snapshot. This function returns a map containing the key-value pairs of
+// the secret if available in the TestContext's CSISecrets structure. If no secret
+// is defined for CreateSnapshotSecret, it returns nil.
+func (tc *TestContext) GetCreateSnapshotSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.CreateSnapshotSecret
+}
+
+// GetDeleteSnapshotSecret retrieves the secret credentials required for deleting
+// a snapshot. This function returns a map containing the key-value pairs of the
+// secret if available in the TestContext's CSISecrets structure. If no secret is
+// defined for DeleteSnapshotSecret, it returns nil.
+func (tc *TestContext) GetDeleteSnapshotSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.DeleteSnapshotSecret
+}
+
+// GetControllerExpandVolumeSecret retrieves the secret credentials required
+// for expanding a volume. This function returns a map containing the key-value
+// pairs of the secret if available in the TestContext's CSISecrets structure.
+// If no secret is defined for ControllerExpandVolumeSecret, it returns nil.
+func (tc *TestContext) GetControllerExpandVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ControllerExpandVolumeSecret
+}
+
+// GetControllerModifyVolumeSecret retrieves the secret credentials required
+// for modifying a volume. This function returns a map containing the key-value
+// pairs of the secret if available in the TestContext's CSISecrets structure.
+// If no secret is defined for ControllerModifyVolumeSecret, it returns nil.
+func (tc *TestContext) GetControllerModifyVolumeSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ControllerModifyVolumeSecret
+}
+
+// GetListSnapshotsSecret retrieves the secret credentials required for listing
+// snapshots. This function returns a map containing the key-value pairs of the
+// secret if available in the TestContext's CSISecrets structure. If no secret is
+// defined for ListSnapshotsSecret, it returns nil.
+func (tc *TestContext) GetListSnapshotsSecret() map[string]string {
+	if tc.Secrets == nil {
+		return nil
+	}
+	return tc.Secrets.ListSnapshotsSecret
+}
+
 // Test will test the CSI driver at the specified address by
 // setting up a Ginkgo suite and running it.
 func Test(t GinkgoTestingT, config TestConfig) {
