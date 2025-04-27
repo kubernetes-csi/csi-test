@@ -494,8 +494,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				},
 			}
 			vol, err := r.CreateVolume(context.Background(), vol2Req)
-			Expect(vol.GetVolume().ContentSource).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(vol.GetVolume().ContentSource).NotTo(BeNil())
 		})
 
 		It("should fail when the volume source snapshot is not found", func() {
