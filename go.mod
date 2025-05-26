@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.1
+	go.uber.org/mock v0.5.2
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.0
 	gopkg.in/yaml.v2 v2.4.0

@@ -10,7 +10,6 @@ github.com/go-logr/logr/funcr
 github.com/go-task/slim-sprig/v3
 # github.com/golang/mock v1.6.0
 ## explicit; go 1.11
-github.com/golang/mock/gomock
 github.com/golang/mock/mockgen/model
 # github.com/golang/protobuf v1.5.4
 ## explicit; go 1.17
@@ -63,6 +62,9 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
+# go.uber.org/mock v0.5.2
+## explicit; go 1.23
+go.uber.org/mock/gomock
 # golang.org/x/net v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/net/context
