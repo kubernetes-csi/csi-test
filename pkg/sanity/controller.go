@@ -150,6 +150,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME:
 				case csi.ControllerServiceCapability_RPC_VOLUME_CONDITION:
 				case csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER:
+				case csi.ControllerServiceCapability_RPC_GET_SNAPSHOT:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
@@ -1184,6 +1185,86 @@ var _ = DescribeSanity("ListSnapshots [Controller Server]", func(sc *TestContext
 
 		// Ensure that all the remaining entries are returned at once.
 		Expect(snapshots.GetEntries()).To(HaveLen(currentTotalSnapshots - maxEntries))
+	})
+})
+
+var _ = DescribeSanity("GetSnapshot [Controller Server]", func(sc *TestContext) {
+	var r *Resources
+
+	BeforeEach(func() {
+		r = &Resources{
+			Context:          sc,
+			ControllerClient: csi.NewControllerClient(sc.ControllerConn),
+			NodeClient:       csi.NewNodeClient(sc.Conn),
+		}
+
+		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_GET_SNAPSHOT) {
+			Skip("GetSnapshot not supported")
+		}
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
+	It("should return an error", func() {
+
+		req := &csi.GetSnapshotRequest{}
+
+		if sc.Secrets != nil {
+			req.Secrets = sc.Secrets.GetSnapshotSecret
+		}
+
+		snapshot, err := r.GetSnapshot(context.Background(), req)
+		Expect(err).To(HaveOccurred())
+		Expect(snapshot).To(BeNil())
+	})
+
+	It("should return snapshot that match the specified snapshot id", func() {
+		// The test creates three snapshots: one that we intend to find by
+		// snapshot ID, and two unrelated ones that must not be returned.
+
+		By("creating first unrelated snapshot")
+		// Create volume source and afterwards the first unrelated snapshot.
+		volReq := MakeCreateVolumeReq(sc, UniqueString("getSnapshot-volume-unrelated-s-1"))
+		r.MustCreateSnapshotFromVolumeRequest(context.Background(), volReq, UniqueString("getSnapshot-snapshot-unrelated-s-1"))
+
+		By("creating target snapshot")
+		// Create volume source and afterwards the target snapshot.
+		volReq = MakeCreateVolumeReq(sc, UniqueString("getSnapshot-volume-target-s"))
+		snapshotTarget, _ := r.MustCreateSnapshotFromVolumeRequest(context.Background(), volReq, UniqueString("getSnapshot-snapshot-target-s"))
+
+		By("creating second unrelated snapshot")
+		// Create volume source and afterwards the second unrelated snapshot.
+		volReq = MakeCreateVolumeReq(sc, UniqueString("getSnapshot-volume-unrelated-s-2"))
+		r.MustCreateSnapshotFromVolumeRequest(context.Background(), volReq, UniqueString("getSnapshot-snapshot-unrelated-s-2"))
+
+		By("get snapshot")
+
+		req := &csi.GetSnapshotRequest{SnapshotId: snapshotTarget.GetSnapshot().GetSnapshotId()}
+
+		if sc.Secrets != nil {
+			req.Secrets = sc.Secrets.GetSnapshotSecret
+		}
+
+		snapshot, err := r.GetSnapshot(context.Background(), req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(snapshot).NotTo(BeNil())
+		verifySnapshotInfo(snapshot.GetSnapshot())
+		Expect(snapshot.GetSnapshot().GetSnapshotId()).To(Equal(snapshotTarget.GetSnapshot().GetSnapshotId()))
+	})
+
+	It("should return an error when the specified snapshot id does not exist", func() {
+
+		req := &csi.GetSnapshotRequest{SnapshotId: "none-exist-id"}
+
+		if sc.Secrets != nil {
+			req.Secrets = sc.Secrets.GetSnapshotSecret
+		}
+
+		snapshot, err := r.GetSnapshot(context.Background(), req)
+		Expect(err).To(HaveOccurred())
+		Expect(snapshot).To(BeNil())
 	})
 })
 
