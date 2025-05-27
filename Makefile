@@ -38,9 +38,9 @@ build-sanity:
 	$(MAKE) -C cmd/csi-sanity all
 
 
-TEST_HOSTPATH_VERSION=v1.14.1
+TEST_HOSTPATH_VERSION=GET_SNAPSHOT
 TEST_HOSTPATH_SOURCE=bin/hostpath-source
-TEST_HOSTPATH_REPO=https://github.com/kubernetes-csi/csi-driver-host-path.git
+TEST_HOSTPATH_REPO=https://github.com/nixpanic/csi-driver-host-path.git
 bin/hostpathplugin:
 	mkdir -p $(@D)
 	if ! [ -d $(TEST_HOSTPATH_SOURCE) ]; then \
