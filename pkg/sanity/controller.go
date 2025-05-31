@@ -402,6 +402,23 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(vol.GetVolume().GetCapacityBytes()).To(Or(BeNumerically(">=", TestVolumeSize(sc)), BeZero()))
 		})
 
+		It("should not fail when topology is not provided", func(ctx SpecContext) {
+
+			if sc.NodeInfo.AccessibleTopology == nil {
+				Skip("Topology not supported")
+			}
+			By("creating a volume")
+			name := UniqueString("sanity-controller-create-no-topology")
+
+			req := MakeCreateVolumeReq(sc, name)
+			req.AccessibilityRequirements = nil
+
+			vol := r.MustCreateVolume(ctx, req)
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.GetVolume()).NotTo(BeNil())
+			Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+		})
+
 		It("should not fail when requesting to create a volume with already existing name and same capacity", func() {
 
 			By("creating a volume")
