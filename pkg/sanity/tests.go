@@ -43,8 +43,8 @@ func registerTestsInGinkgo(sc *TestContext) {
 	for _, test := range tests {
 		test := test
 		Describe(test.text, func() {
-			BeforeEach(func() {
-				sc.Setup()
+			BeforeEach(func(ctx SpecContext) {
+				sc.Setup(ctx)
 			})
 
 			test.body(sc)

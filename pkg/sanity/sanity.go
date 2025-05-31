@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v5/utils"
 	yaml "gopkg.in/yaml.v2"
 
@@ -182,6 +183,8 @@ type TestContext struct {
 	ControllerConn *grpc.ClientConn
 	Secrets        *CSISecrets
 
+	NodeInfo *csi.NodeGetInfoResponse
+
 	connAddress           string
 	controllerConnAddress string
 
@@ -243,7 +246,7 @@ func GinkgoTest(config *TestConfig) *TestContext {
 
 // Setup must be invoked before each test. It initialize per-test
 // variables in the context.
-func (sc *TestContext) Setup() {
+func (sc *TestContext) Setup(ctx context.Context) {
 	var err error
 
 	// Get StorageClass parameters from TestVolumeParametersFile
@@ -271,6 +274,10 @@ func (sc *TestContext) Setup() {
 		sc.Conn, err = utils.Connect(sc.Config.Address, sc.Config.DialOptions...)
 		Expect(err).NotTo(HaveOccurred())
 		sc.connAddress = sc.Config.Address
+		sc.NodeInfo, err = csi.NewNodeClient(sc.Conn).NodeGetInfo(ctx, &csi.NodeGetInfoRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sc.NodeInfo).NotTo(BeNil())
+		Expect(sc.NodeInfo.GetNodeId()).NotTo(BeEmpty())
 	} else {
 		By(fmt.Sprintf("reusing connection to CSI driver at %s", sc.connAddress))
 	}

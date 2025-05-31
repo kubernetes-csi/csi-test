@@ -772,12 +772,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				Skip("testnodevolumeattachlimit not enabled")
 			}
 
-			By("getting node info")
-			nodeInfo, err := r.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nodeInfo).NotTo(BeNil())
+			nodeInfo := sc.NodeInfo
 
 			if nodeInfo.MaxVolumesPerNode <= 0 {
 				Skip("No MaxVolumesPerNode")
@@ -800,7 +795,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			extraVolName := UniqueString("sanity-max-attach-limit-vol+1")
 			vol := r.MustCreateVolume(context.Background(), MakeCreateVolumeReq(sc, extraVolName))
 
-			_, err = r.ControllerPublishVolume(
+			_, err := r.ControllerPublishVolume(
 				context.Background(),
 				MakeControllerPublishVolumeReq(sc, vol.Volume.VolumeId, nid),
 			)
@@ -870,31 +865,23 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				MakeCreateVolumeReq(sc, name),
 			)
 
-			By("getting a node id")
-			nid, err := r.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
 			// ControllerPublishVolume
 			By("calling controllerpublish on that volume")
 
 			pubReq := &csi.ControllerPublishVolumeRequest{
 				VolumeId:         vol.GetVolume().GetVolumeId(),
-				NodeId:           nid.GetNodeId(),
+				NodeId:           sc.NodeInfo.GetNodeId(),
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				Readonly:         false,
 				Secrets:          sc.Secrets.ControllerPublishVolumeSecret,
 			}
 
-			conpubvol := r.MustControllerPublishVolume(context.Background(), pubReq)
+			r.MustControllerPublishVolume(context.Background(), pubReq)
 
 			// Publish again with different attributes.
 			pubReq.Readonly = true
 
-			conpubvol, err = r.ControllerPublishVolume(context.Background(), pubReq)
+			conpubvol, err := r.ControllerPublishVolume(context.Background(), pubReq)
 			ExpectErrorCode(conpubvol, err, codes.AlreadyExists)
 		})
 	})
@@ -1503,6 +1490,13 @@ func MakeCreateVolumeReq(sc *TestContext, name string) *csi.CreateVolumeRequest 
 		Parameters: sc.Config.TestVolumeParameters,
 	}
 
+	if sc.NodeInfo.AccessibleTopology != nil {
+		// Topology requirements are honored if provided by the driver
+		req.AccessibilityRequirements = &csi.TopologyRequirement{
+			Requisite: []*csi.Topology{sc.NodeInfo.AccessibleTopology},
+		}
+	}
+
 	if sc.Secrets != nil {
 		req.Secrets = sc.Secrets.CreateVolumeSecret
 	}
@@ -1593,27 +1587,11 @@ func MakeModifyVolumeReq(sc *TestContext, volID string) *csi.ControllerModifyVol
 func VolumeLifecycle(r *Resources, sc *TestContext, count int) {
 	// CSI spec poses no specific requirements for the cluster/storage setups that a SP MUST support. To perform
 	// meaningful checks the following test assumes that topology-aware provisioning on a single node setup is supported
-	By("getting node information")
-	ni, err := r.NodeGetInfo(
-		context.Background(),
-		&csi.NodeGetInfoRequest{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ni).NotTo(BeNil())
-	Expect(ni.GetNodeId()).NotTo(BeEmpty())
-
-	var accReqs *csi.TopologyRequirement
-	if ni.AccessibleTopology != nil {
-		// Topology requirements are honored if provided by the driver
-		accReqs = &csi.TopologyRequirement{
-			Requisite: []*csi.Topology{ni.AccessibleTopology},
-		}
-	}
 
 	// Create Volume First
 	By("creating a single node writer volume")
 	name := UniqueString(fmt.Sprintf("sanity-controller-publish-%d", count))
 	req := MakeCreateVolumeReq(sc, name)
-	req.AccessibilityRequirements = accReqs
 
 	vol := r.MustCreateVolume(context.Background(), req)
 
@@ -1624,7 +1602,7 @@ func VolumeLifecycle(r *Resources, sc *TestContext, count int) {
 			context.Background(),
 			&csi.ControllerPublishVolumeRequest{
 				VolumeId:         vol.GetVolume().GetVolumeId(),
-				NodeId:           ni.GetNodeId(),
+				NodeId:           sc.NodeInfo.GetNodeId(),
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				VolumeContext:    vol.GetVolume().GetVolumeContext(),
 				Readonly:         false,
