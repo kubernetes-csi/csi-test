@@ -469,7 +469,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("creating a volume")
-			vol1Req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-source-vol"))
+			vol1Req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-source-vol-for-snap"))
 			vol1 := r.MustCreateVolume(context.Background(), vol1Req)
 
 			By("creating a snapshot from the volume")
@@ -523,7 +523,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("creating a volume")
-			vol1Name := UniqueString("sanity-controller-source-vol")
+			vol1Name := UniqueString("sanity-controller-source-vol-for-clone")
 			vol1Req := MakeCreateVolumeReq(sc, vol1Name)
 			volume1 := r.MustCreateVolume(context.Background(), vol1Req)
 
