@@ -68,29 +68,13 @@ func runControllerTest(sc *TestContext, r *Resources, controllerPublishSupported
 
 	name := UniqueString(fmt.Sprintf("sanity-node-full-%d", count))
 
-	By("getting node information")
-	ni, err := r.NodeGetInfo(
-		context.Background(),
-		&csi.NodeGetInfoRequest{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ni).NotTo(BeNil())
-	Expect(ni.GetNodeId()).NotTo(BeEmpty())
-
-	var accReqs *csi.TopologyRequirement
-	if ni.AccessibleTopology != nil {
-		// Topology requirements are honored if provided by the driver
-		accReqs = &csi.TopologyRequirement{
-			Requisite: []*csi.Topology{ni.AccessibleTopology},
-		}
-	}
-
 	// Create Volume First
 	By("creating a single node writer volume")
 	req := MakeCreateVolumeReq(sc, name)
-	req.AccessibilityRequirements = accReqs
 	vol := r.MustCreateVolume(context.Background(), req)
 
 	var conpubvol *csi.ControllerPublishVolumeResponse
+	var err error
 	if controllerPublishSupported {
 		By("controller publishing volume")
 
@@ -98,7 +82,7 @@ func runControllerTest(sc *TestContext, r *Resources, controllerPublishSupported
 			context.Background(),
 			&csi.ControllerPublishVolumeRequest{
 				VolumeId:         vol.GetVolume().GetVolumeId(),
-				NodeId:           ni.GetNodeId(),
+				NodeId:           sc.NodeInfo.GetNodeId(),
 				VolumeCapability: TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER),
 				VolumeContext:    vol.GetVolume().GetVolumeContext(),
 				Readonly:         false,
@@ -425,16 +409,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			volid := vol.GetVolume().GetVolumeId()
 			volpath := sc.TargetPath + "/target"
 
-			By("Getting a node id")
-			nid, err := r.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
 			By("Staging and publishing a volume")
-			conpubvol := controllerPublishVolume(name, vol, nid)
+			conpubvol := controllerPublishVolume(name, vol, sc.NodeInfo)
 			_ = nodeStageVolume(name, vol, conpubvol)
 			_ = nodePublishVolume(name, vol, conpubvol)
 
@@ -605,15 +581,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			vol := createVolume(name)
 
-			By("getting a node id")
-			nid, err := r.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
-			conpubvol := controllerPublishVolume(name, vol, nid)
+			conpubvol := controllerPublishVolume(name, vol, sc.NodeInfo)
 
 			// NodeStageVolume
 			_ = nodeStageVolume(name, vol, conpubvol)
@@ -701,15 +669,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				Expect(rsp.GetCapacityBytes()).To(Equal(TestVolumeExpandSize(sc)))
 			}
 
-			By("getting a node id")
-			nid, err := r.NodeGetInfo(
-				context.Background(),
-				&csi.NodeGetInfoRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
-
-			conpubvol := controllerPublishVolume(name, vol, nid)
+			conpubvol := controllerPublishVolume(name, vol, sc.NodeInfo)
 
 			// NodeStageVolume
 			_ = nodeStageVolume(name, vol, conpubvol)
@@ -718,7 +678,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			_ = nodePublishVolume(name, vol, conpubvol)
 
 			By("expanding the volume on a node")
-			_, err = r.NodeExpandVolume(
+			_, err := r.NodeExpandVolume(
 				context.Background(),
 				&csi.NodeExpandVolumeRequest{
 					VolumeId:   vol.GetVolume().GetVolumeId(),
