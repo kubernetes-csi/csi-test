@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v5/utils"
 	yaml "gopkg.in/yaml.v2"
 
@@ -105,6 +106,10 @@ type TestConfig struct {
 	// TestVolumeMutableParametersFile for setting ModifyVolumeRequest.MutableParameters.
 	TestVolumeMutableParametersFile string
 	TestVolumeMutableParameters     map[string]string
+
+	// TestTopologyRequirementsFile for setting CreateVolumeRequest.AccessibilityRequirements.
+	TestTopologyRequirementsFile string
+	TestTopologyRequirements     *csi.TopologyRequirement
 
 	// Callback functions to customize the creation of target and staging
 	// directories. Returns the new paths for mount and staging.
@@ -252,6 +257,8 @@ func (sc *TestContext) Setup() {
 	loadFromFile(sc.Config.TestSnapshotParametersFile, &sc.Config.TestSnapshotParameters)
 	// Get VolumeAttributeClass parameters from TestVolumeMutableParametersFile
 	loadFromFile(sc.Config.TestVolumeMutableParametersFile, &sc.Config.TestVolumeMutableParameters)
+	// Get TopologyRequirement parameters from TestTopologyRequirementsFile
+	loadFromFile(sc.Config.TestTopologyRequirementsFile, &sc.Config.TestTopologyRequirements)
 
 	if len(sc.Config.SecretsFile) > 0 {
 		sc.Secrets, err = loadSecrets(sc.Config.SecretsFile)

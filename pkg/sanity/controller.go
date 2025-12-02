@@ -1504,6 +1504,10 @@ func MakeCreateVolumeReq(sc *TestContext, name string) *csi.CreateVolumeRequest 
 		Parameters: sc.Config.TestVolumeParameters,
 	}
 
+	if sc.Config.TestTopologyRequirements != nil {
+		req.AccessibilityRequirements = sc.Config.TestTopologyRequirements
+	}
+
 	if sc.Secrets != nil {
 		req.Secrets = sc.Secrets.CreateVolumeSecret
 	}
