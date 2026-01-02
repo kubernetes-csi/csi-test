@@ -469,7 +469,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("creating a volume")
-			vol1Req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-source-vol"))
+			vol1Req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-source-vol-snap"))
 			vol1 := r.MustCreateVolume(context.Background(), vol1Req)
 
 			By("creating a snapshot from the volume")
@@ -505,7 +505,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("creating a volume from source snapshot")
-			volName := UniqueString("sanity-controller-vol-from-snap")
+			volName := UniqueString("sanity-controller-vol-from-snap-not-found")
 			volReq := MakeCreateVolumeReq(sc, volName)
 			volReq.VolumeContentSource = &csi.VolumeContentSource{
 				Type: &csi.VolumeContentSource_Snapshot{
@@ -524,7 +524,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("creating a volume")
-			vol1Name := UniqueString("sanity-controller-source-vol")
+			vol1Name := UniqueString("sanity-controller-source-vol-clone")
 			vol1Req := MakeCreateVolumeReq(sc, vol1Name)
 			volume1 := r.MustCreateVolume(context.Background(), vol1Req)
 
@@ -547,8 +547,8 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				Skip("Volume Cloning not supported")
 			}
 
-			By("creating a volume from source snapshot")
-			volName := UniqueString("sanity-controller-vol-from-snap")
+			By("creating a volume from source volume")
+			volName := UniqueString("sanity-controller-vol-from-vol-not-found")
 			volReq := MakeCreateVolumeReq(sc, volName)
 			volReq.VolumeContentSource = &csi.VolumeContentSource{
 				Type: &csi.VolumeContentSource_Volume{
@@ -580,7 +580,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			}
 
 			By("failing to create a volume")
-			volName := UniqueString("sanity-controller-vol-with-mutable-parameters")
+			volName := UniqueString("sanity-controller-vol-with-mutable-parameters-invalid")
 			volReq := MakeCreateVolumeReq(sc, volName)
 			volReq.MutableParameters = map[string]string{
 				"XXX_FakeKey": "XXX_FakeValue",
