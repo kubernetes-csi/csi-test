@@ -38,7 +38,7 @@ func Connect(address string, dialOptions ...grpc.DialOption) (*grpc.ClientConn, 
 				}))
 	}
 
-	conn, err := grpc.Dial(address, dialOptions...)
+	conn, err := grpc.NewClient(address, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
