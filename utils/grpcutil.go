@@ -45,14 +45,12 @@ func Connect(address string, dialOptions ...grpc.DialOption) (*grpc.ClientConn, 
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	conn.Connect()
 	for {
-		state := conn.GetState()
-		if state == connectivity.Ready {
-			return conn, nil
-		}
-		if !conn.WaitForStateChange(ctx, state) {
+		if !conn.WaitForStateChange(ctx, conn.GetState()) {
 			return conn, fmt.Errorf("Connection timed out")
+		}
+		if conn.GetState() == connectivity.Ready {
+			return conn, nil
 		}
 	}
 }
