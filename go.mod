@@ -1,8 +1,6 @@
 module github.com/kubernetes-csi/csi-test/v5
 
-go 1.23.0
-
-toolchain go1.24.7
+go 1.25.10
 
 require (
 	github.com/container-storage-interface/spec v1.12.0
