@@ -32,9 +32,9 @@ func Connect(address string, dialOptions ...grpc.DialOption) (*grpc.ClientConn, 
 	u, err := url.Parse(address)
 	if err == nil && (!u.IsAbs() || u.Scheme == "unix") {
 		dialOptions = append(dialOptions,
-			grpc.WithDialer(
-				func(addr string, timeout time.Duration) (net.Conn, error) {
-					return net.DialTimeout("unix", u.Path, timeout)
+			grpc.WithContextDialer(
+				func(ctx context.Context, addr string) (net.Conn, error) {
+					return (&net.Dialer{}).DialContext(ctx, "unix", u.Path)
 				}))
 	}
 
@@ -45,12 +45,14 @@ func Connect(address string, dialOptions ...grpc.DialOption) (*grpc.ClientConn, 
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+	conn.Connect()
 	for {
-		if !conn.WaitForStateChange(ctx, conn.GetState()) {
-			return conn, fmt.Errorf("Connection timed out")
-		}
-		if conn.GetState() == connectivity.Ready {
+		state := conn.GetState()
+		if state == connectivity.Ready {
 			return conn, nil
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			return conn, fmt.Errorf("Connection timed out")
 		}
 	}
 }
