@@ -36,6 +36,9 @@ func Connect(address string, dialOptions ...grpc.DialOption) (*grpc.ClientConn, 
 				func(ctx context.Context, addr string) (net.Conn, error) {
 					return (&net.Dialer{}).DialContext(ctx, "unix", u.Path)
 				}))
+		if u.Scheme != "unix" {
+			address = "unix:" + address
+		}
 	}
 
 	conn, err := grpc.NewClient(address, dialOptions...)
