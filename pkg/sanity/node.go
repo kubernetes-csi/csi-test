@@ -169,12 +169,13 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 	var (
 		r *Resources
 
-		providesControllerService    bool
-		controllerPublishSupported   bool
-		nodeStageSupported           bool
-		nodeVolumeStatsSupported     bool
-		nodeExpansionSupported       bool
-		controllerExpansionSupported bool
+		providesControllerService      bool
+		controllerPublishSupported     bool
+		nodeStageSupported             bool
+		nodeVolumeStatsSupported       bool
+		nodeExpansionSupported         bool
+		controllerExpansionSupported   bool
+		singleNodeMultiWriterSupported bool
 	)
 
 	createVolumeWithCapability := func(volumeName string, volCap *csi.VolumeCapability) *csi.CreateVolumeResponse {
@@ -304,6 +305,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		if providesControllerService {
 			controllerExpansionSupported = isControllerCapabilitySupported(cl, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME)
 		}
+		singleNodeMultiWriterSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER)
 		r = &Resources{
 			Context:          sc,
 			ControllerClient: cl,
@@ -403,6 +405,53 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				},
 			)
 			ExpectErrorCode(rsp, err, codes.InvalidArgument)
+		})
+
+		Describe("with single node multi writer capability", func() {
+			BeforeEach(func() {
+				if !singleNodeMultiWriterSupported {
+					Skip("Service does not have single node multi writer capability")
+				}
+			})
+
+			It("should fail when volume with single node single writer access mode is already mounted at a different target path", func() {
+				By("creating a single node single writer volume")
+				name := UniqueString("sanity-node-publish-single-node-single-writer")
+				cap := TestVolumeCapabilityWithAccessType(sc, csi.VolumeCapability_AccessMode_SINGLE_NODE_SINGLE_WRITER)
+				vol := createVolumeWithCapability(name, cap)
+
+				By("Getting a node id")
+				nid, err := r.NodeGetInfo(
+					context.Background(),
+					&csi.NodeGetInfoRequest{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(nid).NotTo(BeNil())
+				Expect(nid.GetNodeId()).NotTo(BeEmpty())
+
+				By("Staging and publishing a volume")
+				conpubvol := controllerPublishVolumeWithCapability(name, vol, nid, cap)
+				_ = nodeStageVolumeWithCapability(name, vol, conpubvol, cap)
+				_ = nodePublishVolumeWithCapability(name, vol, conpubvol, cap)
+
+				nodePublishRequest := &csi.NodePublishVolumeRequest{
+					VolumeId:         vol.GetVolume().GetVolumeId(),
+					TargetPath:       sc.TargetPath + "/other_target",
+					VolumeCapability: cap,
+					VolumeContext:    vol.GetVolume().GetVolumeContext(),
+					Secrets:          sc.Secrets.NodePublishVolumeSecret,
+				}
+				if conpubvol != nil {
+					nodePublishRequest.PublishContext = conpubvol.GetPublishContext()
+				}
+				if nodeStageSupported {
+					nodePublishRequest.StagingTargetPath = sc.StagingPath
+				}
+
+				rsp, err := r.NodePublishVolume(
+					context.Background(),
+					nodePublishRequest)
+				ExpectErrorCode(rsp, err, codes.FailedPrecondition)
+			})
 		})
 	})
 
