@@ -33,8 +33,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	// Force go to vendor mockgen, see https://github.com/golang/mock/issues/415#issuecomment-602547154
-	_ "github.com/golang/mock/mockgen/model"
+	// Force Go to vendor the mockgen model package used by go:generate.
+	_ "go.uber.org/mock/mockgen/model"
 )
 
 var (
