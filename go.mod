@@ -13,7 +13,7 @@ require (
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 )
 
 require (
