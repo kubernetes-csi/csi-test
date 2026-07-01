@@ -24,6 +24,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-test/v5/utils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -47,7 +48,8 @@ func (s *simpleDriver) Probe(context.Context, *csi.ProbeRequest) (*csi.ProbeResp
 }
 
 func (s *simpleDriver) GetPluginInfo(
-	context.Context, *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
+	context.Context, *csi.GetPluginInfoRequest,
+) (*csi.GetPluginInfoResponse, error) {
 	return &csi.GetPluginInfoResponse{
 		Name:          "simpleDriver",
 		VendorVersion: "0.1.1",
@@ -95,7 +97,6 @@ func (s *simpleDriver) Stop() {
 
 // Tests
 func TestSimpleDriver(t *testing.T) {
-
 	// Setup simple driver
 	s := &simpleDriver{}
 	err := s.Start()
@@ -105,7 +106,7 @@ func TestSimpleDriver(t *testing.T) {
 	defer s.Stop()
 
 	// Setup a connection to the driver
-	conn, err := utils.Connect(s.Address(), grpc.WithInsecure())
+	conn, err := utils.Connect(s.Address(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Errorf("Error: %s", err.Error())
 	}
