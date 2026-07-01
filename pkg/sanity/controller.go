@@ -95,7 +95,6 @@ func isControllerCapabilitySupported(
 		&csi.ControllerGetCapabilitiesRequest{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(caps).NotTo(BeNil())
-	Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 	for _, cap := range caps.GetCapabilities() {
 		Expect(cap.GetRpc()).NotTo(BeNil())
@@ -130,7 +129,6 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			By("checking successful response")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(caps).NotTo(BeNil())
-			Expect(caps.GetCapabilities()).NotTo(BeNil())
 
 			for _, cap := range caps.GetCapabilities() {
 				Expect(cap.GetRpc()).NotTo(BeNil())
