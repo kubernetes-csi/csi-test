@@ -509,7 +509,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			volReq.VolumeContentSource = &csi.VolumeContentSource{
 				Type: &csi.VolumeContentSource_Snapshot{
 					Snapshot: &csi.VolumeContentSource_SnapshotSource{
-						SnapshotId: "non-existing-snapshot-id",
+						SnapshotId: sc.Config.IDGen.GenerateUniqueValidSnapshotID(),
 					},
 				},
 			}
@@ -1299,7 +1299,7 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *TestContex
 
 	It("should succeed when an invalid snapshot id is used", func() {
 
-		req := MakeDeleteSnapshotReq(sc, "reallyfakesnapshotid")
+		req := MakeDeleteSnapshotReq(sc, sc.Config.IDGen.GenerateInvalidSnapshotID())
 		_, err := r.DeleteSnapshot(context.Background(), req)
 		Expect(err).NotTo(HaveOccurred())
 	})

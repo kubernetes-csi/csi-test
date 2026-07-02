@@ -37,6 +37,15 @@ type IDGenerator interface {
 	// case this method should output any non-empty ID
 	GenerateInvalidVolumeID() string
 
+	// GenerateUniqueValidSnapshotID must generate a unique Snapshot ID that the CSI
+	// Driver considers in valid form
+	GenerateUniqueValidSnapshotID() string
+
+	// GenerateInvalidSnapshotID must output a Snapshot ID that the CSI Driver MAY
+	// consider invalid. Some drivers may not have requirements on IDs in which
+	// case this method should output any non-empty ID
+	GenerateInvalidSnapshotID() string
+
 	// GenerateUniqueValidNodeID must generate a unique Node ID that the CSI
 	// Driver considers in valid form
 	GenerateUniqueValidNodeID() string
@@ -58,6 +67,14 @@ func (d DefaultIDGenerator) GenerateUniqueValidVolumeID() string {
 
 func (d DefaultIDGenerator) GenerateInvalidVolumeID() string {
 	return "fake-vol-id"
+}
+
+func (d DefaultIDGenerator) GenerateUniqueValidSnapshotID() string {
+	return fmt.Sprintf("fake-snap-id-%s", uuid.New().String()[:10])
+}
+
+func (d DefaultIDGenerator) GenerateInvalidSnapshotID() string {
+	return "fake-snap-id"
 }
 
 func (d DefaultIDGenerator) GenerateUniqueValidNodeID() string {
