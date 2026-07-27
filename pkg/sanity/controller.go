@@ -40,6 +40,10 @@ const (
 	DefTestExpandIncrement int64 = 1 * 1024 * 1024 * 1024
 
 	MaxNameLength int = 128
+
+	// CSI 1.13 removed the deprecated VOLUME_CONDITION capability name.
+	// Keep accepting its wire value because older drivers may still report it.
+	deprecatedControllerVolumeCondition csi.ControllerServiceCapability_RPC_Type = 11
 )
 
 func TestVolumeSize(sc *TestContext) int64 {
@@ -150,6 +154,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_GET_SNAPSHOT:
 				case csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH:
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH:
+				case deprecatedControllerVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}

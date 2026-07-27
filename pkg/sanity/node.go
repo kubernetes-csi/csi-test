@@ -27,6 +27,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	// CSI 1.13 removed the deprecated VOLUME_CONDITION capability name.
+	// Keep accepting its wire value because older drivers may still report it.
+	deprecatedNodeVolumeCondition csi.NodeServiceCapability_RPC_Type = 4
+)
+
 func isNodeCapabilitySupported(c csi.NodeClient,
 	capType csi.NodeServiceCapability_RPC_Type,
 ) bool {
@@ -343,6 +349,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				case csi.NodeServiceCapability_RPC_VOLUME_MOUNT_GROUP:
 				case csi.NodeServiceCapability_RPC_GET_VOLUME_HEALTH:
 				case csi.NodeServiceCapability_RPC_GET_STORAGE_HEALTH:
+				case deprecatedNodeVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
