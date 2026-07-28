@@ -40,6 +40,10 @@ const (
 	DefTestExpandIncrement int64 = 1 * 1024 * 1024 * 1024
 
 	MaxNameLength int = 128
+
+	// CSI 1.13 removed the deprecated VOLUME_CONDITION capability name.
+	// Keep accepting its wire value because older drivers may still report it.
+	deprecatedControllerVolumeCondition csi.ControllerServiceCapability_RPC_Type = 11
 )
 
 func TestVolumeSize(sc *TestContext) int64 {
@@ -146,9 +150,11 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_MODIFY_VOLUME:
 				case csi.ControllerServiceCapability_RPC_LIST_VOLUMES_PUBLISHED_NODES:
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME:
-				case csi.ControllerServiceCapability_RPC_VOLUME_CONDITION:
 				case csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER:
 				case csi.ControllerServiceCapability_RPC_GET_SNAPSHOT:
+				case csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH:
+				case csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH:
+				case deprecatedControllerVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
@@ -1566,6 +1572,74 @@ var _ = DescribeSanity("ModifyVolume [Controller Server]", func(sc *TestContext)
 		}
 		rsp, err := r.ControllerModifyVolume(context.Background(), modifyReq)
 		ExpectErrorCode(rsp, err, codes.InvalidArgument)
+	})
+})
+
+var _ = DescribeSanity("ControllerGetVolumeHealth [Controller Server]", func(sc *TestContext) {
+	var r *Resources
+
+	BeforeEach(func() {
+		r = &Resources{
+			Context:          sc,
+			ControllerClient: csi.NewControllerClient(sc.ControllerConn),
+			NodeClient:       csi.NewNodeClient(sc.Conn),
+		}
+		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH) {
+			Skip("ControllerGetVolumeHealth not supported")
+		}
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
+	It("should fail when no volume id is provided", func() {
+		rsp, err := r.ControllerGetVolumeHealth(
+			context.Background(),
+			&csi.ControllerGetVolumeHealthRequest{})
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
+	})
+
+	It("should return health for a valid volume", func() {
+		name := UniqueString("sanity-controller-get-volume-health")
+		vol := r.MustCreateVolume(context.Background(), MakeCreateVolumeReq(sc, name))
+
+		rsp, err := r.ControllerGetVolumeHealth(
+			context.Background(),
+			&csi.ControllerGetVolumeHealthRequest{
+				VolumeId: vol.GetVolume().GetVolumeId(),
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
+		Expect(rsp.GetVolumeHealth()).NotTo(BeNil())
+		Expect(rsp.GetVolumeHealth().GetVolumeId()).To(Equal(vol.GetVolume().GetVolumeId()))
+	})
+})
+
+var _ = DescribeSanity("ControllerListVolumeHealth [Controller Server]", func(sc *TestContext) {
+	var r *Resources
+
+	BeforeEach(func() {
+		r = &Resources{
+			Context:          sc,
+			ControllerClient: csi.NewControllerClient(sc.ControllerConn),
+			NodeClient:       csi.NewNodeClient(sc.Conn),
+		}
+		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH) {
+			Skip("ControllerListVolumeHealth not supported")
+		}
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
+	It("should return appropriate response", func() {
+		rsp, err := r.ControllerListVolumeHealth(
+			context.Background(),
+			&csi.ControllerListVolumeHealthRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
 	})
 })
 

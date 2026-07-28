@@ -27,6 +27,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	// CSI 1.13 removed the deprecated VOLUME_CONDITION capability name.
+	// Keep accepting its wire value because older drivers may still report it.
+	deprecatedNodeVolumeCondition csi.NodeServiceCapability_RPC_Type = 4
+)
+
 func isNodeCapabilitySupported(c csi.NodeClient,
 	capType csi.NodeServiceCapability_RPC_Type,
 ) bool {
@@ -176,6 +182,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		nodeExpansionSupported         bool
 		controllerExpansionSupported   bool
 		singleNodeMultiWriterSupported bool
+		nodeVolumeHealthSupported      bool
+		nodeStorageHealthSupported     bool
 	)
 
 	createVolumeWithCapability := func(volumeName string, volCap *csi.VolumeCapability) *csi.CreateVolumeResponse {
@@ -306,6 +314,8 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 			controllerExpansionSupported = isControllerCapabilitySupported(cl, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME)
 		}
 		singleNodeMultiWriterSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER)
+		nodeVolumeHealthSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_GET_VOLUME_HEALTH)
+		nodeStorageHealthSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_GET_STORAGE_HEALTH)
 		r = &Resources{
 			Context:          sc,
 			ControllerClient: cl,
@@ -335,9 +345,11 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				case csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME:
 				case csi.NodeServiceCapability_RPC_GET_VOLUME_STATS:
 				case csi.NodeServiceCapability_RPC_EXPAND_VOLUME:
-				case csi.NodeServiceCapability_RPC_VOLUME_CONDITION:
 				case csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER:
 				case csi.NodeServiceCapability_RPC_VOLUME_MOUNT_GROUP:
+				case csi.NodeServiceCapability_RPC_GET_VOLUME_HEALTH:
+				case csi.NodeServiceCapability_RPC_GET_STORAGE_HEALTH:
+				case deprecatedNodeVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
@@ -797,6 +809,74 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred(), "while expanding volume on node")
+		})
+	})
+
+	Describe("NodeGetVolumeHealth", func() {
+		BeforeEach(func() {
+			if !nodeVolumeHealthSupported {
+				Skip("NodeGetVolumeHealth not supported")
+			}
+		})
+
+		It("should fail when no volume id is provided", func() {
+			rsp, err := r.NodeGetVolumeHealth(
+				context.Background(),
+				&csi.NodeGetVolumeHealthRequest{},
+			)
+			ExpectErrorCode(rsp, err, codes.InvalidArgument)
+		})
+
+		It("should return health for a valid volume", func() {
+			name := UniqueString("sanity-node-get-volume-health")
+
+			vol := createVolume(name)
+
+			By("getting a node id")
+			nid, err := r.NodeGetInfo(
+				context.Background(),
+				&csi.NodeGetInfoRequest{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nid).NotTo(BeNil())
+			Expect(nid.GetNodeId()).NotTo(BeEmpty())
+
+			conpubvol := controllerPublishVolume(name, vol, nid)
+
+			// NodeStageVolume
+			_ = nodeStageVolume(name, vol, conpubvol)
+
+			// NodePublishVolume
+			_ = nodePublishVolume(name, vol, conpubvol)
+
+			// NodeGetVolumeHealth
+			By("Get node volume health")
+			rsp, err := r.NodeGetVolumeHealth(
+				context.Background(),
+				&csi.NodeGetVolumeHealthRequest{
+					VolumeId: vol.GetVolume().GetVolumeId(),
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rsp).NotTo(BeNil())
+			Expect(rsp.GetVolumeHealth()).NotTo(BeNil())
+			Expect(rsp.GetVolumeHealth().GetVolumeId()).To(Equal(vol.GetVolume().GetVolumeId()))
+		})
+	})
+
+	Describe("NodeGetStorageHealth", func() {
+		BeforeEach(func() {
+			if !nodeStorageHealthSupported {
+				Skip("NodeGetStorageHealth not supported")
+			}
+		})
+
+		It("should return appropriate response", func() {
+			rsp, err := r.NodeGetStorageHealth(
+				context.Background(),
+				&csi.NodeGetStorageHealthRequest{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rsp).NotTo(BeNil())
 		})
 	})
 
