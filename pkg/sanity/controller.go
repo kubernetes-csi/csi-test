@@ -1417,6 +1417,43 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 		// TODO: review if the second snapshot create is really necessary
 		r.MustCreateSnapshot(context.Background(), snapReq1)
 	})
+
+	It("should succeed when creating a snapshot with accessibility requirements", func() {
+		if !isPluginCapabilitySupported(csi.NewIdentityClient(sc.ControllerConn), csi.PluginCapability_Service_SNAPSHOT_ACCESSIBILITY_CONSTRAINTS) {
+			Skip("SNAPSHOT_ACCESSIBILITY_CONSTRAINTS not supported")
+		}
+
+		By("getting node information")
+		ni, err := r.NodeGetInfo(context.Background(), &csi.NodeGetInfoRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ni).NotTo(BeNil())
+		if ni.GetAccessibleTopology() == nil {
+			Skip("node does not report accessible topology")
+		}
+
+		By("creating a volume")
+		volReq := MakeCreateVolumeReq(sc, UniqueString("CreateSnapshot-topology-volume"))
+		volReq.AccessibilityRequirements = &csi.TopologyRequirement{
+			Requisite: []*csi.Topology{ni.GetAccessibleTopology()},
+		}
+		volume := r.MustCreateVolume(context.Background(), volReq)
+
+		By("creating a snapshot constrained to the node's topology")
+		snapReq := MakeCreateSnapshotReq(sc, UniqueString("CreateSnapshot-topology-snapshot"), volume.GetVolume().GetVolumeId())
+		snapReq.AccessibilityRequirements = &csi.TopologyRequirement{
+			Requisite: []*csi.Topology{ni.GetAccessibleTopology()},
+			Preferred: []*csi.Topology{ni.GetAccessibleTopology()},
+		}
+
+		snap := r.MustCreateSnapshot(context.Background(), snapReq)
+
+		// accessible_topology is optional in the response, but if the driver
+		// reports it, every returned topology must be one of the requested
+		// requisite topologies.
+		for _, topo := range snap.GetSnapshot().GetAccessibleTopology() {
+			Expect(topo).To(Equal(ni.GetAccessibleTopology()))
+		}
+	})
 })
 
 var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext) {
