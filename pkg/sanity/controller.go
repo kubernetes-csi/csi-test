@@ -209,47 +209,55 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 		})
 
 		It("check the presence of new volumes and absence of deleted ones in the volume list", func() {
-			// List Volumes before creating new volume.
+			containsVolume := func(response *csi.ListVolumesResponse, volumeID string) bool {
+				for _, entry := range response.GetEntries() {
+					if entry.GetVolume().GetVolumeId() == volumeID {
+						return true
+					}
+				}
+				return false
+			}
+
+			By("creating a volume")
+			name := UniqueString("sanity-list-volumes")
+			vol := r.MustCreateVolume(
+				context.Background(),
+				MakeCreateVolumeReq(sc, name),
+			)
+			volumeID := vol.GetVolume().GetVolumeId()
+
+			By("checking that the created volume is listed")
 			vols, err := r.ListVolumes(
 				context.Background(),
 				&csi.ListVolumesRequest{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vols).NotTo(BeNil())
-
-			totalVols := len(vols.GetEntries())
-
-			By("creating a volume")
-			name := "sanity"
-
-			// Create a new volume.
-			req := MakeCreateVolumeReq(sc, name)
-			vol := r.MustCreateVolume(context.Background(), req)
-
-			// List volumes and check for the newly created volume.
-			vols, err = r.ListVolumes(
-				context.Background(),
-				&csi.ListVolumesRequest{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vols).NotTo(BeNil())
-			Expect(len(vols.GetEntries())).To(Equal(totalVols + 1))
+			Expect(containsVolume(vols, volumeID)).To(
+				BeTrue(),
+				"created volume %q was not returned by ListVolumes",
+				volumeID,
+			)
 
 			By("deleting the volume")
-
 			delReq := &csi.DeleteVolumeRequest{
-				VolumeId: vol.GetVolume().GetVolumeId(),
+				VolumeId: volumeID,
 				Secrets:  sc.Secrets.DeleteVolumeSecret,
 			}
 
 			_, err = r.DeleteVolume(context.Background(), delReq)
 			Expect(err).NotTo(HaveOccurred())
 
-			// List volumes and check if the deleted volume exists in the volume list.
+			By("checking that the deleted volume is no longer listed")
 			vols, err = r.ListVolumes(
 				context.Background(),
 				&csi.ListVolumesRequest{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vols).NotTo(BeNil())
-			Expect(len(vols.GetEntries())).To(Equal(totalVols))
+			Expect(containsVolume(vols, volumeID)).To(
+				BeFalse(),
+				"deleted volume %q was still returned by ListVolumes",
+				volumeID,
+			)
 		})
 
 		// Disabling this below case as it is fragile and results are inconsistent
