@@ -202,7 +202,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			vols, err := r.ListVolumes(
 				context.Background(),
 				&csi.ListVolumesRequest{
-					StartingToken: "invalid-token",
+					StartingToken: sc.Config.TestInvalidListVolumesStartingToken,
 				},
 			)
 			ExpectErrorCode(vols, err, codes.Aborted)
