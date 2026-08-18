@@ -22,10 +22,10 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	mock_driver "github.com/kubernetes-csi/csi-test/v5/driver"
 	mock_utils "github.com/kubernetes-csi/csi-test/v5/utils"
+	"go.uber.org/mock/gomock"
 )
 
 func TestPluginInfoResponse(t *testing.T) {

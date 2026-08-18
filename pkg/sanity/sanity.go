@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -31,6 +30,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +50,7 @@ type CSISecrets struct {
 	ControllerExpandVolumeSecret               map[string]string `yaml:"ControllerExpandVolumeSecret"`
 	ControllerModifyVolumeSecret               map[string]string `yaml:"ControllerModifyVolumeSecret"`
 	ListSnapshotsSecret                        map[string]string `yaml:"ListSnapshotsSecret"`
+	GetSnapshotSecret                          map[string]string `yaml:"GetSnapshotSecret"`
 }
 
 // TestConfig provides the configuration for the sanity tests. It must be
@@ -73,7 +74,7 @@ type TestConfig struct {
 	Address string
 
 	// DialOptions specifies the options that are to be used
-	// when connecting to Address. The default is grpc.WithInsecure().
+	// when connecting to Address. The default is grpc.WithTransportCredentials(insecure.NewCredentials()).
 	// A dialer will be added for Unix Domain Sockets.
 	DialOptions []grpc.DialOption
 
@@ -209,8 +210,8 @@ func NewTestConfig() TestConfig {
 		IdempotentCount:      10,
 		CheckPathCmdTimeout:  10 * time.Second,
 
-		DialOptions:           []grpc.DialOption{grpc.WithInsecure(), grpc.WithAuthority("localhost")},
-		ControllerDialOptions: []grpc.DialOption{grpc.WithInsecure(), grpc.WithAuthority("localhost")},
+		DialOptions:           []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority("localhost")},
+		ControllerDialOptions: []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority("localhost")},
 	}
 }
 
@@ -347,7 +348,6 @@ func (sc *TestContext) Finalize() {
 // target path using a custom command, custom function or falls back to the
 // default using mkdir and returns the new target path.
 func createMountTargetLocation(targetPath string, createPathCmd string, customCreateDir func(string) (string, error), timeout time.Duration) (string, error) {
-
 	// Return the target path if empty.
 	if targetPath == "" {
 		return targetPath, nil
@@ -420,7 +420,7 @@ func removeMountTargetLocation(targetPath string, removePathCmd string, customRe
 func loadSecrets(path string) (*CSISecrets, error) {
 	var creds CSISecrets
 
-	yamlFile, err := ioutil.ReadFile(path)
+	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		return &creds, fmt.Errorf("failed to read file %q: #%v", path, err)
 	}
@@ -436,7 +436,7 @@ func loadSecrets(path string) (*CSISecrets, error) {
 // loadFromFile reads struct from given file path.
 func loadFromFile(from string, to interface{}) {
 	if len(from) != 0 {
-		yamlFile, err := ioutil.ReadFile(from)
+		yamlFile, err := os.ReadFile(from)
 		if err != nil {
 			panic(fmt.Sprintf("failed to read file %q: %v", from, err))
 		}
