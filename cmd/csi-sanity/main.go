@@ -85,6 +85,7 @@ func main() {
 	durationVar(&config.CheckPathCmdTimeout, "checkpathcmdtimeout", "Timeout for the command to check a given path, in seconds")
 	stringVar(&config.SecretsFile, "secrets", "CSI secrets file")
 	stringVar(&config.TestVolumeAccessType, "testvolumeaccesstype", "Volume capability access type, valid values are mount or block")
+	stringVar(&config.TestInvalidListVolumesStartingToken, "testinvalidlistvolumesstartingtoken", "Invalid starting token for ListVolumes")
 	int64Var(&config.TestVolumeSize, "testvolumesize", "Base volume size used for provisioned volumes")
 	int64Var(&config.TestVolumeExpandSize, "testvolumeexpandsize", "Target size for expanded volumes")
 	stringVar(&config.TestVolumeParametersFile, "testvolumeparameters", "YAML file of volume parameters for provisioned volumes")

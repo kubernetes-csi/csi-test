@@ -99,6 +99,10 @@ type TestConfig struct {
 	TestNodeVolumeAttachLimit bool
 	TestVolumeAccessType      string
 
+	// TestInvalidListVolumesStartingToken is a token that the CSI driver
+	// considers invalid for ListVolumes.
+	TestInvalidListVolumesStartingToken string
+
 	// TestSnapshotParametersFile for setting CreateSnapshotRequest.Parameters.
 	TestSnapshotParametersFile string
 	TestSnapshotParameters     map[string]string
@@ -195,15 +199,16 @@ type TestContext struct {
 // their defaults.
 func NewTestConfig() TestConfig {
 	return TestConfig{
-		TargetPath:           os.TempDir() + "/csi-mount",
-		StagingPath:          os.TempDir() + "/csi-staging",
-		CreatePathCmdTimeout: 10 * time.Second,
-		RemovePathCmdTimeout: 10 * time.Second,
-		TestVolumeSize:       10 * 1024 * 1024 * 1024, // 10 GiB
-		TestVolumeAccessType: "mount",
-		IDGen:                &DefaultIDGenerator{},
-		IdempotentCount:      10,
-		CheckPathCmdTimeout:  10 * time.Second,
+		TargetPath:                          os.TempDir() + "/csi-mount",
+		StagingPath:                         os.TempDir() + "/csi-staging",
+		CreatePathCmdTimeout:                10 * time.Second,
+		RemovePathCmdTimeout:                10 * time.Second,
+		TestVolumeSize:                      10 * 1024 * 1024 * 1024, // 10 GiB
+		TestVolumeAccessType:                "mount",
+		TestInvalidListVolumesStartingToken: "invalid-token",
+		IDGen:                               &DefaultIDGenerator{},
+		IdempotentCount:                     10,
+		CheckPathCmdTimeout:                 10 * time.Second,
 
 		DialOptions:           []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority("localhost")},
 		ControllerDialOptions: []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithAuthority("localhost")},
