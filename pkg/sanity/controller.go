@@ -154,6 +154,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_GET_SNAPSHOT:
 				case csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH:
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH:
+				case csi.ControllerServiceCapability_RPC_GET_NODE_INFO:
 				case deprecatedControllerVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
@@ -1677,6 +1678,113 @@ var _ = DescribeSanity("ControllerListVolumeHealth [Controller Server]", func(sc
 			&csi.ControllerListVolumeHealthRequest{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rsp).NotTo(BeNil())
+	})
+})
+
+var _ = DescribeSanity("ControllerGetNodeInfo [Controller Server]", func(sc *TestContext) {
+	var r *Resources
+
+	BeforeEach(func() {
+		r = &Resources{
+			Context:          sc,
+			ControllerClient: csi.NewControllerClient(sc.ControllerConn),
+			NodeClient:       csi.NewNodeClient(sc.Conn),
+		}
+		if !isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_GET_NODE_INFO) {
+			Skip("ControllerGetNodeInfo not supported")
+		}
+	})
+
+	AfterEach(func() {
+		r.Cleanup()
+	})
+
+	It("should fail when no node id is provided", func() {
+		rsp, err := r.ControllerGetNodeInfo(
+			context.Background(),
+			&csi.ControllerGetNodeInfoRequest{})
+		ExpectErrorCode(rsp, err, codes.InvalidArgument)
+	})
+
+	It("should fail when the node does not exist", func() {
+		rsp, err := r.ControllerGetNodeInfo(
+			context.Background(),
+			&csi.ControllerGetNodeInfoRequest{
+				NodeId: sc.Config.IDGen.GenerateUniqueValidNodeID(),
+			})
+		ExpectErrorCode(rsp, err, codes.NotFound)
+	})
+
+	It("should return appropriate values", func() {
+		By("getting a node id")
+		nid, err := r.NodeGetInfo(
+			context.Background(),
+			&csi.NodeGetInfoRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(nid).NotTo(BeNil())
+		Expect(nid.GetNodeId()).NotTo(BeEmpty())
+
+		rsp, err := r.ControllerGetNodeInfo(
+			context.Background(),
+			&csi.ControllerGetNodeInfoRequest{
+				NodeId: nid.GetNodeId(),
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
+		Expect(rsp.GetMaxVolumesPerNode()).NotTo(BeNumerically("<", 0))
+		for _, v := range rsp.GetPublishedVolumes() {
+			Expect(v.GetVolumeId()).NotTo(BeEmpty())
+		}
+
+		if rsp.GetAccessibleTopology() != nil {
+			Expect(isPluginCapabilitySupported(csi.NewIdentityClient(sc.ControllerConn), csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS)).To(BeTrue(),
+				"accessible_topology returned without the VOLUME_ACCESSIBILITY_CONSTRAINTS plugin capability")
+		}
+	})
+
+	It("should not return a volume after it is unpublished", func() {
+		By("getting node information")
+		ni, err := r.NodeGetInfo(
+			context.Background(),
+			&csi.NodeGetInfoRequest{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ni).NotTo(BeNil())
+		Expect(ni.GetNodeId()).NotTo(BeEmpty())
+
+		By("creating a single node writer volume")
+		req := MakeCreateVolumeReq(sc, UniqueString("sanity-controller-get-node-info"))
+		if ni.GetAccessibleTopology() != nil {
+			// Topology requirements are honored if provided by the driver
+			req.AccessibilityRequirements = &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{ni.GetAccessibleTopology()},
+			}
+		}
+		vol := r.MustCreateVolume(context.Background(), req)
+		volID := vol.GetVolume().GetVolumeId()
+
+		By("calling controllerpublish on that volume")
+		pubReq := MakeControllerPublishVolumeReq(sc, volID, ni.GetNodeId())
+		pubReq.VolumeContext = vol.GetVolume().GetVolumeContext()
+		r.MustControllerPublishVolume(context.Background(), pubReq)
+
+		By("calling controllerunpublish on that volume")
+		_, err = r.ControllerUnpublishVolume(
+			context.Background(),
+			MakeControllerUnpublishVolumeReq(sc, volID, ni.GetNodeId()),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking that the volume is not published to the node")
+		rsp, err := r.ControllerGetNodeInfo(
+			context.Background(),
+			&csi.ControllerGetNodeInfoRequest{
+				NodeId: ni.GetNodeId(),
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rsp).NotTo(BeNil())
+		for _, v := range rsp.GetPublishedVolumes() {
+			Expect(v.GetVolumeId()).NotTo(Equal(volID), "volume is still published to the node after ControllerUnpublishVolume")
+		}
 	})
 })
 
