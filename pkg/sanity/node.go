@@ -349,6 +349,7 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 				case csi.NodeServiceCapability_RPC_VOLUME_MOUNT_GROUP:
 				case csi.NodeServiceCapability_RPC_GET_VOLUME_HEALTH:
 				case csi.NodeServiceCapability_RPC_GET_STORAGE_HEALTH:
+				case csi.NodeServiceCapability_RPC_NODE_INFO_FROM_CONTROLLER:
 				case deprecatedNodeVolumeCondition:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
@@ -380,6 +381,36 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 
 			if accessibilityConstraintSupported {
 				Expect(ninfo.GetAccessibleTopology()).NotTo(BeNil())
+			}
+		})
+
+		It("should return appropriate values when controller_get_node_info is set", func() {
+			if !isNodeCapabilitySupported(r, csi.NodeServiceCapability_RPC_NODE_INFO_FROM_CONTROLLER) {
+				Skip("NodeGetInfo.controller_get_node_info field not supported")
+			}
+
+			ninfo, err := r.NodeGetInfo(
+				context.Background(),
+				&csi.NodeGetInfoRequest{
+					ControllerGetNodeInfo: true,
+				})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ninfo).NotTo(BeNil())
+			Expect(ninfo.GetNodeId()).NotTo(BeEmpty())
+
+			if providesControllerService {
+				Expect(isControllerCapabilitySupported(r, csi.ControllerServiceCapability_RPC_GET_NODE_INFO)).To(BeTrue(),
+					"NODE_INFO_FROM_CONTROLLER requires the GET_NODE_INFO controller capability")
+
+				By("getting node info from the controller for that node id")
+				rsp, err := r.ControllerGetNodeInfo(
+					context.Background(),
+					&csi.ControllerGetNodeInfoRequest{
+						NodeId: ninfo.GetNodeId(),
+					})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rsp).NotTo(BeNil())
 			}
 		})
 	})
